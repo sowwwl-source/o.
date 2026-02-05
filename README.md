@@ -1,0 +1,2 @@
+# o.
+Le réseau minimal
