@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - INVITE_CODES=${INVITE_CODES}
+      - AZA_API_BASE_URL=${AZA_API_BASE_URL}
+      - AZA_API_TOKEN=${AZA_API_TOKEN}
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  db_data:

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SARZAC | OWLS</title>
+    <link rel="stylesheet" href="/sarzac.css">
+    <script src="/sarzac.js" defer></script>
+</head>
+<body class="sarzac-page">
+
+    <div id="start-overlay">
+        <h1 class="overlay-title">SARZAC</h1>
+        <p class="overlay-subtitle">[ TAP TO SYNC ]</p>
+    </div>
+    <div id="loading-msg">INITIALISATION...</div>
+
+    <button id="contrib-toggle" class="contrib-toggle">LAISSE TA TRACE</button>
+    <div id="contrib-panel" class="contrib-panel" aria-hidden="true">
+        <div class="contrib-title">TRACE VOCALE</div>
+        <div id="rec-status" class="contrib-status">SILENCE</div>
+        <div class="contrib-actions">
+            <button id="rec-start">ENREGISTRER</button>
+            <button id="rec-stop" disabled>STOP</button>
+            <button id="rec-upload" disabled>ENVOYER</button>
+        </div>
+        <input id="rec-token" class="contrib-input" type="password" placeholder="CODE">
+        <audio id="rec-preview" class="rec-preview" controls></audio>
+        <div id="rec-msg" class="contrib-msg"></div>
+        <div class="contrib-list" id="archive-list"></div>
+    </div>
+
+    <div class="viewport">
+        <div class="container">
+
+            <div class="card-container card-1">
+                <div class="card">
+                    <div class="front">
+                        <div class="texture-layer"></div> <pre class="ascii-art">
+AZARAZEDASARZAC
+ZARZACAZARAZEDA
+AZEDA ZARZAC AZA
+R Z A C A Z A R 
+A Z E D A S A R 
+Z A R Z A C A Z
+                        </pre>
+                        <div class="label">01. DELTA</div>
+                    </div>
+                    <div class="back">
+                        <h2 class="manifesto-title">L'Incidence</h2>
+                        <p class="manifesto-text">Sarzac. Déjà par hasard, mais pas dans le silence. <span class="keyword">Azar. Azeda.</span> Ce nom s'écrit partout. Nous sommes l'accident heureux qui refuse de se taire.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-container card-2">
+                <div class="card">
+                    <div class="front">
+                        <div class="texture-layer"></div>
+                        <pre class="ascii-art">
+   //   //   //
+  //   //   // 
+ //   //   //  
+--- // -------
+   //   //    
+  //   //     
+ //   // //   
+                        </pre>
+                        <div class="label">02. FRACTURE</div>
+                    </div>
+                    <div class="back">
+                        <h2 class="manifesto-title">La Fracture</h2>
+                        <p class="manifesto-text">On nous a vendu une connexion, on a eu des murs. Sarzac refuse ce deuil. <span class="keyword">La vie aura toujours raison sur le code.</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-container card-3">
+                <div class="card">
+                    <div class="front">
+                        <div class="texture-layer"></div>
+                        <pre class="ascii-art">
+ (o) (o) (@)
+(   |   )   \
+ \  &  /  (Y)
+ (o) (o)   | 
+(   |   ) / \
+ \  §  / ( & )
+                        </pre>
+                        <div class="label">03. MEUTE</div>
+                    </div>
+                    <div class="back">
+                        <h2 class="manifesto-title">L'Organique</h2>
+                        <p class="manifesto-text">Connecter n'est pas câbler, c'est fusionner. Ici, les ego fondent pour former une meute. C'est viscéral.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-container card-4">
+                <div class="card">
+                    <div class="front">
+                        <div class="texture-layer"></div>
+                        <pre class="ascii-art">
+# % @ & # % @ &
+% .-------. . #
+@ /<span class="glow">0wlslw0</span>\ &
+& \ <span class="glow">0wlslw0</span> / %
+# '-------' . @
+% # @ & # % @ &
+                        </pre>
+                        <div class="label">04. 0WLSLW0</div>
+                    </div>
+                    <div class="back">
+                        <h2 class="manifesto-title">Le Combat</h2>
+                        <p class="manifesto-text">La marée monte. Mais au centre du cyclone, une fréquence résiste. <span class="keyword">0wlslw0</span>. Le point fixe qui fait reculer la tempête.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-container card-5">
+                <div class="card">
+                    <div class="front">
+                        <pre class="ascii-art">
+   .       .   
+ .   .   .   . 
+   . <span class="glow">LIGHT</span> .   
+ .   .   .   . 
+   .       .   
+                        </pre>
+                        <div class="label">05. ÉCHO</div>
+                    </div>
+                    <div class="back">
+                        <h2 class="manifesto-title">L'Incandescence</h2>
+                        <p class="manifesto-text">La saturation est totale. La lumière a gagné. Fermez les yeux. Le grand effacement commence maintenant.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

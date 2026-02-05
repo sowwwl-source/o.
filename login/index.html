@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer un compte — O.</title>
+    <style>
+        body { background: #0b0b0b; color: #fff; font-family: sans-serif; margin: 0; }
+        .wrap { max-width: 520px; margin: 4rem auto; padding: 2rem; }
+        h1 { margin-bottom: 0.5rem; }
+        label { display: block; margin: 1rem 0 0.4rem; }
+        input { width: 100%; padding: 0.7rem; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; }
+        button { margin-top: 1.2rem; padding: 0.8rem 1.6rem; border: 1px solid #ffd700; background: transparent; color: #ffd700; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #ffd700; color: #000; }
+        .note { margin-top: 1rem; font-size: 0.9rem; opacity: 0.75; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>Créer un compte</h1>
+        <p>Cette page est un accès statique. Le backend PHP est requis pour finaliser l'inscription.</p>
+        <form method="post" action="https://YOUR-BACKEND.com/auth.php">
+            <label>Nom d'utilisateur</label>
+            <input type="text" name="username" placeholder="Votre pseudo">
+            <label>Mot de passe</label>
+            <input type="password" name="password" placeholder="••••••••">
+            <button type="submit">Créer le compte</button>
+        </form>
+        <p class="note">Remplacez l'URL d'action par votre serveur PHP (VPS / Railway / Heroku).</p>
+    </div>
+</body>
+</html>

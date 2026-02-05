@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>O. — Accès</title>
+    <script>
+        // Force unregister service workers to clear cache
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
+    <style>
+        body { background: #0b0b0b; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .wrap { text-align: center; max-width: 520px; padding: 2rem; }
+        a { color: #ffd700; text-decoration: none; border: 1px solid #ffd700; padding: 0.8rem 1.6rem; border-radius: 6px; display: inline-block; margin-top: 1rem; }
+        a:hover { background: #ffd700; color: #000; }
+        .muted { opacity: 0.7; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>O. — Accès</h1>
+        <p>La page verte a été désactivée. Vous pouvez entrer ici.</p>
+        <a href="/login">Créer un compte / Se connecter</a>
+        <p class="muted">Si votre backend PHP n'est pas encore déployé, cette page restera statique.</p>
+    </div>
+</body>
+</html>

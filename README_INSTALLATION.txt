@@ -1,0 +1,1 @@
+Upload files into /www via FTPS. Safari iOS -> Add to Home Screen. Credits: sowwwl / sirèn

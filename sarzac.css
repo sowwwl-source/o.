@@ -1,0 +1,340 @@
+/* SARZAC experience */
+body.sarzac-page * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body.sarzac-page {
+    background-color: #050505;
+    color: #ffffff;
+    font-family: 'Courier New', Courier, monospace;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.sarzac-page .viewport {
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    align-items: center;
+    padding-left: 10vw;
+    padding-right: 10vw;
+    -webkit-overflow-scrolling: touch;
+}
+
+body.sarzac-page .container {
+    display: flex;
+    gap: 20px;
+    height: 80vh;
+    min-width: max-content;
+}
+
+body.sarzac-page .card-container {
+    width: 280px;
+    height: 100%;
+    perspective: 1000px;
+    cursor: crosshair;
+    position: relative;
+}
+
+body.sarzac-page .card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+}
+
+body.sarzac-page .card-container:hover .card,
+body.sarzac-page .card-container:active .card {
+    transform: rotateY(180deg);
+}
+
+body.sarzac-page .front,
+body.sarzac-page .back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border: 1px solid #222;
+    overflow: hidden;
+}
+
+body.sarzac-page .front {
+    background-color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+body.sarzac-page .texture-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 10px;
+    line-height: 12px;
+    color: #333;
+    word-break: break-all;
+    white-space: pre-wrap;
+    z-index: 1;
+    padding: 10px;
+    opacity: 0.7;
+}
+
+body.sarzac-page .ascii-art {
+    position: relative;
+    z-index: 2;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    white-space: pre;
+    background: linear-gradient(180deg, #ff0000, #00ff00, #0000ff);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 2px rgba(255,255,255,0.2));
+}
+
+body.sarzac-page .label {
+    position: absolute;
+    bottom: 20px;
+    z-index: 3;
+    background: #000;
+    padding: 2px 8px;
+    font-size: 10px;
+    border: 1px solid #333;
+    letter-spacing: 2px;
+}
+
+body.sarzac-page .back {
+    background-color: #111;
+    transform: rotateY(180deg);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: left;
+}
+
+body.sarzac-page .manifesto-title {
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid #fff;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    width: 100%;
+}
+
+body.sarzac-page .manifesto-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #ccc;
+}
+
+body.sarzac-page .keyword {
+    color: #fff;
+    font-style: italic;
+}
+
+body.sarzac-page .card-4 .ascii-art span.glow {
+    color: white;
+    -webkit-text-fill-color: white;
+    text-shadow: 0 0 10px white;
+}
+
+body.sarzac-page #start-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: opacity 1s;
+}
+
+body.sarzac-page .overlay-title {
+    letter-spacing: 5px;
+    margin-bottom: 10px;
+}
+
+body.sarzac-page .overlay-subtitle {
+    font-size: 10px;
+    color: #666;
+}
+
+body.sarzac-page #loading-msg {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 10px;
+    color: #444;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+body.sarzac-page .card-5 .front {
+    background: #111;
+}
+
+body.sarzac-page .card-5 .ascii-art {
+    font-size: 8px;
+    color: #ffffff;
+    background: none;
+    -webkit-text-fill-color: #ffffff;
+    filter: none;
+}
+
+body.sarzac-page .card-5 .back {
+    background: #ffffff;
+    color: #000000;
+}
+
+body.sarzac-page .card-5 .manifesto-title {
+    border-color: #000000;
+}
+
+body.sarzac-page .card-5 .manifesto-text {
+    color: #333333;
+}
+
+body.sarzac-page .contrib-toggle {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 9998;
+    background: #0b0b0b;
+    color: #ddd;
+    border: 1px solid #222;
+    padding: 8px 10px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: crosshair;
+}
+
+body.sarzac-page .contrib-panel {
+    position: fixed;
+    left: 20px;
+    bottom: 60px;
+    width: 280px;
+    max-width: 80vw;
+    background: #0b0b0b;
+    border: 1px solid #222;
+    padding: 12px;
+    font-size: 11px;
+    z-index: 9998;
+    display: none;
+    box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
+
+body.sarzac-page .contrib-panel.open {
+    display: block;
+}
+
+body.sarzac-page .contrib-title {
+    letter-spacing: 2px;
+    font-size: 10px;
+    color: #aaa;
+    margin-bottom: 8px;
+}
+
+body.sarzac-page .contrib-status {
+    color: #666;
+    margin-bottom: 6px;
+    min-height: 14px;
+}
+
+body.sarzac-page .contrib-actions {
+    display: flex;
+    gap: 6px;
+}
+
+body.sarzac-page .contrib-panel button {
+    background: #111;
+    color: #eee;
+    border: 1px solid #333;
+    padding: 6px 8px;
+    font-size: 10px;
+    cursor: crosshair;
+}
+
+body.sarzac-page .contrib-panel button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+body.sarzac-page .contrib-panel audio {
+    width: 100%;
+    margin-top: 8px;
+    height: 30px;
+}
+
+body.sarzac-page .contrib-msg {
+    margin-top: 6px;
+    color: #888;
+    min-height: 14px;
+}
+
+body.sarzac-page .contrib-list {
+    margin-top: 8px;
+    max-height: 140px;
+    overflow: auto;
+    border-top: 1px solid #222;
+    padding-top: 6px;
+}
+
+body.sarzac-page .contrib-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+body.sarzac-page .contrib-time {
+    color: #555;
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+body.sarzac-page .contrib-input {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px 8px;
+    background: #0e0e0e;
+    color: #ddd;
+    border: 1px solid #222;
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+body.sarzac-page .rec-preview {
+    display: none;
+}
+
+body.sarzac-page ::-webkit-scrollbar {
+    height: 4px;
+}
+
+body.sarzac-page ::-webkit-scrollbar-thumb {
+    background: #333;
+}
+
+body.sarzac-page ::-webkit-scrollbar-track {
+    background: #000;
+}

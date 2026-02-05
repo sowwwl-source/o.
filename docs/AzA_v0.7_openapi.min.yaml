@@ -1,0 +1,275 @@
+openapi: 3.0.3
+info:
+  title: AzA Tool Contracts API (minimal)
+  version: "0.7.0"
+servers:
+  - url: https://api.sowwwl.cloud
+  - url: https://<your-app>.ondigitalocean.app
+security:
+  - bearerAuth: []
+paths:
+  /v1/organize:
+    post:
+      summary: ORGANIZE_DRIVE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrganizeDrive' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrganizeDriveResult' }
+  /v1/index:
+    post:
+      summary: INDEX_OBJECT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IndexObject' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JobQueued' }
+  /v1/evict:
+    post:
+      summary: EVICT_KB_CHUNKS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EvictChunks' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvictChunksResult' }
+  /v1/user/score:
+    post:
+      summary: UPDATE_USER_SCORE
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserScore' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserScoreResult' }
+  /v1/post/generate:
+    post:
+      summary: GENERATE_POST
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GeneratePost' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeneratePostResult' }
+  /v1/post/publish:
+    post:
+      summary: PUBLISH_POST
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublishPost' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublishPostResult' }
+  /v1/kb/touch:
+    post:
+      summary: TOUCH_CHUNKS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TouchChunks' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TouchChunksResult' }
+  /v1/voice/render:
+    post:
+      summary: VOICE_RENDER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoiceRender' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoiceRenderResult' }
+  /upload:
+    post:
+      summary: UPLOAD_FILE
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, user_id]
+              properties:
+                file: { type: string, format: binary }
+                user_id: { type: string }
+                workspace_id: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  media_id: { type: string }
+                  bucket: { type: string }
+                  object_key: { type: string }
+                  size: { type: integer }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    OrganizeDrive:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { type: string }
+        workspace_id: { type: string, nullable: true }
+        root_prefix: { type: string }
+        dry_run: { type: boolean, default: true }
+        max_actions: { type: integer, default: 100 }
+        policy: { type: object }
+    OrganizeDriveResult:
+      type: object
+      properties:
+        actions:
+          type: array
+          items: { type: object }
+        summary: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
+    IndexObject:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { type: string }
+        object_ids:
+          type: array
+          items: { type: string }
+        upload_id: { type: string }
+        max_chunks_per_object: { type: integer, default: 200 }
+    JobQueued:
+      type: object
+      properties:
+        job_id: { type: string }
+        status: { type: string, example: queued }
+    EvictChunks:
+      type: object
+      required: [user_id, to_free_bytes]
+      properties:
+        user_id: { type: string }
+        to_free_bytes: { type: integer }
+        strategy: { type: string, default: aza_score }
+    EvictChunksResult:
+      type: object
+      properties:
+        evicted_count: { type: integer }
+        freed_bytes: { type: integer }
+    UpdateUserScore:
+      type: object
+      required: [user_id, delta, reason]
+      properties:
+        user_id: { type: string }
+        delta: { type: number }
+        reason: { type: string }
+        events:
+          type: array
+          items: { type: object }
+    UserScoreResult:
+      type: object
+      properties:
+        user_id: { type: string }
+        new_score: { type: number }
+        updated_at: { type: string, format: date-time }
+    GeneratePost:
+      type: object
+      required: [user_id, source_object_ids]
+      properties:
+        user_id: { type: string }
+        workspace_id: { type: string, nullable: true }
+        source_object_ids:
+          type: array
+          items: { type: string }
+        style_state: { type: string, enum: [O, '0'] }
+        language: { type: string, default: fr }
+        max_per_day: { type: integer, default: 1 }
+    GeneratePostResult:
+      type: object
+      properties:
+        post_id: { type: string }
+        status: { type: string, example: draft }
+        content_preview: { type: string }
+    PublishPost:
+      type: object
+      required: [post_id]
+      properties:
+        post_id: { type: string }
+        scheduled_at: { type: string, format: date-time, nullable: true }
+    PublishPostResult:
+      type: object
+      properties:
+        post_id: { type: string }
+        status: { type: string, example: published }
+        published_at: { type: string, format: date-time }
+    TouchChunks:
+      type: object
+      required: [user_id, chunk_keys]
+      properties:
+        user_id: { type: string }
+        chunk_keys:
+          type: array
+          items: { type: string }
+    TouchChunksResult:
+      type: object
+      properties:
+        touched_count: { type: integer }
+    VoiceRender:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        voice_state: { type: string, enum: [O, '0'] }
+        oscillation: { type: number, default: 0.5 }
+        format: { type: string, enum: [mp3, wav], default: mp3 }
+        sample_rate: { type: integer, default: 48000 }
+    VoiceRenderResult:
+      type: object
+      properties:
+        audio_url: { type: string }
+        audio_base64: { type: string }
+        duration_ms: { type: integer }
