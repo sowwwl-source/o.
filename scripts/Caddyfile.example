@@ -1,0 +1,28 @@
+# Caddyfile for sowwwl API
+# Place in /etc/caddy/Caddyfile on production server
+
+# Replace with your actual domain
+api.sowwwl.com {
+    # Automatic HTTPS via Let's Encrypt
+    
+    # Reverse proxy to local API
+    reverse_proxy localhost:8000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/api.log
+        format json
+    }
+}

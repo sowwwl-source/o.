@@ -1,0 +1,225 @@
+<?php
+/**
+ * sowwwl API — PHP (no vendor), session-based auth, JSON only.
+ * Routes:
+ *  - GET  /health
+ *  - POST /auth/register
+ *  - POST /auth/login
+ *  - POST /auth/logout
+ *  - GET  /me
+ *
+ * Deploy behind HTTPS (recommended). Works great behind Netlify proxy (/api/*).
+ */
+
+declare(strict_types=1);
+
+header('Content-Type: application/json; charset=utf-8');
+
+// ====== Basic hardening ======
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+// ====== Minimal env loader (.env optional) ======
+function load_env(string $file): void {
+    if (!is_file($file)) return;
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) continue;
+        $pos = strpos($line, '=');
+        if ($pos === false) continue;
+        $k = trim(substr($line, 0, $pos));
+        $v = trim(substr($line, $pos + 1));
+        if ($k === '') continue;
+        if ((str_starts_with($v, '"') && str_ends_with($v, '"')) || (str_starts_with($v, "'") && str_ends_with($v, "'"))) {
+            $v = substr($v, 1, -1);
+        }
+        if (getenv($k) === false) {
+            putenv($k . '=' . $v);
+            $_ENV[$k] = $v;
+        }
+    }
+}
+load_env(__DIR__ . '/.env');
+
+// ====== Sessions ======
+$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',      // keep empty; with Netlify proxy this becomes the site domain
+    'secure' => $secure, // must be true in prod HTTPS
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
+session_start();
+
+// ====== Helpers ======
+function json_input(): array {
+    $raw = file_get_contents('php://input');
+    if ($raw === false || trim($raw) === '') return [];
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : [];
+}
+
+function out(int $code, array $payload): never {
+    http_response_code($code);
+    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function require_method(string $expected): void {
+    global $method;
+    if ($method !== $expected) out(405, ['error' => 'method_not_allowed']);
+}
+
+function env(string $key, ?string $default = null): ?string {
+    $v = $_ENV[$key] ?? getenv($key);
+    if ($v === false || $v === null || $v === '') return $default;
+    return (string)$v;
+}
+
+// ====== DB ======
+function db(): PDO {
+    static $pdo = null;
+    if ($pdo) return $pdo;
+
+    $host = env('DB_HOST');
+    $name = env('DB_NAME');
+    $user = env('DB_USER');
+    $pass = env('DB_PASS');
+    $port = env('DB_PORT', '3306');
+
+    if (!$host || !$name || !$user) out(500, ['error' => 'db_not_configured']);
+
+    $dsn = "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4";
+    try {
+        $pdo = new PDO($dsn, $user, (string)$pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        return $pdo;
+    } catch (Throwable $e) {
+        out(500, ['error' => 'db_connection_failed']);
+    }
+}
+
+// ====== CSRF (optional) ======
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(16));
+}
+
+// ====== Routes ======
+if ($path === '/health') {
+    out(200, ['status' => 'ok']);
+}
+
+if ($path === '/auth/register') {
+    require_method('POST');
+    $in = json_input();
+
+    $email = strtolower(trim((string)($in['email'] ?? '')));
+    $password = (string)($in['password'] ?? '');
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(422, ['error' => 'invalid_email']);
+    if (mb_strlen($password) < 8) out(422, ['error' => 'password_too_short', 'min' => 8]);
+
+    $pdo = db();
+
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("INSERT INTO users (email, password_hash) VALUES (:e, :h)");
+        $stmt->execute([':e' => $email, ':h' => $hash]);
+        $uid = (int)$pdo->lastInsertId();
+
+        $handle = 'o.' . $uid;
+        $comm = 'o+' . $uid . '@sowwwl.com';
+
+        $pdo->prepare("INSERT INTO profiles (user_id, handle) VALUES (:u, :h)")
+            ->execute([':u' => $uid, ':h' => $handle]);
+
+        $pdo->prepare("INSERT INTO identities (user_id, comm_address) VALUES (:u, :c)")
+            ->execute([':u' => $uid, ':c' => $comm]);
+
+        $pdo->commit();
+
+        $_SESSION['uid'] = $uid;
+
+        out(201, ['status' => 'created', 'user_id' => $uid, 'handle' => $handle, 'comm_address' => $comm]);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        // Duplicate email
+        if (str_contains($e->getMessage(), 'Duplicate')) out(409, ['error' => 'email_exists']);
+        out(500, ['error' => 'register_failed']);
+    }
+}
+
+if ($path === '/auth/login') {
+    require_method('POST');
+    $in = json_input();
+
+    $email = strtolower(trim((string)($in['email'] ?? '')));
+    $password = (string)($in['password'] ?? '');
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(422, ['error' => 'invalid_email']);
+
+    $pdo = db();
+    $stmt = $pdo->prepare("SELECT id, password_hash, status FROM users WHERE email = :e");
+    $stmt->execute([':e' => $email]);
+    $user = $stmt->fetch();
+
+    if (!$user) out(401, ['error' => 'denied']);
+    if (($user['status'] ?? 'active') !== 'active') out(403, ['error' => 'user_not_active']);
+
+    if (!password_verify($password, (string)$user['password_hash'])) {
+        out(401, ['error' => 'denied']);
+    }
+
+    $_SESSION['uid'] = (int)$user['id'];
+    out(200, ['status' => 'ok']);
+}
+
+if ($path === '/auth/logout') {
+    require_method('POST');
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+    }
+    session_destroy();
+    out(200, ['status' => 'logged_out']);
+}
+
+if ($path === '/me') {
+    require_method('GET');
+
+    $uid = (int)($_SESSION['uid'] ?? 0);
+    if ($uid <= 0) out(401, ['guest' => true]);
+
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.email, u.created_at,
+               p.handle, p.display_name, p.state_o,
+               i.comm_address, i.type, i.verified
+        FROM users u
+        JOIN profiles p ON p.user_id = u.id
+        JOIN identities i ON i.user_id = u.id
+        WHERE u.id = :id
+        LIMIT 1
+    ");
+    $stmt->execute([':id' => $uid]);
+    $row = $stmt->fetch();
+
+    if (!$row) out(401, ['guest' => true]);
+
+    out(200, ['user' => $row, 'csrf' => $_SESSION['csrf']]);
+}
+
+out(404, ['error' => 'not_found', 'path' => $path]);

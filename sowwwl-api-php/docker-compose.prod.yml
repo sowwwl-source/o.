@@ -1,0 +1,16 @@
+# Production override - use with: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  db:
+    restart: always
+    volumes:
+      - /opt/sowwwl/data/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASS}
+
+  api:
+    image: ghcr.io/${GITHUB_REPO}/api:latest
+    restart: always
+    env_file:
+      - .env
