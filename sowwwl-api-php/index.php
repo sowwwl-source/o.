@@ -94,6 +94,14 @@ function require_method(string $expected): void {
     if ($method !== $expected) out(405, ['error' => 'method_not_allowed']);
 }
 
+function require_csrf(): void {
+    $h = $_SERVER['HTTP_X_CSRF'] ?? '';
+    $s = (string)($_SESSION['csrf'] ?? '');
+    if ($s === '' || !is_string($h) || !hash_equals($s, $h)) {
+        out(403, ['error' => 'csrf']);
+    }
+}
+
 function env(string $key, ?string $default = null): ?string {
     $v = $_ENV[$key] ?? getenv($key);
     if ($v === false || $v === null || $v === '') return $default;
@@ -239,6 +247,44 @@ if ($path === '/me') {
     if (!$row) out(401, ['guest' => true]);
 
     out(200, ['user' => $row, 'csrf' => $_SESSION['csrf']]);
+}
+
+if ($path === '/bote') {
+    $uid = (int)($_SESSION['uid'] ?? 0);
+    if ($uid <= 0) out(401, ['guest' => true]);
+
+    if ($method === 'GET') {
+        $pdo = db();
+        $stmt = $pdo->prepare("SELECT title, content, updated_at FROM botes WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            out(200, ['bote' => ['title' => null, 'content' => '', 'updated_at' => null]]);
+        }
+        out(200, ['bote' => $row]);
+    }
+
+    if ($method === 'POST') {
+        require_csrf();
+        $in = json_input();
+        $title = trim((string)($in['title'] ?? ''));
+        $content = (string)($in['content'] ?? '');
+
+        if ($title === '') $title = null;
+        if (mb_strlen($content) > 200_000) out(413, ['error' => 'content_too_large']);
+
+        $pdo = db();
+        // One bote per user; UPSERT.
+        $stmt = $pdo->prepare("
+            INSERT INTO botes (user_id, title, content) VALUES (:u, :t, :c)
+            ON DUPLICATE KEY UPDATE title = VALUES(title), content = VALUES(content), updated_at = CURRENT_TIMESTAMP
+        ");
+        $stmt->execute([':u' => $uid, ':t' => $title, ':c' => $content]);
+
+        out(200, ['status' => 'saved']);
+    }
+
+    out(405, ['error' => 'method_not_allowed']);
 }
 
 out(404, ['error' => 'not_found', 'path' => $path]);

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>b0té — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/sh0re.html">↩</a>
+      <span class="muted">/api/bote</span>
+    </header>
+
+    <section class="card" aria-label="B0té">
+      <h1 class="muted">// b0té //</h1>
+      <p class="muted">Édition + visualisation (1 b0té par compte).</p>
+      <p class="muted" style="margin-top:10px">Origin: <code id="origin">—</code></p>
+      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+
+      <div class="row" style="margin-top:14px">
+        <button id="btnSave" class="btn" type="button">sauver</button>
+        <button id="btnReload" class="btn" type="button">recharger</button>
+        <a class="btn" href="/etat.html">état</a>
+        <a class="btn" href="/login.html">login</a>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <input id="title" type="text" placeholder="titre (optionnel)" autocomplete="off" />
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <textarea id="src" spellcheck="false" style="width:100%;min-height:52vh"></textarea>
+      </div>
+
+      <p class="muted" style="margin-top:10px">Preview:</p>
+      <pre id="view" class="card" style="margin-top:10px;white-space:pre-wrap">—</pre>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
+    const els = {
+      me: document.getElementById('me'),
+      title: document.getElementById('title'),
+      src: document.getElementById('src'),
+      view: document.getElementById('view'),
+      btnSave: document.getElementById('btnSave'),
+      btnReload: document.getElementById('btnReload'),
+    };
+
+    function render() {
+      els.view.textContent = els.src.value || '—';
+    }
+
+    async function getMe() {
+      const res = await fetch('/api/me', { credentials: 'include' });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    async function getBote() {
+      const res = await fetch('/api/bote', { credentials: 'include' });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    async function saveBote(csrf, title, content) {
+      const res = await fetch('/api/bote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf },
+        credentials: 'include',
+        body: JSON.stringify({ title, content }),
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    async function bootstrap() {
+      const m = await getMe();
+      if (!m.ok) {
+        els.me.textContent = 'guest';
+        els.src.value = 'Connecte-toi d’abord: /login.html';
+        render();
+        return;
+      }
+      const u = m.data?.user;
+      const handle = u?.handle || ('o.' + (u?.id || '?'));
+      els.me.textContent = `${handle} (${u?.email || '—'})`;
+
+      const b = await getBote();
+      const bote = b.data?.bote || {};
+      els.title.value = bote.title || '';
+      els.src.value = bote.content || '';
+      render();
+      window.__csrf = m.data?.csrf || '';
+    }
+
+    els.src.addEventListener('input', render);
+    els.btnReload.addEventListener('click', bootstrap);
+    els.btnSave.addEventListener('click', async () => {
+      const csrf = window.__csrf || '';
+      const r = await saveBote(csrf, els.title.value, els.src.value);
+      if (!r.ok) {
+        els.view.textContent = JSON.stringify(r, null, 2);
+        return;
+      }
+      // Refresh csrf/user state (and show latest data)
+      await bootstrap();
+    });
+
+    bootstrap();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+
