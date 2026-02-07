@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>m4p — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+  <style>
+    .graph-card{padding:0;overflow:hidden}
+    #graph{height:min(72vh, 720px);width:100%}
+    @media (max-width: 700px){ #graph{height:72vh} }
+    .hint{opacity:.7;font-size:12px;margin-top:10px}
+  </style>
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/0.html">↩</a>
+      <span class="muted">map 3D</span>
+    </header>
+
+    <section class="card" aria-label="Infos">
+      <h1 class="muted">// m4p //</h1>
+      <p class="muted">Comme les maps CNRTL, mais en 3D : mots → portes.</p>
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Origin: <code id="origin">—</code></span>
+        <span class="muted">Moi: <code id="me">—</code></span>
+        <span class="muted">API: <code id="api">—</code></span>
+      </div>
+      <p class="hint">Drag = tourner • scroll = zoom • click mot = ouvrir. (La zone 3D ne déclenche pas l’inversion.)</p>
+    </section>
+
+    <section class="card graph-card" aria-label="Graph">
+      <div id="graph" data-no-flip></div>
+    </section>
+  </main>
+
+  <!-- 3D graph deps (no build step). -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three-spritetext@1.9.0/dist/three-spritetext.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.73.5/dist/3d-force-graph.min.js"></script>
+
+  <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function statusColor(s) {
+      if (s === 'ok') return '#7dffb8';
+      if (s === 'off') return '#ff6b6b';
+      if (s === 'soon') return '#ffd27a';
+      if (s === 'locked') return 'rgba(245,243,238,.55)';
+      return 'rgba(245,243,238,.75)';
+    }
+
+    function nodeText(n) {
+      if (n.locked) return `${n.word}\nlocked`;
+      if (n.status === 'ok') return `${n.word}\n1`;
+      if (n.status === 'off') return `${n.word}\n0`;
+      if (n.status === 'soon') return `${n.word}\ns0o0n`;
+      return n.word;
+    }
+
+    (async () => {
+      const health = await j('/api/health');
+      document.getElementById('api').textContent = health.ok ? 'ok' : `fail:${health.status}`;
+
+      const me = await j('/api/me');
+      const authed = me.ok;
+      if (!authed) {
+        document.getElementById('me').textContent = 'guest';
+      } else {
+        const u = me.data?.user || {};
+        document.getElementById('me').textContent = `${u.handle || ('o.' + (u.id || '?'))} (${u.email || '—'})`;
+      }
+
+      const boteProbe = await j('/api/bote');
+      const boteReady = boteProbe.status === 200 || boteProbe.status === 401;
+
+      const nodes = [
+        { id: 'O.', word: 'O.', href: '/index.html', status: 'ok' },
+        { id: '0', word: '0', href: '/0.html', status: 'ok' },
+        { id: 'sh0re', word: 'sh0re', href: '/sh0re.html', status: 'ok' },
+        { id: 'b0té', word: 'b0té', href: '/b0te.html', status: boteReady ? 'ok' : 'soon', locked: !authed },
+        { id: 'état', word: 'état', href: '/etat.html', status: 'ok' },
+        { id: 'login', word: 'login', href: '/login.html', status: 'ok' },
+        { id: 'sal00ns', word: 'sal00ns', href: '#', status: 'soon', locked: true },
+        { id: 'mail', word: 'mail', href: '#', status: 'soon', locked: true },
+        { id: 'call', word: 'call', href: '#', status: 'soon', locked: true },
+      ];
+
+      if (authed) {
+        const u = me.data?.user || {};
+        const handle = u.handle || ('o.' + (u.id || '?'));
+        nodes.push({ id: 'me', word: handle, href: '/sh0re.html', status: 'ok' });
+      }
+
+      const links = [
+        { source: 'O.', target: '0' },
+        { source: '0', target: 'sh0re' },
+        { source: '0', target: 'b0té' },
+        { source: '0', target: 'sal00ns' },
+        { source: '0', target: 'mail' },
+        { source: '0', target: 'call' },
+        { source: '0', target: 'état' },
+        { source: '0', target: 'login' },
+      ];
+      if (authed) links.push({ source: 'sh0re', target: 'me' });
+
+      const data = { nodes, links };
+
+      const graphEl = document.getElementById('graph');
+      const Graph = ForceGraph3D({ controlType: 'orbit' })(graphEl);
+
+      function applyTheme() {
+        const bg = getComputedStyle(document.body).backgroundColor || '#000';
+        Graph.backgroundColor(bg);
+      }
+
+      const nodeObjects = new Map();
+      Graph
+        .graphData(data)
+        .linkOpacity(0.18)
+        .linkWidth(0.6)
+        .nodeRelSize(0)
+        .nodeThreeObject((node) => {
+          const sprite = new SpriteText(nodeText(node));
+          sprite.color = statusColor(node.locked ? 'locked' : node.status);
+          sprite.textHeight = 10;
+          sprite.material.depthWrite = false;
+          nodeObjects.set(node.id, sprite);
+          return sprite;
+        })
+        .onNodeClick((node) => {
+          const href = (node && node.href) || '';
+          if (!href || href === '#') return;
+          window.location.href = href;
+        });
+
+      applyTheme();
+      const root = document.documentElement;
+      new MutationObserver(() => applyTheme()).observe(root, { attributes: true, attributeFilter: ['class'] });
+
+      // Gentle initial camera
+      Graph.cameraPosition({ x: 0, y: 0, z: 260 }, { x: 0, y: 0, z: 0 }, 800);
+    })();
+  </script>
+
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+

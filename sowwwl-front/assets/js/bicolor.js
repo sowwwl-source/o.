@@ -142,6 +142,9 @@
         return;
       }
 
+      // Allow pages to opt-out for specific interactive regions (e.g. 3D canvases).
+      if (e.target instanceof Element && e.target.closest("[data-no-flip]")) return;
+
       const nav = linkTargetFromEventTarget(e.target);
       const isNav = Boolean(nav?.href) && isSameOriginHref(nav?.href);
 
@@ -189,4 +192,3 @@
     { capture: true },
   );
 })();
-
