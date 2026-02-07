@@ -224,13 +224,22 @@
         }).catch(() => {});
       }
 
-      const links = authed ? await j('/api/links') : { ok: false, data: { links: [] } };
-      const rel = new Map();
-      const linksArr = (links.data && links.data.links) ? links.data.links : [];
-      linksArr.forEach((l) => {
-        const d = l && l.peer ? l.peer.door_id : null;
-        if (typeof d === 'string' && d.length === 32) rel.set(d, l);
-      });
+      let rel = new Map();
+      async function refreshLinks() {
+        if (!authed) {
+          rel = new Map();
+          return;
+        }
+        const links = await j('/api/links');
+        const next = new Map();
+        const linksArr = (links.data && links.data.links) ? links.data.links : [];
+        linksArr.forEach((l) => {
+          const d = l && l.peer ? l.peer.door_id : null;
+          if (typeof d === 'string' && d.length === 32) next.set(d, l);
+        });
+        rel = next;
+      }
+      await refreshLinks();
 
       const doorsRes = await j('/api/d0rs?limit=1200');
       if (!doorsRes.ok) {
@@ -398,6 +407,10 @@
           body: JSON.stringify({ door_id: doorId }),
         });
         show(r);
+        if (r.ok) {
+          await refreshLinks().catch(() => {});
+          applyTheme();
+        }
       });
 
       function applyTheme() {
@@ -443,4 +456,3 @@
   <script src="/assets/js/bicolor.js" defer></script>
 </body>
 </html>
-
