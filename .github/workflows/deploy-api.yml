@@ -60,6 +60,8 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
+    permissions:
+      contents: read
     
     steps:
       - name: Deploy to DigitalOcean
@@ -74,7 +76,8 @@ jobs:
             # Ensure the server uses the latest compose files from this repo,
             # not stale copies in /opt/sowwwl.
             APP_DIR="/opt/sowwwl/app"
-            REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+            # Use GITHUB_TOKEN for private repos (masked in logs).
+            REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
             REF="${{ github.ref_name }}"
 
             if ! command -v git >/dev/null 2>&1; then
@@ -86,6 +89,7 @@ jobs:
               rm -rf "${APP_DIR}"
               git clone --depth 1 --branch "${REF}" "${REPO_URL}" "${APP_DIR}"
             else
+              git -C "${APP_DIR}" remote set-url origin "${REPO_URL}"
               git -C "${APP_DIR}" fetch --depth 1 origin "${REF}"
               git -C "${APP_DIR}" reset --hard "origin/${REF}"
             fi
