@@ -15,19 +15,25 @@
 
     <section class="card" aria-label="Auth">
       <h1 class="muted">// login //</h1>
+      <p class="muted" style="margin-top:10px">
+        Important : reste sur <b>un seul</b> domaine pendant l’auth (ex. <code>www.sowwwl.com</code>).
+      </p>
+      <p class="muted" style="margin-top:10px">
+        Origin: <code id="origin">—</code>
+      </p>
 
       <h2>Créer un compte</h2>
       <div class="row">
-        <input id="r_email" placeholder="email" autocomplete="email" />
-        <input id="r_pass" placeholder="mot de passe" type="password" autocomplete="new-password" />
-        <button id="btnRegister">register</button>
+        <input id="r_email" type="email" placeholder="email" autocomplete="email" />
+        <input id="r_pass" placeholder="mot de passe (8+)" type="password" autocomplete="new-password" />
+        <button id="btnRegister" class="btn" type="button">Créer</button>
       </div>
 
       <h2 style="margin-top:22px">Se connecter</h2>
       <div class="row">
-        <input id="l_email" placeholder="email" autocomplete="email" />
+        <input id="l_email" type="email" placeholder="email" autocomplete="email" />
         <input id="l_pass" placeholder="mot de passe" type="password" autocomplete="current-password" />
-        <button id="btnLogin">login</button>
+        <button id="btnLogin" class="btn" type="button">Se connecter</button>
       </div>
 
       <h3 style="margin-top:22px">Réponse</h3>
@@ -36,6 +42,8 @@
   </main>
 
   <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
     async function api(path, payload){
       const res = await fetch('/api' + path, {
         method: 'POST',
@@ -51,18 +59,27 @@
 
     function show(x){ document.getElementById('out').textContent = JSON.stringify(x, null, 2); }
 
+    async function me() {
+      const res = await fetch('/api/me', { credentials: 'include' });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch(e) { data = {raw:text}; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
     document.getElementById('btnRegister').addEventListener('click', async () => {
       const email = document.getElementById('r_email').value.trim();
       const password = document.getElementById('r_pass').value;
-      show(await api('/auth/register', {email, password}));
+      const r = await api('/auth/register', {email, password});
+      show({ register: r, me: await me() });
     });
 
     document.getElementById('btnLogin').addEventListener('click', async () => {
       const email = document.getElementById('l_email').value.trim();
       const password = document.getElementById('l_pass').value;
       const r = await api('/auth/login', {email, password});
-      show(r);
-      if (r.ok) window.location.href = '/';
+      show({ login: r, me: await me() });
+      if (r.ok) window.location.href = '/etat.html';
     });
   </script>
   <script src="/assets/js/bicolor.js" defer></script>

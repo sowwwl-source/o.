@@ -15,10 +15,14 @@
 
     <section class="card" aria-label="API">
       <p class="muted">Front → /api/* → Backend PHP → MySQL</p>
+      <p class="muted" style="margin-top:10px">
+        Origin: <code id="origin">—</code>
+      </p>
 
       <div class="row" style="margin-top:14px">
-        <button id="btnMe">/me</button>
-        <button id="btnLogout">logout</button>
+        <button id="btnMe" class="btn" type="button">/me</button>
+        <button id="btnLogout" class="btn" type="button">logout</button>
+        <a class="btn" href="/login.html">login</a>
       </div>
 
       <h2 style="margin-top:22px">Réponse</h2>
@@ -27,6 +31,8 @@
   </main>
 
   <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
     async function api(path, opts) {
       const res = await fetch("/api" + path, Object.assign({
         headers: { "Content-Type": "application/json" },
