@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>sh0re — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">lands visibles</span>
+    </header>
+
+    <section class="card" aria-label="Session">
+      <h1 class="muted">// sh0re //</h1>
+      <p class="muted">Tu arrives ici après login : l’arborescence des lands visibles.</p>
+      <p class="muted" style="margin-top:10px">Origin: <code id="origin">—</code></p>
+      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="/etat.html">état</a>
+        <a class="btn" href="/login.html">login</a>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Arborescence">
+      <h2 class="muted">arborescence</h2>
+      <pre id="tree" aria-label="Tree">—</pre>
+      <p class="muted">Placeholder : on branchera la vraie liste via l’API ensuite.</p>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
+    const TREE =
+`sh0re/
+  lands/
+    0wlslw0/          (public)
+    sowwwl/           (public)
+    private/          (locked)
+  portals/
+    manif3st
+    qu3st
+`;
+
+    document.getElementById('tree').textContent = TREE;
+
+    async function me() {
+      const res = await fetch('/api/me', { credentials: 'include' });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    (async () => {
+      const r = await me();
+      if (!r.ok) {
+        document.getElementById('me').textContent = 'guest';
+        return;
+      }
+      const u = r.data?.user;
+      const handle = u?.handle || ('o.' + (u?.id || '?'));
+      document.getElementById('me').textContent = `${handle} (${u?.email || '—'})`;
+    })();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+
