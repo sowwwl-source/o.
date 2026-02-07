@@ -46,6 +46,9 @@ function load_env(string $file): void {
 }
 load_env(__DIR__ . '/.env');
 
+// Modules
+require_once __DIR__ . '/lib/land-theme.php';
+
 // ====== Sessions ======
 function is_https_request(): bool {
     $https = $_SERVER['HTTPS'] ?? '';
@@ -235,12 +238,7 @@ function ensure_land(PDO $pdo, int $uid): void {
 }
 
 function greek_letter_or_empty(string $s): string {
-    $t = trim($s);
-    if ($t === '') return '';
-    $ch = mb_substr($t, 0, 1);
-    $low = mb_strtolower($ch);
-    $allowed = ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω'];
-    return in_array($low, $allowed, true) ? $low : '';
+    return normalize_greek_glyph($s);
 }
 
 function words_count(string $s): int {
@@ -250,17 +248,78 @@ function words_count(string $s): int {
     return $parts ? count($parts) : 0;
 }
 
-function beauty_score(string $s): float {
+function delta_coherence_score(string $s): float {
+    // Coherence score (0..1): word_count + length + "no repeated chars" ratio.
     $t = trim($s);
     if ($t === '') return 0.0;
-    $parts = preg_split('/\s+/u', $t, -1, PREG_SPLIT_NO_EMPTY);
-    if (!$parts) return 0.0;
-    $n = count($parts);
-    $uniq = count(array_unique(array_map('mb_strtolower', $parts)));
-    $lenFactor = min(1.0, $n / 9.0);
-    $uniqFactor = $n > 0 ? ($uniq / $n) : 0.0;
-    $score = ($lenFactor * 0.6) + ($uniqFactor * 0.4);
-    return round(min(1.0, max(0.0, $score)), 3);
+
+    $wc = words_count($t);
+    $wordScore = min(1.0, max(0.0, $wc / 9.0));
+
+    $chars = preg_replace('/\s+/u', '', $t);
+    $arr = preg_split('//u', (string)$chars, -1, PREG_SPLIT_NO_EMPTY);
+    $total = $arr ? count($arr) : 0;
+    $uniq = $arr ? count(array_unique(array_map('mb_strtolower', $arr))) : 0;
+    $uniqRatio = $total > 0 ? ($uniq / $total) : 0.0;
+
+    $lenScore = $total > 0 ? min(1.0, $total / 60.0) : 0.0;
+
+    $score = ($wordScore * 0.4) + ($lenScore * 0.3) + ($uniqRatio * 0.3);
+    return (float)round(min(1.0, max(0.0, $score)), 3);
+}
+
+function bote_unlock_info(PDO $pdo, int $uid): array {
+    try {
+        $stmt = $pdo->prepare("SELECT unlock_until FROM bote_unlock WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $until = $row['unlock_until'] ?? null;
+        $unlocked = false;
+        if ($until) {
+            $ts = strtotime((string)$until);
+            $unlocked = ($ts !== false) && ($ts >= time());
+        }
+        return ['unlock_until' => $until, 'unlocked' => $unlocked];
+    } catch (Throwable) {
+        return ['unlock_until' => null, 'unlocked' => false];
+    }
+}
+
+function seed_root_dir(): string {
+    $base = env('SEED_ROOT', '/data');
+    if (!$base) $base = '/data';
+    return rtrim($base, '/');
+}
+
+function write_o_seed_file(int $uid, string $glyph, string $archetype, string $firstLine): array {
+    $root = seed_root_dir();
+    $dir = $root . '/0.users.O/' . $uid . '/seed';
+    $path = $dir . '/O.seed.txt';
+
+    $first = trim($firstLine);
+    if (mb_strlen($first) > 320) $first = mb_substr($first, 0, 320);
+    if (mb_strlen($archetype) > 64) $archetype = mb_substr($archetype, 0, 64);
+
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0770, true);
+    }
+
+    $lines = [
+        'O. ' . gmdate('c'),
+        'glyph: ' . ($glyph !== '' ? $glyph : '—'),
+        'archetype: ' . ($archetype !== '' ? $archetype : '—'),
+        'b0te: ' . ($first !== '' ? $first : '—'),
+    ];
+    $content = implode("\n", $lines) . "\n";
+
+    $ok = false;
+    try {
+        $ok = file_put_contents($path, $content, LOCK_EX) !== false;
+    } catch (Throwable) {
+        $ok = false;
+    }
+
+    return ['ok' => $ok, 'path' => $path];
 }
 
 function uid_from_door(PDO $pdo, string $door_id): int {
@@ -468,21 +527,62 @@ if ($path === '/me') {
     out(200, ['user' => $row, 'csrf' => $_SESSION['csrf']]);
 }
 
+if ($path === '/land/theme') {
+    require_method('GET');
+    $uid = require_auth_uid();
+    $pdo = db();
+
+    ensure_land($pdo, $uid);
+
+    $theme = getLandTheme($pdo, $uid);
+    if (!$theme) {
+        $stmt = $pdo->prepare("SELECT glyph FROM land WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $glyph = (string)($row['glyph'] ?? '');
+        if ($glyph !== '') {
+            $theme = applyLandGlyphTheme($pdo, $uid, $glyph);
+        }
+    }
+
+    out(200, ['theme' => $theme]);
+}
+
 // ====== Quest DELTA (4n0d3) ======
 if ($path === '/quest/delta') {
     require_method('GET');
     $uid = require_auth_uid();
     $pdo = db();
     try {
-        $stmt = $pdo->prepare("SELECT state, step, beauty_text, passage_choice, land_glyph, o_seed_line, seal, updated_at FROM quest_delta WHERE user_id = :u LIMIT 1");
+        $stmt = $pdo->prepare("
+            SELECT q.state, q.step, q.beauty_text, q.passage_choice, q.land_glyph, q.o_seed_line, q.seal, q.updated_at,
+                   m.coherence_score
+            FROM quest_delta q
+            LEFT JOIN quest_delta_meta m ON m.user_id = q.user_id
+            WHERE q.user_id = :u
+            LIMIT 1
+        ");
         $stmt->execute([':u' => $uid]);
         $row = $stmt->fetch();
         if (!$row) {
-            out(200, ['state' => 'IDLE', 'step' => 0]);
+            out(200, ['state' => 'IDLE', 'step' => 0, 'answers' => []]);
         }
-        out(200, $row);
+        $answers = [
+            'beauty_text' => $row['beauty_text'] ?? null,
+            'coherence_score' => $row['coherence_score'] !== null ? (float)$row['coherence_score'] : null,
+            'passage_choice' => $row['passage_choice'] ?? null,
+            'land_glyph' => $row['land_glyph'] ?? null,
+            'o_seed_line' => $row['o_seed_line'] ?? null,
+            'seal' => $row['seal'] ?? null,
+        ];
+        out(200, [
+            'state' => (string)$row['state'],
+            'step' => (int)$row['step'],
+            'answers' => $answers,
+            'updated_at' => $row['updated_at'] ?? null,
+        ]);
     } catch (Throwable) {
-        out(200, ['state' => 'IDLE', 'step' => 0]);
+        out(200, ['state' => 'IDLE', 'step' => 0, 'answers' => []]);
     }
 }
 
@@ -492,13 +592,28 @@ if ($path === '/quest/delta/start') {
     require_csrf();
     $pdo = db();
     try {
+        $pdo->beginTransaction();
+
         $pdo->prepare("
-            INSERT INTO quest_delta (user_id, state, step)
-            VALUES (:u, 'RUNNING', 1)
-            ON DUPLICATE KEY UPDATE state = 'RUNNING', step = 1, updated_at = CURRENT_TIMESTAMP
+            INSERT INTO quest_delta (user_id, state, step, beauty_text, passage_choice, land_glyph, o_seed_line, seal)
+            VALUES (:u, 'RUNNING', 1, NULL, NULL, NULL, NULL, NULL)
+            ON DUPLICATE KEY UPDATE
+              state = 'RUNNING',
+              step = 1,
+              beauty_text = NULL,
+              passage_choice = NULL,
+              land_glyph = NULL,
+              o_seed_line = NULL,
+              seal = NULL,
+              updated_at = CURRENT_TIMESTAMP
         ")->execute([':u' => $uid]);
+
+        $pdo->prepare("DELETE FROM quest_delta_meta WHERE user_id = :u")->execute([':u' => $uid]);
+
+        $pdo->commit();
         out(200, ['state' => 'RUNNING', 'step' => 1]);
     } catch (Throwable) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
         out(500, ['error' => 'quest_start_failed']);
     }
 }
@@ -535,9 +650,13 @@ if ($path === '/quest/delta/answer') {
         if ($wc <= 0 || $wc > 9) {
             out(200, ['ok' => false, 'step' => 2, 'error' => 'length', 'max_words' => 9]);
         }
-        $score = beauty_score($answer);
+        $score = delta_coherence_score($answer);
         $pdo->prepare("UPDATE quest_delta SET beauty_text = :t, step = 3 WHERE user_id = :u")
             ->execute([':t' => $answer, ':u' => $uid]);
+        $pdo->prepare("
+            INSERT INTO quest_delta_meta (user_id, coherence_score) VALUES (:u, :s)
+            ON DUPLICATE KEY UPDATE coherence_score = VALUES(coherence_score), updated_at = CURRENT_TIMESTAMP
+        ")->execute([':u' => $uid, ':s' => $score]);
         out(200, ['ok' => true, 'step' => 3, 'score' => $score]);
     }
 
@@ -586,8 +705,15 @@ if ($path === '/quest/delta/end') {
     $pdo = db();
 
     $seal = 'Δ';
+    $glyph = '';
+    $theme = null;
     try {
-        $pdo->prepare("UPDATE quest_delta SET state = 'ENDED', seal = :s WHERE user_id = :u")
+        $stmt = $pdo->prepare("SELECT land_glyph FROM quest_delta WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $glyph = (string)($row['land_glyph'] ?? '');
+
+        $pdo->prepare("UPDATE quest_delta SET state = 'ENDED', step = 0, seal = :s WHERE user_id = :u")
             ->execute([':s' => $seal, ':u' => $uid]);
     } catch (Throwable) {
         // Rollout-safe.
@@ -597,8 +723,29 @@ if ($path === '/quest/delta/end') {
         ensure_land($pdo, $uid);
         $pdo->prepare("UPDATE land SET seal = :s WHERE user_id = :u")
             ->execute([':s' => $seal, ':u' => $uid]);
+
+        // Apply land theme (separate module). If glyph isn't set, do nothing.
+        $g = normalize_greek_glyph($glyph);
+        if ($g !== '') {
+            $theme = applyLandGlyphTheme($pdo, $uid, $g);
+        }
     } catch (Throwable) {
         // Ignore.
+    }
+
+    // Unlock B0te creation for 7 days.
+    try {
+        $pdo->prepare("
+            INSERT INTO bote_unlock (user_id, unlock_until)
+            VALUES (:u, DATE_ADD(NOW(), INTERVAL 7 DAY))
+            ON DUPLICATE KEY UPDATE unlock_until = VALUES(unlock_until), updated_at = CURRENT_TIMESTAMP
+        ")->execute([':u' => $uid]);
+        $stmt = $pdo->prepare("SELECT unlock_until FROM bote_unlock WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $urow = $stmt->fetch();
+        $unlockUntil = $urow['unlock_until'] ?? null;
+    } catch (Throwable) {
+        $unlockUntil = null;
     }
 
     // Trigger flip token (server-driven)
@@ -611,9 +758,9 @@ if ($path === '/quest/delta/end') {
         $stmt->execute([':u' => $uid]);
         $row = $stmt->fetch();
         $seq = (int)($row['flip_seq'] ?? 0);
-        out(200, ['status' => 'ended', 'seal' => $seal, 'flip_seq' => $seq]);
+        out(200, ['status' => 'ended', 'seal' => $seal, 'flip_seq' => $seq, 'theme' => $theme, 'bote_unlock_until' => $unlockUntil]);
     } catch (Throwable) {
-        out(200, ['status' => 'ended', 'seal' => $seal]);
+        out(200, ['status' => 'ended', 'seal' => $seal, 'theme' => $theme, 'bote_unlock_until' => $unlockUntil]);
     }
 }
 
@@ -1139,6 +1286,210 @@ TXT;
     }
 
     out(405, ['error' => 'method_not_allowed']);
+}
+
+// ====== B0te (v2) ======
+if ($path === '/bote/active') {
+    require_method('GET');
+    $uid = require_auth_uid();
+    $pdo = db();
+
+    $unlock = bote_unlock_info($pdo, $uid);
+
+    $stmt = $pdo->prepare("
+        SELECT status, languages, content, created_at, validated_at, expires_at, glyph, archetype, seed_path, first_line, updated_at
+        FROM bote_entries
+        WHERE user_id = :u
+        LIMIT 1
+    ");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        $status = (string)($row['status'] ?? '');
+        $expires = $row['expires_at'] ?? null;
+        if ($status === 'VISIBLE' && $expires) {
+            $ts = strtotime((string)$expires);
+            if ($ts !== false && $ts < time()) {
+                $pdo->prepare("UPDATE bote_entries SET status = 'ARCHIVED' WHERE user_id = :u")->execute([':u' => $uid]);
+                $row['status'] = 'ARCHIVED';
+            }
+        }
+    }
+
+    out(200, ['bote' => $row ?: null, 'unlock_until' => $unlock['unlock_until'], 'unlocked' => $unlock['unlocked']]);
+}
+
+if ($path === '/bote/start') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+
+    $unlock = bote_unlock_info($pdo, $uid);
+    if (!$unlock['unlocked']) out(403, ['error' => 'bote_locked', 'unlock_until' => $unlock['unlock_until']]);
+
+    // Don't overwrite an active visible B0te.
+    try {
+        $stmt = $pdo->prepare("SELECT status, expires_at FROM bote_entries WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        if ($row && (string)($row['status'] ?? '') === 'VISIBLE') {
+            $expires = $row['expires_at'] ?? null;
+            $ts = $expires ? strtotime((string)$expires) : false;
+            if ($ts === false || $ts >= time()) {
+                out(409, ['error' => 'bote_already_visible', 'expires_at' => $expires]);
+            }
+        }
+    } catch (Throwable) {
+        // Ignore.
+    }
+
+    $in = json_input();
+    $langs = $in['languages'] ?? null;
+    $langStr = null;
+    if (is_array($langs)) {
+        $safe = [];
+        foreach ($langs as $x) {
+            $t = strtolower(trim((string)$x));
+            if ($t === '' || mb_strlen($t) > 12) continue;
+            if (!preg_match('/^[a-z0-9_-]+$/', $t)) continue;
+            $safe[] = $t;
+        }
+        $safe = array_values(array_unique($safe));
+        if ($safe) $langStr = implode(',', $safe);
+    }
+
+    $pdo->prepare("
+        INSERT INTO bote_entries (user_id, status, languages, content, created_at, validated_at, expires_at, glyph, archetype, seed_path, first_line)
+        VALUES (:u, 'DRAFT', :l, '', CURRENT_TIMESTAMP, NULL, NULL, NULL, NULL, NULL, NULL)
+        ON DUPLICATE KEY UPDATE
+          status = 'DRAFT',
+          languages = VALUES(languages),
+          content = '',
+          created_at = CURRENT_TIMESTAMP,
+          validated_at = NULL,
+          expires_at = NULL,
+          glyph = NULL,
+          archetype = NULL,
+          seed_path = NULL,
+          first_line = NULL,
+          updated_at = CURRENT_TIMESTAMP
+    ")->execute([':u' => $uid, ':l' => $langStr]);
+
+    $stmt = $pdo->prepare("SELECT status, languages, content, created_at, validated_at, expires_at, updated_at FROM bote_entries WHERE user_id = :u LIMIT 1");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch();
+    out(200, ['status' => 'started', 'bote' => $row, 'unlock_until' => $unlock['unlock_until']]);
+}
+
+if ($path === '/bote/validate') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+
+    $unlock = bote_unlock_info($pdo, $uid);
+    if (!$unlock['unlocked']) out(403, ['error' => 'bote_locked', 'unlock_until' => $unlock['unlock_until']]);
+
+    $in = json_input();
+    $content = (string)($in['content'] ?? '');
+    if (mb_strlen($content) > 200_000) out(413, ['error' => 'content_too_large']);
+
+    $langs = $in['languages'] ?? null;
+    $langStr = null;
+    if (is_array($langs)) {
+        $safe = [];
+        foreach ($langs as $x) {
+            $t = strtolower(trim((string)$x));
+            if ($t === '' || mb_strlen($t) > 12) continue;
+            if (!preg_match('/^[a-z0-9_-]+$/', $t)) continue;
+            $safe[] = $t;
+        }
+        $safe = array_values(array_unique($safe));
+        if ($safe) $langStr = implode(',', $safe);
+    }
+
+    $firstLine = '';
+    $lines = preg_split("/\r?\n/u", $content);
+    if ($lines) {
+        foreach ($lines as $l) {
+            $t = trim((string)$l);
+            if ($t === '') continue;
+            $firstLine = $t;
+            break;
+        }
+    }
+
+    // Pull glyph/archetype from Quest DELTA if available.
+    $glyph = '';
+    $archetype = '';
+    try {
+        $stmt = $pdo->prepare("SELECT land_glyph, passage_choice FROM quest_delta WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $q = $stmt->fetch();
+        $glyph = normalize_greek_glyph((string)($q['land_glyph'] ?? ''));
+        $archetype = (string)($q['passage_choice'] ?? '');
+    } catch (Throwable) {
+        $glyph = '';
+        $archetype = '';
+    }
+
+    $seed = write_o_seed_file($uid, $glyph, $archetype, $firstLine);
+    $seedPath = $seed['ok'] ? (string)$seed['path'] : null;
+
+    $pdo->prepare("
+        INSERT INTO bote_entries (user_id, status, languages, content, validated_at, expires_at, glyph, archetype, seed_path, first_line)
+        VALUES (:u, 'VISIBLE', :l, :c, CURRENT_TIMESTAMP, DATE_ADD(NOW(), INTERVAL 7 DAY), :g, :a, :p, :f)
+        ON DUPLICATE KEY UPDATE
+          status = 'VISIBLE',
+          languages = VALUES(languages),
+          content = VALUES(content),
+          validated_at = CURRENT_TIMESTAMP,
+          expires_at = DATE_ADD(NOW(), INTERVAL 7 DAY),
+          glyph = VALUES(glyph),
+          archetype = VALUES(archetype),
+          seed_path = VALUES(seed_path),
+          first_line = VALUES(first_line),
+          updated_at = CURRENT_TIMESTAMP
+    ")->execute([
+        ':u' => $uid,
+        ':l' => $langStr,
+        ':c' => $content,
+        ':g' => $glyph !== '' ? $glyph : null,
+        ':a' => $archetype !== '' ? $archetype : null,
+        ':p' => $seedPath,
+        ':f' => $firstLine !== '' ? $firstLine : null,
+    ]);
+
+    $stmt = $pdo->prepare("
+        SELECT status, languages, content, created_at, validated_at, expires_at, glyph, archetype, seed_path, first_line, updated_at
+        FROM bote_entries
+        WHERE user_id = :u
+        LIMIT 1
+    ");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch();
+
+    out(200, [
+        'status' => 'validated',
+        'bote' => $row,
+        'seed' => $seed,
+        'unlock_until' => $unlock['unlock_until'],
+    ]);
+}
+
+if ($path === '/bote/cleanup') {
+    require_method('POST');
+    $token = (string)($_SERVER['HTTP_X_CLEANUP_TOKEN'] ?? '');
+    $expected = (string)(env('BOTE_CLEANUP_TOKEN', '') ?? '');
+    if ($expected === '' || !hash_equals($expected, $token)) {
+        out(403, ['error' => 'denied']);
+    }
+    $pdo = db();
+    $stmt = $pdo->prepare("UPDATE bote_entries SET status = 'ARCHIVED' WHERE status = 'VISIBLE' AND expires_at IS NOT NULL AND expires_at < NOW()");
+    $stmt->execute();
+    out(200, ['status' => 'ok', 'archived' => $stmt->rowCount()]);
 }
 
 if ($path === '/bote') {

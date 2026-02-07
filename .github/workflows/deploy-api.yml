@@ -93,7 +93,7 @@ jobs:
           ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           # Prepare directory
-          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo rm -rf /opt/sowwwl/app; sudo mkdir -p /opt/sowwwl/app/sowwwl-api-php'
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo rm -rf /opt/sowwwl/app; sudo mkdir -p /opt/sowwwl/app/sowwwl-api-php; sudo mkdir -p /opt/sowwwl/data/seeds'
 
           # Upload files
           scp -i ~/.ssh/id_deploy docker-compose.yml "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/docker-compose.yml"

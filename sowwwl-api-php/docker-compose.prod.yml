@@ -13,3 +13,7 @@ services:
   api:
     image: ${API_IMAGE:-ghcr.io/sowwwl-source/o-api:latest}
     restart: always
+    volumes:
+      - /opt/sowwwl/data/seeds:/data
+    environment:
+      SEED_ROOT: /data

@@ -5,196 +5,545 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>b0té — O.</title>
   <link rel="stylesheet" href="/assets/css/o.css" />
+  <style>
+    .b0te-grid{display:grid;gap:14px}
+    .b0te-editor{
+      width:100%;
+      min-height:26vh;
+      resize:vertical;
+      border-radius:18px;
+      padding:12px 14px;
+    }
+    .b0te-sed{
+      width:100%;
+      min-height:10vh;
+      border-radius:18px;
+      padding:12px 14px;
+      border:1px dashed var(--line);
+      opacity:.92;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .b0te-canvas{
+      width:100%;
+      height:min(52vh, 560px);
+      border-radius:18px;
+      border:1px solid var(--line);
+      display:block;
+      background:transparent;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      letter-spacing:.04em;
+      opacity:.9;
+    }
+    .pill.ok{border-color:rgba(120,255,170,.35)}
+    .pill.lock{opacity:.65}
+  </style>
 </head>
 <body>
   <main id="o">
     <header class="row" style="justify-content:space-between;gap:18px">
       <a class="muted" href="/sh0re.html">↩</a>
-      <span class="muted">/api/bote</span>
+      <span class="muted">/api/bote/*</span>
     </header>
 
-    <section class="card" aria-label="B0té">
+    <section class="card" aria-label="B0te">
       <h1 class="muted">// b0té //</h1>
-      <p class="muted">Édition + visualisation (1 b0té par compte).</p>
-      <p class="muted" style="margin-top:10px">Origin: <code id="origin">—</code></p>
-      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+      <p class="muted">Création live : texte + forme. Les mots s’insufflent. (Validation = 7 jours visibles.)</p>
+
+      <div class="row" style="margin-top:10px">
+        <span class="muted">Origin: <code id="origin">—</code></span>
+        <span class="muted">Moi: <code id="me">—</code></span>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <span id="pillUnlock" class="pill lock">unlock: —</span>
+        <span id="pillState" class="pill">state: —</span>
+        <span id="pillPhase" class="pill">phase: —</span>
+      </div>
 
       <div class="row" style="margin-top:14px">
-        <button id="btnSave" class="btn" type="button">sauver</button>
-        <button id="btnReload" class="btn" type="button">recharger</button>
+        <button id="btnStart" class="btn" type="button">commencer</button>
+        <button id="btnStop" class="btn" type="button">pause</button>
+        <button id="btnDict" class="btn" type="button">dictée</button>
+        <button id="btnValidate" class="btn" type="button">VALIDER</button>
         <a class="btn" href="/etat.html">état</a>
         <a class="btn" href="/login.html">login</a>
       </div>
 
       <div class="row" style="margin-top:14px">
-        <input id="title" type="text" placeholder="titre (optionnel)" autocomplete="off" />
+        <span class="muted">Langues:</span>
+        <label class="pill"><input id="lang_fr" type="checkbox" checked> fr</label>
+        <label class="pill"><input id="lang_en" type="checkbox" checked> en</label>
       </div>
+    </section>
 
-      <div class="row" style="margin-top:14px">
-        <textarea id="src" spellcheck="false" style="width:100%;min-height:52vh"></textarea>
+    <section class="card" aria-label="Edition">
+      <div class="b0te-grid">
+        <div>
+          <p class="muted">Écris. L’injection brouille en fin de page (sédimentation).</p>
+          <textarea id="user" class="b0te-editor" spellcheck="false" placeholder="…"></textarea>
+        </div>
+        <div>
+          <p class="muted">Sédimentation (injecté):</p>
+          <pre id="sed" class="b0te-sed">—</pre>
+        </div>
       </div>
+    </section>
 
-      <p class="muted" style="margin-top:10px">Preview:</p>
-      <pre id="view" class="card" style="margin-top:10px;white-space:pre-wrap">—</pre>
+    <section class="card" aria-label="Rendu">
+      <p class="muted">Rendu (canvas) : clic/touch = bouscule (champ 2D).</p>
+      <canvas id="cv" class="b0te-canvas" data-no-glitch></canvas>
+      <pre id="out" class="card" style="margin-top:12px;white-space:pre-wrap">—</pre>
     </section>
   </main>
 
-  <script>
+  <script type="module">
+    import { createInjectionSchedule, pickInjectedWord } from '/assets/js/bote-engine.mjs';
+
     document.getElementById('origin').textContent = window.location.origin;
 
     const els = {
       me: document.getElementById('me'),
-      title: document.getElementById('title'),
-      src: document.getElementById('src'),
-      view: document.getElementById('view'),
-      btnSave: document.getElementById('btnSave'),
-      btnReload: document.getElementById('btnReload'),
+      unlock: document.getElementById('pillUnlock'),
+      state: document.getElementById('pillState'),
+      phase: document.getElementById('pillPhase'),
+      out: document.getElementById('out'),
+      user: document.getElementById('user'),
+      sed: document.getElementById('sed'),
+      cv: document.getElementById('cv'),
+      btnStart: document.getElementById('btnStart'),
+      btnStop: document.getElementById('btnStop'),
+      btnDict: document.getElementById('btnDict'),
+      btnValidate: document.getElementById('btnValidate'),
+      langFr: document.getElementById('lang_fr'),
+      langEn: document.getElementById('lang_en'),
     };
 
-    function render() {
-      els.view.textContent = els.src.value || '—';
-    }
+    function show(x) { els.out.textContent = JSON.stringify(x, null, 2); }
 
-    async function getMe() {
-      const res = await fetch('/api/me', { credentials: 'include' });
+    async function api(path, opts) {
+      const res = await fetch('/api' + path, Object.assign({ credentials: 'include' }, opts || {}));
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); } catch { data = { raw: text }; }
       return { ok: res.ok, status: res.status, data };
     }
 
-    async function getBote() {
-      const res = await fetch('/api/bote', { credentials: 'include' });
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-      return { ok: res.ok, status: res.status, data };
+    let CSRF = '';
+    let dictionaries = { fr: [], en: [] };
+    let banned = new Set();
+
+    function selectedLanguages() {
+      const out = [];
+      if (els.langFr.checked) out.push('fr');
+      if (els.langEn.checked) out.push('en');
+      return out.length ? out : ['fr'];
     }
 
-    async function saveBote(csrf, title, content) {
-      const res = await fetch('/api/bote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf },
-        credentials: 'include',
-        body: JSON.stringify({ title, content }),
+    function saveLangs() {
+      try {
+        localStorage.setItem('o:b0te:langs', JSON.stringify({ fr: els.langFr.checked, en: els.langEn.checked }));
+      } catch {}
+    }
+    function loadLangs() {
+      try {
+        const raw = localStorage.getItem('o:b0te:langs');
+        if (!raw) return;
+        const o = JSON.parse(raw);
+        if (typeof o?.fr === 'boolean') els.langFr.checked = o.fr;
+        if (typeof o?.en === 'boolean') els.langEn.checked = o.en;
+      } catch {}
+    }
+
+    els.langFr.addEventListener('change', saveLangs);
+    els.langEn.addEventListener('change', saveLangs);
+
+    async function loadJson(url) {
+      const res = await fetch(url, { credentials: 'omit', cache: 'no-store' });
+      const text = await res.text();
+      try { return JSON.parse(text); } catch { return null; }
+    }
+
+    const schedule = createInjectionSchedule();
+    let running = false;
+    let timer = 0;
+    let startedAt = 0;
+    const MAX_DURATION_MS = 8 * 60 * 1000;
+
+    let sedText = '';
+    const recent = new Set();
+    const recentQueue = [];
+
+    function addRecent(w) {
+      const k = String(w || '').toLowerCase();
+      if (!k) return;
+      recent.add(k);
+      recentQueue.push(k);
+      while (recentQueue.length > 48) {
+        const old = recentQueue.shift();
+        recent.delete(old);
+      }
+    }
+
+    function appendSedimentation(w) {
+      const word = String(w || '').trim();
+      if (!word) return;
+      const sep = sedText === '' ? '' : (sedText.endsWith('\n') ? '' : ' ');
+      sedText += sep + word;
+      // Soft line breaks for breathing.
+      const tokens = sedText.trim().split(/\s+/);
+      if (tokens.length % 9 === 0) sedText += '\n';
+      els.sed.textContent = sedText || '—';
+      renderCanvas();
+    }
+
+    function combinedText() {
+      const user = els.user.value || '';
+      const sed = sedText.trim();
+      if (!sed) return user;
+      return user + '\n\n// sedimentation\n' + sed;
+    }
+
+    function setPills({ unlocked, unlockUntil, boteState } = {}) {
+      els.unlock.textContent = unlockUntil ? `unlock: ${unlockUntil}` : 'unlock: —';
+      els.unlock.classList.toggle('ok', Boolean(unlocked));
+      els.unlock.classList.toggle('lock', !unlocked);
+      els.state.textContent = `state: ${boteState || '—'}`;
+    }
+
+    function setPhasePill() {
+      const s = schedule.snapshot();
+      const quota = s.quota === Infinity ? '∞' : String(s.quota);
+      els.phase.textContent = `phase: ${s.intervalMs}ms (${s.injectedInPhase}/${quota})`;
+    }
+
+    function stop(reason) {
+      running = false;
+      if (timer) clearTimeout(timer);
+      timer = 0;
+      els.btnStart.disabled = false;
+      els.btnStop.disabled = true;
+      els.phase.textContent = reason ? `phase: ${reason}` : 'phase: —';
+    }
+
+    function injectOnce() {
+      const w = pickInjectedWord({
+        dictionaries,
+        languages: selectedLanguages(),
+        banned,
+        recent,
       });
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
-      return { ok: res.ok, status: res.status, data };
+      if (!w) return;
+      addRecent(w);
+      appendSedimentation(w);
+      schedule.recordInjection();
+      setPhasePill();
+    }
+
+    function tick() {
+      if (!running) return;
+      if (Date.now() - startedAt > MAX_DURATION_MS) return stop('max');
+      injectOnce();
+      timer = setTimeout(tick, schedule.nextDelayMs());
+    }
+
+    async function start() {
+      if (!CSRF) return show({ ok: false, error: 'csrf_missing' });
+      const langs = selectedLanguages();
+      const r = await api('/bote/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ languages: langs }),
+      });
+      show(r);
+      if (!r.ok) return;
+
+      sedText = '';
+      recent.clear();
+      recentQueue.length = 0;
+      els.sed.textContent = '—';
+
+      schedule.reset();
+      setPhasePill();
+      running = true;
+      startedAt = Date.now();
+      els.btnStart.disabled = true;
+      els.btnStop.disabled = false;
+      timer = setTimeout(tick, schedule.nextDelayMs());
+    }
+
+    async function validate() {
+      if (!CSRF) return show({ ok: false, error: 'csrf_missing' });
+      stop('—');
+      const langs = selectedLanguages();
+      const r = await api('/bote/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ languages: langs, content: combinedText() }),
+      });
+      show(r);
+      await refreshState();
+    }
+
+    els.btnStart.addEventListener('click', start);
+    els.btnStop.addEventListener('click', () => stop('pause'));
+    els.btnValidate.addEventListener('click', validate);
+
+    els.user.addEventListener('input', () => renderCanvas());
+
+    // ===== Dictation (Web Speech API) =====
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let rec = null;
+    let dictOn = false;
+
+    function dictSetUI(on, msg) {
+      els.btnDict.textContent = on ? 'dictée: on' : 'dictée';
+      if (msg) els.phase.textContent = `phase: ${msg}`;
+    }
+
+    function insertAtCursor(text) {
+      const ta = els.user;
+      const start = ta.selectionStart || 0;
+      const end = ta.selectionEnd || 0;
+      const cur = ta.value || '';
+      const next = cur.slice(0, start) + text + cur.slice(end);
+      ta.value = next;
+      const pos = start + text.length;
+      ta.setSelectionRange(pos, pos);
+      ta.focus();
+      renderCanvas();
+    }
+
+    function dictStart() {
+      if (!SpeechRecognition) return dictSetUI(false, 'dictée indisponible');
+      if (rec) return;
+      rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = selectedLanguages().includes('fr') ? 'fr-FR' : 'en-US';
+      let lastFinal = '';
+
+      rec.onresult = (e) => {
+        let finalText = '';
+        let interim = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          const t = (r && r[0] && r[0].transcript) ? r[0].transcript : '';
+          if (r.isFinal) finalText += t;
+          else interim += t;
+        }
+        const cleaned = (finalText || '').trim();
+        if (cleaned && cleaned !== lastFinal) {
+          lastFinal = cleaned;
+          insertAtCursor(cleaned + ' ');
+        }
+        if (interim) dictSetUI(true, 'ecoute…');
+      };
+
+      rec.onerror = () => { dictStop('erreur'); };
+      rec.onend = () => { if (dictOn) dictStop('fin'); };
+
+      dictOn = true;
+      dictSetUI(true, 'ecoute…');
+      try { rec.start(); } catch { dictStop('indisponible'); }
+    }
+
+    function dictStop(reason) {
+      dictOn = false;
+      dictSetUI(false, reason || '');
+      try { rec && rec.stop(); } catch {}
+      rec = null;
+    }
+
+    els.btnDict.addEventListener('click', () => {
+      if (dictOn) return dictStop('stop');
+      dictStart();
+    });
+
+    // ===== Canvas vector field (2D illusion) =====
+    const ctx = els.cv.getContext('2d', { alpha: true });
+    const impulses = [];
+    let canvasDpr = 1;
+    let needResize = true;
+
+    function cssVar(name, fallback) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
+
+    function resizeCanvas() {
+      const r = els.cv.getBoundingClientRect();
+      canvasDpr = Math.min(2, window.devicePixelRatio || 1);
+      els.cv.width = Math.max(1, Math.floor(r.width * canvasDpr));
+      els.cv.height = Math.max(1, Math.floor(r.height * canvasDpr));
+      needResize = false;
+    }
+
+    function addImpulse(clientX, clientY) {
+      const r = els.cv.getBoundingClientRect();
+      const x = (clientX - r.left) * canvasDpr;
+      const y = (clientY - r.top) * canvasDpr;
+      impulses.push({ x, y, start: performance.now(), dur: 900, amp: 22, sigma: 140 });
+      if (impulses.length > 6) impulses.shift();
+    }
+
+    els.cv.addEventListener('pointerdown', (e) => {
+      addImpulse(e.clientX, e.clientY);
+    });
+
+    function wrapLines(lines, maxCols) {
+      const out = [];
+      for (const line of lines) {
+        const s = String(line || '');
+        if (s.length <= maxCols) { out.push(s); continue; }
+        for (let i = 0; i < s.length; i += maxCols) {
+          out.push(s.slice(i, i + maxCols));
+        }
+      }
+      return out;
+    }
+
+    function renderCanvas() {
+      if (!ctx) return;
+      const fg = cssVar('--fg', '#ffe7c7');
+      const green = cssVar('--accent-green', '#56ffa6');
+      const line = cssVar('--line', 'rgba(255,231,199,.22)');
+
+      if (needResize) resizeCanvas();
+      const w = els.cv.width;
+      const h = els.cv.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Frame
+      ctx.strokeStyle = line;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+      ctx.globalAlpha = 1;
+
+      const pad = 14 * canvasDpr;
+      const cssW = els.cv.getBoundingClientRect().width || 720;
+      const fontSize = Math.max(11, Math.min(14, Math.floor((cssW / 720) * 13)));
+      ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace`;
+      ctx.textBaseline = 'top';
+
+      const cellW = Math.max(7, Math.floor(fontSize * 0.62));
+      const lineH = Math.floor(fontSize * 1.35);
+      const maxCols = Math.max(16, Math.floor((w - pad * 2) / cellW));
+      const maxRows = Math.max(8, Math.floor((h - pad * 2) / lineH));
+
+      const userLines = (els.user.value || '').split(/\r?\n/);
+      const sedLines = (sedText || '').trim() ? (['', '// sedimentation'] .concat((sedText || '').split(/\r?\n/))) : [];
+
+      let lines = wrapLines(userLines.concat(sedLines), maxCols);
+      if (lines.length > maxRows) lines = lines.slice(lines.length - maxRows);
+
+      const now = performance.now();
+      for (let i = impulses.length - 1; i >= 0; i--) {
+        const im = impulses[i];
+        const t = (now - im.start) / im.dur;
+        if (t >= 1) impulses.splice(i, 1);
+      }
+
+      for (let row = 0; row < lines.length; row++) {
+        const s = lines[row];
+        const isSed = row >= (lines.length - sedLines.length) && sedLines.length > 0;
+        ctx.fillStyle = isSed ? green : fg;
+        ctx.globalAlpha = isSed ? 0.86 : 0.92;
+
+        for (let col = 0; col < s.length; col++) {
+          const ch = s[col];
+          const x0 = pad + col * cellW;
+          const y0 = pad + row * lineH;
+
+          let ox = 0;
+          let oy = 0;
+          for (const im of impulses) {
+            const dx = x0 - im.x;
+            const dy = y0 - im.y;
+            const d2 = dx * dx + dy * dy;
+            const t = (now - im.start) / im.dur;
+            const fade = Math.max(0, 1 - t);
+            const wgt = Math.exp(-d2 / (2 * im.sigma * im.sigma)) * fade;
+            const inv = 1 / (Math.sqrt(d2) + 10);
+            // Swirl (perpendicular)
+            ox += (-dy) * inv * wgt * im.amp;
+            oy += (dx) * inv * wgt * im.amp;
+          }
+
+          ctx.fillText(ch, x0 + ox, y0 + oy);
+        }
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Render loop: slow, steady, non-aggressive.
+    let raf = 0;
+    function frame() {
+      renderCanvas();
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+
+    window.addEventListener('resize', () => { needResize = true; });
+
+    // ===== Bootstrap =====
+    async function refreshState() {
+      const r = await api('/bote/active');
+      const bote = r.data?.bote || null;
+      const unlocked = Boolean(r.data?.unlocked);
+      const unlockUntil = r.data?.unlock_until || null;
+      const boteState = bote ? (bote.status || '—') : '—';
+      setPills({ unlocked, unlockUntil, boteState });
+      if (bote && bote.status === 'VISIBLE') {
+        els.user.value = bote.content || '';
+        sedText = '';
+        els.sed.textContent = '—';
+        els.btnStart.disabled = true;
+        els.btnValidate.disabled = true;
+        stop('visible');
+      } else {
+        els.btnStart.disabled = !unlocked;
+        els.btnValidate.disabled = !unlocked;
+        els.btnStop.disabled = true;
+        setPhasePill();
+      }
+      show(r);
     }
 
     async function bootstrap() {
-      const m = await getMe();
-      if (!m.ok) {
+      loadLangs();
+      const me = await api('/me');
+      if (!me.ok) {
         els.me.textContent = 'guest';
-        els.src.value = 'Connecte-toi d’abord: /login.html';
-        render();
+        els.btnStart.disabled = true;
+        els.btnValidate.disabled = true;
+        show(me);
         return;
       }
-      const u = m.data?.user;
-      const handle = u?.handle || ('o.' + (u?.id || '?'));
-      els.me.textContent = `${handle} (${u?.email || '—'})`;
+      CSRF = String(me.data?.csrf || '');
+      const u = me.data?.user || {};
+      els.me.textContent = `${u.handle || ('o.' + (u.id || '?'))} (${u.email || '—'})`;
 
-      const b = await getBote();
-      const bote = b.data?.bote || {};
-      els.title.value = bote.title || '';
-      els.src.value = bote.content || '';
-      render();
-      window.__csrf = m.data?.csrf || '';
+      // Load dictionaries
+      const fr = await loadJson('/assets/dict/fr.json');
+      const en = await loadJson('/assets/dict/en.json');
+      const ban = await loadJson('/assets/dict/banned.json');
+      if (Array.isArray(fr)) dictionaries.fr = fr;
+      if (Array.isArray(en)) dictionaries.en = en;
+      if (Array.isArray(ban)) banned = new Set(ban.map((x) => String(x || '').toLowerCase().trim()));
 
-      if (IS_PREVIEW && !previewStarted) {
-        previewStarted = true;
-        startPreviewWords();
-      }
-    }
-
-    els.src.addEventListener('input', render);
-    els.btnReload.addEventListener('click', bootstrap);
-    els.btnSave.addEventListener('click', async () => {
-      const csrf = window.__csrf || '';
-      const r = await saveBote(csrf, els.title.value, els.src.value);
-      if (!r.ok) {
-        els.view.textContent = JSON.stringify(r, null, 2);
-        return;
-      }
-      // Refresh csrf/user state (and show latest data)
-      await bootstrap();
-    });
-
-    const IS_PREVIEW =
-      Boolean(window.__O_PREVIEW__) ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1';
-
-    let previewStarted = false;
-
-    function startPreviewWords() {
-      // Random words injected into the b0té, accelerating every 3 inserts:
-      // 11s → 8s → 5s → 3s → 2s → 1s → 1s → O.
-      const speeds = [11, 8, 5, 3, 2, 1, 1]; // seconds
-      const words = [
-        'algues', 'minitel', 'ambre', 'horaires', 'grain', 'trace', 'archive',
-        'seuil', 'porte', 'calme', 'flux', 'silence', 'inverse', 'point',
-        'sh0re', 'b0té', 'qu3st', 'manif3st', 'scan', 'anneau', 'donut',
-        'lenteur', 'vide', 'matière', 'attention', 'respire', 'reste',
-      ];
-
-      function rand01() {
-        try {
-          const a = new Uint32Array(1);
-          crypto.getRandomValues(a);
-          return a[0] / 4294967296;
-        } catch {
-          return Math.random();
-        }
-      }
-
-      function pick(arr) {
-        return arr[Math.floor(rand01() * arr.length)];
-      }
-
-      function glitchOE(s) {
-        // Soft glitch: occasionally swap o/e -> 0/3
-        if (rand01() > 0.38) return s;
-        return s.replace(/o/gi, '0').replace(/e/gi, '3');
-      }
-
-      function appendWord(w) {
-        const cur = els.src.value || '';
-        const sep = cur === '' ? '' : (cur.endsWith('\n') ? '' : '\n');
-        els.src.value = cur + sep + w;
-        render();
-      }
-
-      let stage = 0;
-      let hits = 0;
-      let stopped = false;
-
-      function tick() {
-        if (stopped) return;
-
-        // Don't interfere while typing.
-        if (document.activeElement !== els.src) {
-          const w = glitchOE(pick(words));
-          appendWord(w);
-          hits++;
-          if (hits >= 3) {
-            hits = 0;
-            stage++;
-            if (stage >= speeds.length) {
-              stopped = true;
-              appendWord('O.');
-              return;
-            }
-          }
-        }
-
-        const delay = speeds[Math.min(stage, speeds.length - 1)] * 1000;
-        setTimeout(tick, delay);
-      }
-
-      setTimeout(tick, speeds[0] * 1000);
+      await refreshState();
+      renderCanvas();
     }
 
     bootstrap();
