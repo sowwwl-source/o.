@@ -301,7 +301,7 @@
       const name = (el.getAttribute("data-threshold") || "").trim() || "threshold";
       const origin = bestOrigin(e.clientX ?? window.innerWidth / 2, e.clientY ?? window.innerHeight / 2);
 
-      e.preventDefault();
+      if (isNav) e.preventDefault();
       try {
         await threshold(name, origin);
       } catch {}
