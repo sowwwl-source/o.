@@ -16,32 +16,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare target directory
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            set -e
-            sudo mkdir -p /var/www/sowwwl-front
-            sudo rm -rf /var/www/sowwwl-front/*
+      - name: Deploy to DigitalOcean (rsync over ssh)
+        env:
+          DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USER: ${{ secrets.DO_USER }}
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+        run: |
+          set -euo pipefail
 
-      - name: Upload static frontend
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: "sowwwl-front/*"
-          target: "/var/www/sowwwl-front"
+          sudo apt-get update -y
+          sudo apt-get install -y rsync openssh-client
 
-      - name: Ensure readable permissions
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            set -e
-            sudo chmod -R a+rX /var/www/sowwwl-front
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${DO_SSH_KEY}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo mkdir -p /var/www/sowwwl-front'
+          rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" sowwwl-front/ "${DO_USER}@${DO_HOST}:/var/www/sowwwl-front/"
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo chmod -R a+rX /var/www/sowwwl-front'
