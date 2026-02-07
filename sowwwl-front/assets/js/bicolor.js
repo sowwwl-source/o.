@@ -1,9 +1,11 @@
-/* Bicolor flip + soft navigation + O./. zoom */
+/* Bicolor (server-driven) + typography glitch + C0ntr0l */
 (() => {
   const root = document.documentElement;
   const STORE_INV = "o:inv";
   const STORE_FOCUS = "o:focus";
   const STORE_DEPTH = "o:depth";
+  const STORE_UID = "o:uid";
+  const STORE_SEQ_PREFIX = "o:seq:";
 
   const storage = {
     get(key) {
@@ -24,9 +26,9 @@
     return v === "o" || v === "dot" ? v : "dot";
   }
 
-  function readDepth() {
-    const n = Number.parseInt(storage.get(STORE_DEPTH) || "0", 10);
-    return Number.isFinite(n) && n > 0 ? n : 0;
+  function toInt(v, fallback = 0) {
+    const n = Number.parseInt(String(v ?? ""), 10);
+    return Number.isFinite(n) ? n : fallback;
   }
 
   function zoomFromDepth(depth) {
@@ -34,15 +36,60 @@
     return 1 + Math.log1p(depth) * 0.18;
   }
 
-  // Apply stored state (no-op if storage is blocked)
-  const storedInv = storage.get(STORE_INV) === "1";
-  root.classList.toggle("is-inverted", storedInv);
+  function stateFromSeq(seq) {
+    const depth = Math.max(0, toInt(seq, 0));
+    const inv = depth % 2 === 1;
+    const focus = inv ? "o" : "dot";
+    return { inv, focus, depth };
+  }
 
-  const storedFocus = clampFocus(storage.get(STORE_FOCUS));
-  root.dataset.focus = storedFocus;
+  function applyVisualState(next) {
+    root.classList.toggle("is-inverted", Boolean(next.inv));
+    root.dataset.focus = clampFocus(next.focus);
+    root.style.setProperty("--zoom", String(zoomFromDepth(Math.max(0, toInt(next.depth, 0)))));
 
-  let depth = readDepth();
-  root.style.setProperty("--zoom", String(zoomFromDepth(depth)));
+    storage.set(STORE_INV, next.inv ? "1" : "0");
+    storage.set(STORE_FOCUS, clampFocus(next.focus));
+    storage.set(STORE_DEPTH, String(Math.max(0, toInt(next.depth, 0))));
+  }
+
+  // Apply cached state immediately (prevents flicker). Server sync will override.
+  applyVisualState({
+    inv: storage.get(STORE_INV) === "1",
+    focus: clampFocus(storage.get(STORE_FOCUS)),
+    depth: toInt(storage.get(STORE_DEPTH), 0),
+  });
+
+  // Track last pointer/touch position so flips can originate from touch on iOS/Android.
+  const lastPointer = {
+    x: window.innerWidth / 2,
+    y: window.innerHeight / 2,
+    ts: 0,
+  };
+
+  function recordPointer(x, y) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    lastPointer.x = x;
+    lastPointer.y = y;
+    lastPointer.ts = Date.now();
+  }
+
+  function recordFromEvent(e) {
+    if (!e) return;
+    if (typeof e.clientX === "number" && typeof e.clientY === "number") {
+      recordPointer(e.clientX, e.clientY);
+      return;
+    }
+    const t = e.touches && e.touches[0];
+    if (t && typeof t.clientX === "number" && typeof t.clientY === "number") {
+      recordPointer(t.clientX, t.clientY);
+    }
+  }
+
+  window.addEventListener("pointerdown", recordFromEvent, { capture: true, passive: true });
+  window.addEventListener("pointermove", recordFromEvent, { capture: true, passive: true });
+  window.addEventListener("touchstart", recordFromEvent, { capture: true, passive: true });
+  window.addEventListener("touchmove", recordFromEvent, { capture: true, passive: true });
 
   function focusEl() {
     const focus = clampFocus(root.dataset.focus);
@@ -55,6 +102,12 @@
     if (!el) return { x: fallbackX, y: fallbackY };
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  function bestOrigin(fallbackX, fallbackY) {
+    const recent = Date.now() - lastPointer.ts < 5000;
+    if (recent) return { x: lastPointer.x, y: lastPointer.y };
+    return originFromFocus(fallbackX, fallbackY);
   }
 
   function createIris(x, y) {
@@ -75,11 +128,12 @@
 
   let flipping = false;
 
-  async function flipAt(x, y) {
+  async function irisCommit(commit, origin) {
     if (flipping) return;
     flipping = true;
 
-    const iris = createIris(x, y);
+    const o = origin || bestOrigin(window.innerWidth / 2, window.innerHeight / 2);
+    const iris = createIris(o.x, o.y);
     await new Promise((resolve) => {
       const t = setTimeout(resolve, 650);
       iris.addEventListener(
@@ -92,23 +146,12 @@
       );
     });
 
-    // Toggle theme
-    const nowInv = !root.classList.contains("is-inverted");
-    root.classList.toggle("is-inverted", nowInv);
-    storage.set(STORE_INV, nowInv ? "1" : "0");
-
-    // Zoom depth
-    depth++;
-    storage.set(STORE_DEPTH, String(depth));
-    root.style.setProperty("--zoom", String(zoomFromDepth(depth)));
-
-    // Alternate focus: O <-> .
-    const nextFocus = clampFocus(root.dataset.focus) === "dot" ? "o" : "dot";
-    root.dataset.focus = nextFocus;
-    storage.set(STORE_FOCUS, nextFocus);
-
-    iris.remove();
-    flipping = false;
+    try {
+      commit();
+    } finally {
+      iris.remove();
+      flipping = false;
+    }
   }
 
   function isSameOriginHref(href) {
@@ -125,69 +168,147 @@
     return Boolean(target?.closest("input, textarea, select, option, button, label"));
   }
 
-  function linkTargetFromEventTarget(target) {
-    const el = target?.closest("a[href], [data-href]");
-    if (!el) return null;
-    if (el.matches("a[href]")) return { el, href: el.getAttribute("href") || "" };
-    return { el, href: el.getAttribute("data-href") || "" };
+  // ====== Server-driven flip (token stored in profile; multi-device) ======
+  const api = {
+    async json(path, opts) {
+      const res = await fetch(path, Object.assign({ credentials: "include" }, opts || {}));
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { raw: text };
+      }
+      return { ok: res.ok, status: res.status, data };
+    },
+  };
+
+  const ux = {
+    uid: toInt(storage.get(STORE_UID), 0) || null,
+    csrf: "",
+    seq: null,
+    seqKey(uid) {
+      return `${STORE_SEQ_PREFIX}${uid}`;
+    },
+    lastSeq(uid) {
+      const v = storage.get(this.seqKey(uid));
+      if (v === null) return null;
+      return toInt(v, 0);
+    },
+    remember(uid, seq) {
+      storage.set(STORE_UID, String(uid));
+      storage.set(this.seqKey(uid), String(seq));
+    },
+  };
+
+  async function syncFromServer({ animate = false } = {}) {
+    const r = await api.json("/api/me");
+    if (!r.ok) {
+      ux.uid = null;
+      ux.csrf = "";
+      ux.seq = null;
+      return { ok: false, status: r.status, data: r.data };
+    }
+
+    const u = r.data?.user || {};
+    const uid = toInt(u.id, 0) || null;
+    const seq = Math.max(0, toInt(u.flip_seq, 0));
+
+    ux.uid = uid;
+    ux.csrf = String(r.data?.csrf || "");
+    ux.seq = seq;
+
+    const next = stateFromSeq(seq);
+    const currentInv = root.classList.contains("is-inverted");
+    const last = uid ? ux.lastSeq(uid) : null;
+
+    if (uid) ux.remember(uid, seq);
+
+    // Avoid animating on first sync; animate only when token advances.
+    const tokenAdvanced = last !== null && seq !== last;
+    const themeChanged = next.inv !== currentInv;
+
+    if (animate && tokenAdvanced && themeChanged) {
+      await irisCommit(() => applyVisualState(next), bestOrigin(window.innerWidth / 2, window.innerHeight / 2));
+      return { ok: true, status: r.status, data: r.data };
+    }
+
+    applyVisualState(next);
+    return { ok: true, status: r.status, data: r.data };
   }
 
-  // Click = flip (except form editing). For links: flip then navigate.
+  async function threshold(name, origin) {
+    if (flipping) return { ok: false, status: 409, data: { error: "busy" } };
+
+    // Ensure we have csrf (and are authed)
+    if (!ux.csrf) await syncFromServer({ animate: false });
+    if (!ux.csrf) return { ok: false, status: 401, data: { guest: true } };
+
+    const r = await api.json("/api/ux/threshold", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF": ux.csrf },
+      body: JSON.stringify({ name: String(name || "") }),
+    });
+
+    if (!r.ok) return r;
+
+    const seq = Math.max(0, toInt(r.data?.flip_seq, 0));
+    ux.seq = seq;
+    if (ux.uid) ux.remember(ux.uid, seq);
+
+    const next = stateFromSeq(seq);
+    const themeChanged = next.inv !== root.classList.contains("is-inverted");
+    if (themeChanged) {
+      await irisCommit(() => applyVisualState(next), origin || bestOrigin(window.innerWidth / 2, window.innerHeight / 2));
+    } else {
+      applyVisualState(next);
+    }
+
+    return r;
+  }
+
+  // Public helpers for pages: O.threshold("quest") and O.sync()
+  window.O = window.O || {};
+  window.O.threshold = threshold;
+  window.O.sync = syncFromServer;
+
+  // Initial sync (no animation) + resync on focus (multi-device).
+  syncFromServer({ animate: false }).catch(() => {});
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    syncFromServer({ animate: true }).catch(() => {});
+  });
+  window.addEventListener("focus", () => syncFromServer({ animate: true }).catch(() => {}));
+
+  // Optional: mark specific links/buttons as thresholds via data-threshold="name".
   document.addEventListener(
     "click",
     async (e) => {
       if (e.defaultPrevented) return;
-      if (flipping) {
-        e.preventDefault();
-        return;
-      }
-
-      // Allow pages to opt-out for specific interactive regions (e.g. 3D canvases).
-      if (e.target instanceof Element && e.target.closest("[data-no-flip]")) return;
-
-      const nav = linkTargetFromEventTarget(e.target);
-      const isNav = Boolean(nav?.href) && isSameOriginHref(nav?.href);
-
-      // Let modified clicks behave normally (new tab, context, etc.)
-      if (isNav && (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return;
-      if (isNav && nav?.el?.matches("a[target='_blank'], a[download]")) return;
-
-      // Don't flip while interacting with inputs/textarea/etc.
-      if (!isNav && isInteractive(e.target)) return;
-
-      const origin = originFromFocus(
-        e.clientX ?? window.innerWidth / 2,
-        e.clientY ?? window.innerHeight / 2,
-      );
-      if (isNav) e.preventDefault();
-
-      await flipAt(origin.x, origin.y);
-
-      if (isNav && nav?.href) {
-        const u = new URL(nav.href, window.location.href);
-        window.location.href = u.toString();
-      }
-    },
-    { capture: true },
-  );
-
-  // Make spans with data-href keyboard-activatable (Enter / Space).
-  document.addEventListener(
-    "keydown",
-    async (e) => {
-      if (e.defaultPrevented) return;
-      if (e.key !== "Enter" && e.key !== " ") return;
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      const el = target.closest("[data-href]");
+      if (flipping) return;
+      if (!(e.target instanceof Element)) return;
+      const el = e.target.closest("[data-threshold]");
       if (!el) return;
-      const href = el.getAttribute("data-href") || "";
-      if (!isSameOriginHref(href)) return;
-      e.preventDefault();
 
-      const origin = originFromFocus(window.innerWidth / 2, window.innerHeight / 2);
-      await flipAt(origin.x, origin.y);
-      window.location.href = new URL(href, window.location.href).toString();
+      if (isInteractive(e.target)) return;
+
+      const href = el.matches("a[href]") ? el.getAttribute("href") || "" : "";
+      const isNav = Boolean(href) && isSameOriginHref(href);
+
+      if (isNav && (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return;
+      if (isNav && el.matches("a[target='_blank'], a[download]")) return;
+
+      const name = (el.getAttribute("data-threshold") || "").trim() || "threshold";
+      const origin = bestOrigin(e.clientX ?? window.innerWidth / 2, e.clientY ?? window.innerHeight / 2);
+
+      e.preventDefault();
+      try {
+        await threshold(name, origin);
+      } catch {}
+
+      if (isNav) {
+        window.location.href = new URL(href, window.location.href).toString();
+      }
     },
     { capture: true },
   );

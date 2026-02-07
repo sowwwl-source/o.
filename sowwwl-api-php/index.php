@@ -173,6 +173,10 @@ if ($path === '/auth/register') {
         $pdo->prepare("INSERT INTO identities (user_id, comm_address) VALUES (:u, :c)")
             ->execute([':u' => $uid, ':c' => $comm]);
 
+        // Server-driven UX token (multi-device)
+        $pdo->prepare("INSERT INTO ux_state (user_id, flip_seq) VALUES (:u, 0)")
+            ->execute([':u' => $uid]);
+
         $pdo->commit();
 
         session_regenerate_id(true);
@@ -234,10 +238,12 @@ if ($path === '/me') {
     $stmt = $pdo->prepare("
         SELECT u.id, u.email, u.created_at,
                p.handle, p.display_name, p.state_o,
-               i.comm_address, i.type, i.verified
+               i.comm_address, i.type, i.verified,
+               COALESCE(ux.flip_seq, 0) AS flip_seq
         FROM users u
         JOIN profiles p ON p.user_id = u.id
         JOIN identities i ON i.user_id = u.id
+        LEFT JOIN ux_state ux ON ux.user_id = u.id
         WHERE u.id = :id
         LIMIT 1
     ");
@@ -247,6 +253,28 @@ if ($path === '/me') {
     if (!$row) out(401, ['guest' => true]);
 
     out(200, ['user' => $row, 'csrf' => $_SESSION['csrf']]);
+}
+
+if ($path === '/ux/threshold') {
+    require_method('POST');
+    require_csrf();
+
+    $uid = (int)($_SESSION['uid'] ?? 0);
+    if ($uid <= 0) out(401, ['guest' => true]);
+
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        INSERT INTO ux_state (user_id, flip_seq) VALUES (:u, 1)
+        ON DUPLICATE KEY UPDATE flip_seq = flip_seq + 1, updated_at = CURRENT_TIMESTAMP
+    ");
+    $stmt->execute([':u' => $uid]);
+
+    $stmt = $pdo->prepare("SELECT flip_seq FROM ux_state WHERE user_id = :u LIMIT 1");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch();
+    $seq = (int)($row['flip_seq'] ?? 0);
+
+    out(200, ['status' => 'ok', 'flip_seq' => $seq]);
 }
 
 if ($path === '/bote') {

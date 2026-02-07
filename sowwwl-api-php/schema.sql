@@ -34,3 +34,11 @@ CREATE TABLE IF NOT EXISTS botes (
   UNIQUE KEY uniq_user_bote (user_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- UX state (server-driven flip token for multi-device sync)
+CREATE TABLE IF NOT EXISTS ux_state (
+  user_id INT UNSIGNED PRIMARY KEY,
+  flip_seq INT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
