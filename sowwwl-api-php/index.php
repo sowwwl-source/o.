@@ -226,6 +226,43 @@ function ensure_cour(PDO $pdo, int $uid): void {
     }
 }
 
+function ensure_land(PDO $pdo, int $uid): void {
+    try {
+        $pdo->prepare("INSERT IGNORE INTO land (user_id) VALUES (:u)")->execute([':u' => $uid]);
+    } catch (Throwable) {
+        // Rollout-safe: ignore if table isn't there yet.
+    }
+}
+
+function greek_letter_or_empty(string $s): string {
+    $t = trim($s);
+    if ($t === '') return '';
+    $ch = mb_substr($t, 0, 1);
+    $low = mb_strtolower($ch);
+    $allowed = ['α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','π','ρ','σ','τ','υ','φ','χ','ψ','ω'];
+    return in_array($low, $allowed, true) ? $low : '';
+}
+
+function words_count(string $s): int {
+    $t = trim($s);
+    if ($t === '') return 0;
+    $parts = preg_split('/\s+/u', $t, -1, PREG_SPLIT_NO_EMPTY);
+    return $parts ? count($parts) : 0;
+}
+
+function beauty_score(string $s): float {
+    $t = trim($s);
+    if ($t === '') return 0.0;
+    $parts = preg_split('/\s+/u', $t, -1, PREG_SPLIT_NO_EMPTY);
+    if (!$parts) return 0.0;
+    $n = count($parts);
+    $uniq = count(array_unique(array_map('mb_strtolower', $parts)));
+    $lenFactor = min(1.0, $n / 9.0);
+    $uniqFactor = $n > 0 ? ($uniq / $n) : 0.0;
+    $score = ($lenFactor * 0.6) + ($uniqFactor * 0.4);
+    return round(min(1.0, max(0.0, $score)), 3);
+}
+
 function uid_from_door(PDO $pdo, string $door_id): int {
     $d = strtolower(trim($door_id));
     if ($d === '' || strlen($d) !== 32 || !ctype_xdigit($d)) return 0;
@@ -413,10 +450,11 @@ if ($path === '/me') {
 
     if (!$row) out(401, ['guest' => true]);
 
-    // Attach door (identity-less) + ensure cour exists.
+    // Attach door (identity-less) + ensure cour/land exists.
     try {
         $door = ensure_door($pdo, $uid);
         ensure_cour($pdo, $uid);
+        ensure_land($pdo, $uid);
         if (!empty($door['door_id'])) {
             $row['door_id'] = (string)$door['door_id'];
             $row['tz_offset_min'] = $door['tz_offset_min'] ?? null;
@@ -428,6 +466,155 @@ if ($path === '/me') {
     }
 
     out(200, ['user' => $row, 'csrf' => $_SESSION['csrf']]);
+}
+
+// ====== Quest DELTA (4n0d3) ======
+if ($path === '/quest/delta') {
+    require_method('GET');
+    $uid = require_auth_uid();
+    $pdo = db();
+    try {
+        $stmt = $pdo->prepare("SELECT state, step, beauty_text, passage_choice, land_glyph, o_seed_line, seal, updated_at FROM quest_delta WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            out(200, ['state' => 'IDLE', 'step' => 0]);
+        }
+        out(200, $row);
+    } catch (Throwable) {
+        out(200, ['state' => 'IDLE', 'step' => 0]);
+    }
+}
+
+if ($path === '/quest/delta/start') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+    try {
+        $pdo->prepare("
+            INSERT INTO quest_delta (user_id, state, step)
+            VALUES (:u, 'RUNNING', 1)
+            ON DUPLICATE KEY UPDATE state = 'RUNNING', step = 1, updated_at = CURRENT_TIMESTAMP
+        ")->execute([':u' => $uid]);
+        out(200, ['state' => 'RUNNING', 'step' => 1]);
+    } catch (Throwable) {
+        out(500, ['error' => 'quest_start_failed']);
+    }
+}
+
+if ($path === '/quest/delta/answer') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+    $in = json_input();
+    $answer = trim((string)($in['answer'] ?? ''));
+
+    $stmt = $pdo->prepare("SELECT state, step FROM quest_delta WHERE user_id = :u LIMIT 1");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch();
+    $state = (string)($row['state'] ?? 'IDLE');
+    $step = (int)($row['step'] ?? 0);
+
+    if ($state !== 'RUNNING' || $step <= 0) {
+        out(409, ['error' => 'quest_not_running', 'state' => $state, 'step' => $step]);
+    }
+
+    if ($step === 1) {
+        $norm = mb_strtolower(preg_replace('/\s+/u', '', $answer));
+        if ($norm === 'delta' || $norm === 'δ') {
+            $pdo->prepare("UPDATE quest_delta SET step = 2 WHERE user_id = :u")->execute([':u' => $uid]);
+            out(200, ['ok' => true, 'step' => 2]);
+        }
+        out(200, ['ok' => false, 'step' => 1, 'hint' => 'Après α β γ…']);
+    }
+
+    if ($step === 2) {
+        $wc = words_count($answer);
+        if ($wc <= 0 || $wc > 9) {
+            out(200, ['ok' => false, 'step' => 2, 'error' => 'length', 'max_words' => 9]);
+        }
+        $score = beauty_score($answer);
+        $pdo->prepare("UPDATE quest_delta SET beauty_text = :t, step = 3 WHERE user_id = :u")
+            ->execute([':t' => $answer, ':u' => $uid]);
+        out(200, ['ok' => true, 'step' => 3, 'score' => $score]);
+    }
+
+    if ($step === 3) {
+        $norm = mb_strtolower(preg_replace('/[^a-z0-9]+/u', '', $answer));
+        $choice = '';
+        if ($norm === 'c' || str_starts_with($norm, 'culbu1on') || $norm === 'culbu1o' || str_starts_with($norm, 'culbu')) $choice = 'culbu1on';
+        if ($norm === 'd' || str_starts_with($norm, 'dur3rb') || str_starts_with($norm, 'dur3r')) $choice = 'dur3rb';
+        if ($norm === 'o' || str_starts_with($norm, 'tocu') || str_starts_with($norm, 't0cu')) $choice = 'toCu';
+        if ($choice === '') out(200, ['ok' => false, 'step' => 3, 'error' => 'invalid_choice']);
+        $pdo->prepare("UPDATE quest_delta SET passage_choice = :c, step = 4 WHERE user_id = :u")
+            ->execute([':c' => $choice, ':u' => $uid]);
+        out(200, ['ok' => true, 'step' => 4]);
+    }
+
+    if ($step === 4) {
+        $g = greek_letter_or_empty($answer);
+        if ($g === '') out(200, ['ok' => false, 'step' => 4, 'error' => 'invalid_glyph']);
+        $pdo->prepare("UPDATE quest_delta SET land_glyph = :g, step = 5 WHERE user_id = :u")
+            ->execute([':g' => $g, ':u' => $uid]);
+        // Also write to land (best-effort)
+        ensure_land($pdo, $uid);
+        $pdo->prepare("UPDATE land SET glyph = :g WHERE user_id = :u")->execute([':g' => $g, ':u' => $uid]);
+        out(200, ['ok' => true, 'step' => 5, 'glyph' => $g]);
+    }
+
+    if ($step === 5) {
+        $line = ltrim($answer);
+        if (!str_starts_with($line, 'O.')) {
+            out(200, ['ok' => false, 'step' => 5, 'error' => 'must_start_with_O']);
+        }
+        $pdo->prepare("UPDATE quest_delta SET o_seed_line = :l WHERE user_id = :u")
+            ->execute([':l' => $line, ':u' => $uid]);
+        ensure_land($pdo, $uid);
+        $pdo->prepare("UPDATE land SET o_seed_line = :l WHERE user_id = :u")->execute([':l' => $line, ':u' => $uid]);
+        out(200, ['ok' => true, 'step' => 5, 'ready_to_end' => true]);
+    }
+
+    out(200, ['ok' => false, 'step' => $step]);
+}
+
+if ($path === '/quest/delta/end') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+
+    $seal = 'Δ';
+    try {
+        $pdo->prepare("UPDATE quest_delta SET state = 'ENDED', seal = :s WHERE user_id = :u")
+            ->execute([':s' => $seal, ':u' => $uid]);
+    } catch (Throwable) {
+        // Rollout-safe.
+    }
+
+    try {
+        ensure_land($pdo, $uid);
+        $pdo->prepare("UPDATE land SET seal = :s WHERE user_id = :u")
+            ->execute([':s' => $seal, ':u' => $uid]);
+    } catch (Throwable) {
+        // Ignore.
+    }
+
+    // Trigger flip token (server-driven)
+    try {
+        $pdo->prepare("
+            INSERT INTO ux_state (user_id, flip_seq) VALUES (:u, 1)
+            ON DUPLICATE KEY UPDATE flip_seq = flip_seq + 1, updated_at = CURRENT_TIMESTAMP
+        ")->execute([':u' => $uid]);
+        $stmt = $pdo->prepare("SELECT flip_seq FROM ux_state WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $seq = (int)($row['flip_seq'] ?? 0);
+        out(200, ['status' => 'ended', 'seal' => $seal, 'flip_seq' => $seq]);
+    } catch (Throwable) {
+        out(200, ['status' => 'ended', 'seal' => $seal]);
+    }
 }
 
 if ($path === '/ux/threshold') {
@@ -888,6 +1075,70 @@ if ($path === '/cour/me') {
             'updated_at' => $row['updated_at'] ?? null,
         ],
     ]);
+}
+
+// ====== Qu3st (global quest text) ======
+if ($path === '/qu3st') {
+    $default = <<<'TXT'
+          ┌───────────── montagne creuse ─────────────┐
+          │                                           │
+  [mer noire] ────• balise perdue ──┐                 │
+                     │             │                 [tour veilleurs]
+                 pont brisé        │                  │
+                     │             │                  │
+              brume dense       • camp de l'oeil ─────┘
+                     │             │
+                     ▼             │
+               porte O. (fermée)   │
+                     │             │
+                • départ qu3st ────┘
+                     │
+                     ▼
+                retour // O.
+TXT;
+
+    if ($method === 'GET') {
+        $pdo = db();
+        $row = null;
+        try {
+            $stmt = $pdo->prepare("SELECT content, updated_at FROM qu3st WHERE id = 1 LIMIT 1");
+            $stmt->execute();
+            $row = $stmt->fetch();
+        } catch (Throwable) {
+            $row = null;
+        }
+
+        $content = (string)($row['content'] ?? '');
+        if ($content === '') $content = $default;
+
+        out(200, [
+            'qu3st' => [
+                'content' => $content,
+                'updated_at' => $row['updated_at'] ?? null,
+            ],
+        ]);
+    }
+
+    if ($method === 'POST') {
+        $uid = require_auth_uid();
+        require_csrf();
+
+        $in = json_input();
+        $content = (string)($in['content'] ?? '');
+        if (mb_strlen($content) > 200_000) out(413, ['error' => 'content_too_large']);
+
+        $pdo = db();
+        // NOTE: currently any authenticated user can edit qu3st. We can restrict later if needed.
+        $stmt = $pdo->prepare("
+            INSERT INTO qu3st (id, content) VALUES (1, :c)
+            ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = CURRENT_TIMESTAMP
+        ");
+        $stmt->execute([':c' => $content]);
+
+        out(200, ['status' => 'saved']);
+    }
+
+    out(405, ['error' => 'method_not_allowed']);
 }
 
 if ($path === '/bote') {

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>4n0d3 — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/qu3st.html">↩</a>
+      <span class="muted">quest.delta</span>
+    </header>
+
+    <section class="card" aria-label="Quest">
+      <h1 class="muted">// 4n0d3 //</h1>
+      <p class="muted">Fin d’un couloir. Début d’une plaine.</p>
+      <p class="muted">Dans une langue ancienne je suis le quatrième.</p>
+      <p class="muted">Je ne suis pas une réponse : je suis un passage.</p>
+      <p class="muted" style="margin-top:10px">Tape <code>/start</code> pour ouvrir Δ.</p>
+    </section>
+
+    <section class="card" aria-label="Console">
+      <div class="row" style="justify-content:space-between;gap:18px">
+        <span class="muted">État: <code id="state">—</code></span>
+        <span class="muted">Step: <code id="step">—</code></span>
+      </div>
+
+      <p id="question" class="muted" style="margin-top:14px">—</p>
+      <div class="row" style="margin-top:12px">
+        <input id="input" type="text" placeholder="/start" autocomplete="off" />
+        <button id="send" class="btn" type="button">envoyer</button>
+        <button id="end" class="btn" type="button">/end</button>
+      </div>
+
+      <pre id="out" class="card" style="margin-top:14px;white-space:pre-wrap">—</pre>
+    </section>
+  </main>
+
+  <script>
+    const els = {
+      state: document.getElementById('state'),
+      step: document.getElementById('step'),
+      question: document.getElementById('question'),
+      input: document.getElementById('input'),
+      send: document.getElementById('send'),
+      end: document.getElementById('end'),
+      out: document.getElementById('out'),
+    };
+
+    const QUESTIONS = {
+      1: 'Q1: “Fin d’un couloir, début d’une plaine… je suis le quatrième. Qui suis-je ?”',
+      2: 'Q2: “Décris en 9 mots maximum ce que ‘beau’ veut dire ici.”',
+      3: 'Q3: “Tu passes par : (c)ulbu1o(n), (d)ur3r(b), ou t(o)C.u ?”',
+      4: 'Q4: “Choisis une lettre grecque (α β γ δ ε …) pour ton Land.”',
+      5: 'Q5: “Écris une ligne qui commence par ‘O.’”',
+    };
+
+    function show(obj) {
+      els.out.textContent = JSON.stringify(obj, null, 2);
+    }
+
+    async function api(path, opts) {
+      const res = await fetch('/api' + path, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    let CSRF = '';
+
+    async function sync() {
+      const me = await api('/me');
+      if (!me.ok) {
+        els.state.textContent = 'guest';
+        els.step.textContent = '—';
+        els.question.textContent = 'Connecte-toi d’abord.';
+        return;
+      }
+      CSRF = me.data?.csrf || '';
+
+      const q = await api('/quest/delta');
+      const state = q.data?.state || 'IDLE';
+      const step = Number(q.data?.step || 0);
+      els.state.textContent = state;
+      els.step.textContent = String(step || 0);
+      els.question.textContent = QUESTIONS[step] || '—';
+      show(q);
+    }
+
+    async function startQuest() {
+      const r = await api('/quest/delta/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({}),
+      });
+      show(r);
+      await sync();
+    }
+
+    async function endQuest() {
+      const r = await api('/quest/delta/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({}),
+      });
+      show(r);
+      if (window.O && typeof window.O.sync === 'function') {
+        window.O.sync({ animate: true }).catch(() => {});
+      }
+      await sync();
+    }
+
+    async function answerQuest(answer) {
+      const r = await api('/quest/delta/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ answer }),
+      });
+      show(r);
+      if (r.ok && r.data?.ready_to_end) {
+        await endQuest();
+        return;
+      }
+      await sync();
+    }
+
+    els.send.addEventListener('click', async () => {
+      const v = els.input.value.trim();
+      if (v === '') return;
+      if (v === '/start') return startQuest();
+      if (v === '/end') return endQuest();
+      await answerQuest(v);
+    });
+
+    els.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        els.send.click();
+      }
+    });
+
+    els.end.addEventListener('click', endQuest);
+
+    sync();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
