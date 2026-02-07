@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>0 — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">source</span>
+    </header>
+
+    <section class="card" aria-label="0">
+      <h1 class="muted">0</h1>
+      <p class="muted">L’endroit source : voir toutes les solutions ouvertes.</p>
+      <p class="muted" style="margin-top:10px">Origin: <code id="origin">—</code></p>
+      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+      <p class="muted" style="margin-top:10px">API: <code id="api">—</code></p>
+    </section>
+
+    <section class="card" aria-label="Solutions">
+      <h2 class="muted">solutions</h2>
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="/sh0re.html">// sh0re //</a>
+        <a class="btn" href="/b0te.html">// b0té //</a>
+        <a class="btn" href="/etat.html">// état //</a>
+        <a class="btn" href="/login.html">// login //</a>
+      </div>
+      <p class="muted" style="margin-top:14px">À venir : salons / posts / groupes privés / mail / appel / visio.</p>
+    </section>
+
+    <section class="card" aria-label="Portes">
+      <h2 class="muted">portes</h2>
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="/manif3st.html">manif3st</a>
+        <a class="btn" href="/qu3st.html">qu3st</a>
+        <a class="btn" href="/index.html">O.</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    (async () => {
+      const health = await j('/api/health');
+      document.getElementById('api').textContent = health.ok ? 'ok' : `fail:${health.status}`;
+
+      const me = await j('/api/me');
+      if (!me.ok) {
+        document.getElementById('me').textContent = 'guest';
+        return;
+      }
+      const u = me.data?.user || {};
+      document.getElementById('me').textContent = `${u.handle || ('o.' + (u.id || '?'))} (${u.email || '—'})`;
+    })();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+
