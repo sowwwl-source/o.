@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>4nOd3 — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/0.html">↩</a>
+      <span class="muted">/api/qu3st</span>
+    </header>
+
+    <section class="card" aria-label="4nOd3">
+      <h1 class="muted">// 4nOd3 //</h1>
+      <p class="muted">Éditer la qu3st (texte global).</p>
+      <p class="muted" style="margin-top:10px">Origin: <code id="origin">—</code></p>
+      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+
+      <div class="row" style="margin-top:14px">
+        <button id="btnSave" class="btn" type="button">sauver</button>
+        <button id="btnReload" class="btn" type="button">recharger</button>
+        <a class="btn" href="/qu3st.html">ouvrir qu3st</a>
+        <a class="btn" href="/4n0d3.html">Δ</a>
+        <a class="btn" href="/login.html">login</a>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <textarea id="src" spellcheck="false" style="width:100%;min-height:44vh"></textarea>
+      </div>
+
+      <p class="muted" style="margin-top:10px">Preview:</p>
+      <pre id="view" class="card" style="margin-top:10px;white-space:pre;line-height:1.4">—</pre>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
+    const els = {
+      me: document.getElementById('me'),
+      src: document.getElementById('src'),
+      view: document.getElementById('view'),
+      btnSave: document.getElementById('btnSave'),
+      btnReload: document.getElementById('btnReload'),
+    };
+
+    function render() {
+      els.view.textContent = els.src.value || '—';
+    }
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    async function loadQuest() {
+      const r = await j('/api/qu3st');
+      if (!r.ok) return r;
+      const q = r.data?.qu3st || {};
+      els.src.value = (q.content || '');
+      render();
+      return r;
+    }
+
+    async function bootstrap() {
+      const m = await j('/api/me');
+      if (!m.ok) {
+        els.me.textContent = 'guest';
+        els.btnSave.disabled = true;
+        await loadQuest();
+        return;
+      }
+
+      const u = m.data?.user || {};
+      const handle = u.handle || ('o.' + (u.id || '?'));
+      els.me.textContent = `${handle} (${u.email || '—'})`;
+      window.__csrf = String(m.data?.csrf || '');
+      els.btnSave.disabled = false;
+
+      await loadQuest();
+    }
+
+    async function saveQuest() {
+      const csrf = window.__csrf || '';
+      if (!csrf) return { ok: false, status: 401, data: { guest: true } };
+      return await j('/api/qu3st', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': csrf },
+        body: JSON.stringify({ content: els.src.value || '' }),
+      });
+    }
+
+    els.src.addEventListener('input', render);
+    els.btnReload.addEventListener('click', bootstrap);
+    els.btnSave.addEventListener('click', async () => {
+      const r = await saveQuest();
+      if (!r.ok) {
+        els.view.textContent = JSON.stringify(r, null, 2);
+        return;
+      }
+      await bootstrap();
+    });
+
+    bootstrap();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>

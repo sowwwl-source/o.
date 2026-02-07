@@ -11,12 +11,18 @@
     <header>
       <h1 class="muted">// qu3st //</h1>
       <p class="muted">
-        <a href="/index.html">↩</a> — <a href="/manif3st.html">// manif3st //</a>
+        <a href="/index.html">↩</a> — <a href="/manif3st.html">// manif3st //</a> — <a href="/4n0d3.html">// 4nOd3 //</a>
       </p>
     </header>
 
-    <pre style="white-space:pre;line-height:1.4;margin:18px 0 0">
-          ┌───────────── montagne creuse ─────────────┐
+    <pre id="quest" style="white-space:pre;line-height:1.4;margin:18px 0 0">—</pre>
+    <p class="muted" style="margin-top:14px">Lis. Clique. Inverse. Recommence.</p>
+    <p class="muted" style="margin-top:10px"><a href="/4n0d3.html">// 4nOd3 //</a></p>
+  </main>
+
+  <script>
+    const FALLBACK =
+`          ┌───────────── montagne creuse ─────────────┐
           │                                           │
   [mer noire] ────• balise perdue ──┐                 │
                      │             │                 [tour veilleurs]
@@ -30,12 +36,21 @@
                 • départ qu3st ────┘
                      │
                      ▼
-                retour // O.
-    </pre>
-    <p class="muted" style="margin-top:14px">Lis. Clique. Inverse. Recommence.</p>
-    <p class="muted" style="margin-top:10px"><a href="/4n0d3.html">// 4n0d3 //</a></p>
-  </main>
+                retour // O.`;
 
+    (async () => {
+      const pre = document.getElementById('quest');
+      try {
+        const res = await fetch('/api/qu3st', { credentials: 'include' });
+        const text = await res.text();
+        const data = JSON.parse(text);
+        const content = data?.qu3st?.content;
+        pre.textContent = typeof content === 'string' && content !== '' ? content : FALLBACK;
+      } catch {
+        pre.textContent = FALLBACK;
+      }
+    })();
+  </script>
   <script src="/assets/js/bicolor.js" defer></script>
 </body>
 </html>
