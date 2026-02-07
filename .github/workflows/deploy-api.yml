@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, production]
     paths:
+      - 'docker-compose.yml'
       - 'sowwwl-api-php/**'
       - '.github/workflows/deploy-api.yml'
   workflow_dispatch:
@@ -65,6 +66,33 @@ jobs:
       packages: read
     
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare server directory
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            sudo rm -rf /opt/sowwwl/app
+            sudo mkdir -p /opt/sowwwl/app/sowwwl-api-php
+
+      - name: Upload compose files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: |
+            docker-compose.yml
+            sowwwl-api-php/docker-compose.prod.yml
+            sowwwl-api-php/schema.sql
+            .env.example
+          target: "/opt/sowwwl/app"
+
       - name: Deploy to DigitalOcean
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -74,26 +102,8 @@ jobs:
           script: |
             set -euo pipefail
 
-            # Ensure the server uses the latest compose files from this repo,
-            # not stale copies in /opt/sowwwl.
             APP_DIR="/opt/sowwwl/app"
-            # Use GITHUB_TOKEN for private repos (masked in logs).
-            REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
             REF="${{ github.ref_name }}"
-
-            if ! command -v git >/dev/null 2>&1; then
-              apt-get update -y
-              apt-get install -y git
-            fi
-
-            if [ ! -d "${APP_DIR}/.git" ]; then
-              rm -rf "${APP_DIR}"
-              git clone --depth 1 --branch "${REF}" "${REPO_URL}" "${APP_DIR}"
-            else
-              git -C "${APP_DIR}" remote set-url origin "${REPO_URL}"
-              git -C "${APP_DIR}" fetch --depth 1 origin "${REF}"
-              git -C "${APP_DIR}" reset --hard "origin/${REF}"
-            fi
 
             if [ ! -f /opt/sowwwl/.env ]; then
               echo "Missing /opt/sowwwl/.env (create it from /opt/sowwwl/app/.env.example)"
