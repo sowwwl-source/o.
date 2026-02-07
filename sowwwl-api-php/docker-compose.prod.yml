@@ -6,6 +6,7 @@ services:
     restart: always
     volumes:
       - /opt/sowwwl/data/mysql:/var/lib/mysql
+    ports: []
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_PASSWORD: ${DB_PASS}

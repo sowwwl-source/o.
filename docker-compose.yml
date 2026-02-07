@@ -3,10 +3,10 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: sowwwl
-      MYSQL_USER: sowwwl
-      MYSQL_PASSWORD: sowwwlpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-sowwwl}
+      MYSQL_USER: ${DB_USER:-sowwwl}
+      MYSQL_PASSWORD: ${DB_PASS:-sowwwlpass}
     ports:
       - "3306:3306"
     volumes:
@@ -26,11 +26,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: sowwwl
-      DB_USER: sowwwl
-      DB_PASS: sowwwlpass
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-sowwwl}
+      DB_USER: ${DB_USER:-sowwwl}
+      DB_PASS: ${DB_PASS:-sowwwlpass}
     depends_on:
       db:
         condition: service_healthy
