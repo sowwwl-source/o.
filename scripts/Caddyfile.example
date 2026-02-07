@@ -1,0 +1,37 @@
+# Caddyfile for sowwwl (front + API)
+# Place in /etc/caddy/Caddyfile on production server.
+
+# Frontend + same-origin API proxy (/api/* strips /api)
+sowwwl.com, www.sowwwl.com {
+    root * /var/www/sowwwl-front
+
+    handle_path /api/* {
+        reverse_proxy localhost:8000
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+
+    file_server
+}
+
+# Optional: direct API domain
+api.sowwwl.com {
+    reverse_proxy localhost:8000
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+
+    log {
+        output file /var/log/caddy/api.log
+        format json
+    }
+}

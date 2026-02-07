@@ -1,0 +1,17 @@
+# Production override - use with:
+# docker compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d
+
+services:
+  db:
+    restart: always
+    volumes:
+      - /opt/sowwwl/data/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASS}
+
+  api:
+    image: ${API_IMAGE:-ghcr.io/sowwwl-source/o-api:latest}
+    restart: always
+    env_file:
+      - .env

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>login — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">/api/auth/*</span>
+    </header>
+
+    <section class="card" aria-label="Auth">
+      <h1 class="muted">// login //</h1>
+
+      <h2>Créer un compte</h2>
+      <div class="row">
+        <input id="r_email" placeholder="email" autocomplete="email" />
+        <input id="r_pass" placeholder="mot de passe" type="password" autocomplete="new-password" />
+        <button id="btnRegister">register</button>
+      </div>
+
+      <h2 style="margin-top:22px">Se connecter</h2>
+      <div class="row">
+        <input id="l_email" placeholder="email" autocomplete="email" />
+        <input id="l_pass" placeholder="mot de passe" type="password" autocomplete="current-password" />
+        <button id="btnLogin">login</button>
+      </div>
+
+      <h3 style="margin-top:22px">Réponse</h3>
+      <pre id="out">—</pre>
+    </section>
+  </main>
+
+  <script>
+    async function api(path, payload){
+      const res = await fetch('/api' + path, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'include',
+        body: JSON.stringify(payload || {})
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch(e) { data = {raw:text}; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function show(x){ document.getElementById('out').textContent = JSON.stringify(x, null, 2); }
+
+    document.getElementById('btnRegister').addEventListener('click', async () => {
+      const email = document.getElementById('r_email').value.trim();
+      const password = document.getElementById('r_pass').value;
+      show(await api('/auth/register', {email, password}));
+    });
+
+    document.getElementById('btnLogin').addEventListener('click', async () => {
+      const email = document.getElementById('l_email').value.trim();
+      const password = document.getElementById('l_pass').value;
+      const r = await api('/auth/login', {email, password});
+      show(r);
+      if (r.ok) window.location.href = '/';
+    });
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
