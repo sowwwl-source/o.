@@ -2,45 +2,38 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>login — sowwwl</title>
-  <style>
-    :root { color-scheme: dark; }
-    body{background:#000;color:#fff;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;margin:0;padding:24px}
-    a, button{color:#fff}
-    button{background:transparent;border:1px solid #333;padding:10px 12px;border-radius:10px;cursor:pointer}
-    button:hover{border-color:#666}
-    .card{border:1px solid #222;border-radius:16px;padding:16px;max-width:900px}
-    input{background:#000;border:1px solid #222;color:#fff;padding:10px 12px;border-radius:10px;min-width:260px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .muted{color:#aaa}
-    pre{white-space:pre-wrap;word-break:break-word}
-  </style>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>login — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
 </head>
 <body>
-  <div class="card">
-    <div class="row">
-      <a href="/">← accueil</a>
-      <span class="muted">auth backend PHP via /api/*</span>
-    </div>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">/api/auth/*</span>
+    </header>
 
-    <h2>Créer un compte</h2>
-    <div class="row">
-      <input id="r_email" placeholder="email" autocomplete="email" />
-      <input id="r_pass" placeholder="mot de passe" type="password" autocomplete="new-password" />
-      <button id="btnRegister">register</button>
-    </div>
+    <section class="card" aria-label="Auth">
+      <h1 class="muted">// login //</h1>
 
-    <h2>Se connecter</h2>
-    <div class="row">
-      <input id="l_email" placeholder="email" autocomplete="email" />
-      <input id="l_pass" placeholder="mot de passe" type="password" autocomplete="current-password" />
-      <button id="btnLogin">login</button>
-    </div>
+      <h2>Créer un compte</h2>
+      <div class="row">
+        <input id="r_email" placeholder="email" autocomplete="email" />
+        <input id="r_pass" placeholder="mot de passe" type="password" autocomplete="new-password" />
+        <button id="btnRegister">register</button>
+      </div>
 
-    <h3>Réponse</h3>
-    <pre id="out">—</pre>
-  </div>
+      <h2 style="margin-top:22px">Se connecter</h2>
+      <div class="row">
+        <input id="l_email" placeholder="email" autocomplete="email" />
+        <input id="l_pass" placeholder="mot de passe" type="password" autocomplete="current-password" />
+        <button id="btnLogin">login</button>
+      </div>
+
+      <h3 style="margin-top:22px">Réponse</h3>
+      <pre id="out">—</pre>
+    </section>
+  </main>
 
   <script>
     async function api(path, payload){
@@ -72,5 +65,6 @@
       if (r.ok) window.location.href = '/';
     });
   </script>
+  <script src="/assets/js/bicolor.js" defer></script>
 </body>
 </html>
