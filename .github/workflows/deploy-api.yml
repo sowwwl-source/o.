@@ -86,11 +86,8 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
-          source: |
-            docker-compose.yml
-            sowwwl-api-php/docker-compose.prod.yml
-            sowwwl-api-php/schema.sql
-            .env.example
+          # NOTE: scp-action expects a comma-separated string (newlines can be treated as a single pattern).
+          source: "docker-compose.yml,sowwwl-api-php/docker-compose.prod.yml,sowwwl-api-php/schema.sql,.env.example"
           target: "/opt/sowwwl/app"
 
       - name: Deploy to DigitalOcean
