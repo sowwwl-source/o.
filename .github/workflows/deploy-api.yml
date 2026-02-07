@@ -119,4 +119,8 @@ jobs:
              FULL_IMAGE=\"\$IMAGE_BASE:\$TAG\"
              docker pull \"\$FULL_IMAGE\"
              API_IMAGE=\"\$FULL_IMAGE\" docker compose --env-file /opt/sowwwl/.env -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
+
+             # Apply schema migrations (idempotent: CREATE TABLE IF NOT EXISTS ...)
+             docker compose --env-file /opt/sowwwl/.env -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml exec -T db sh -lc \
+               'mysql -uroot -p\"$MYSQL_ROOT_PASSWORD\" \"$DB_NAME\" < /docker-entrypoint-initdb.d/schema.sql'
              docker system prune -f"
