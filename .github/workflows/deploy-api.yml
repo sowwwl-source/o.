@@ -121,5 +121,5 @@ jobs:
             if [ "$REF" = "main" ]; then TAG="latest"; else TAG="$REF"; fi
             FULL_IMAGE="${IMAGE_BASE}:${TAG}"
             docker pull "$FULL_IMAGE"
-            API_IMAGE="$FULL_IMAGE" docker compose --env-file /opt/sowwwl/.env -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build api
+            API_IMAGE="$FULL_IMAGE" docker compose --env-file /opt/sowwwl/.env -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
             docker system prune -f
