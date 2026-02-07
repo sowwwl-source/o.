@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>li3ns — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/sh0re.html">↩</a>
+      <span class="muted">/api/links</span>
+    </header>
+
+    <section class="card" aria-label="Li3ns">
+      <h1 class="muted">// li3ns //</h1>
+      <p class="muted">Relier les gens entre eux. Sans bruit.</p>
+      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+
+      <div class="row" style="margin-top:14px">
+        <input id="target" type="text" placeholder="handle (o.9) / o+9@sowwwl.com / email" autocomplete="off" />
+        <button id="btnReq" class="btn" type="button">relier</button>
+        <button id="btnRefresh" class="btn" type="button">refresh</button>
+        <a class="btn" href="/etat.html">état</a>
+        <a class="btn" href="/login.html">login</a>
+      </div>
+
+      <p class="muted" style="margin-top:10px">Réponse:</p>
+      <pre id="out" class="card" style="margin-top:10px;white-space:pre-wrap">—</pre>
+    </section>
+
+    <section class="card" aria-label="Liste">
+      <h2 class="muted">li3ns</h2>
+      <div id="list" aria-label="Liste des liens">—</div>
+    </section>
+  </main>
+
+  <script>
+    const els = {
+      me: document.getElementById('me'),
+      target: document.getElementById('target'),
+      btnReq: document.getElementById('btnReq'),
+      btnRefresh: document.getElementById('btnRefresh'),
+      out: document.getElementById('out'),
+      list: document.getElementById('list'),
+    };
+
+    let CSRF = '';
+    let UID = 0;
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    async function apiPost(path, payload) {
+      return j('/api' + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify(payload || {}),
+      });
+    }
+
+    function show(x) {
+      els.out.textContent = JSON.stringify(x, null, 2);
+    }
+
+    function badge(label, cls) {
+      const s = document.createElement('span');
+      s.className = 'badge ' + cls;
+      s.textContent = label;
+      return s;
+    }
+
+    function statusBadge(link) {
+      if (link.status === 'accepted') return badge('1', 'ok');
+      if (link.status === 'blocked') return badge('locked', 'lock');
+      return badge('s0o0n', 'soon');
+    }
+
+    function dirBadge(link) {
+      if (link.direction === 'incoming') return badge('in', 'ok');
+      if (link.direction === 'outgoing') return badge('out', 'ok');
+      if (link.status === 'blocked') return badge('0', 'off');
+      return badge('ok', 'ok');
+    }
+
+    function mkBtn(label, onClick) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.textContent = label;
+      b.addEventListener('click', onClick);
+      return b;
+    }
+
+    function renderList(links) {
+      els.list.textContent = '';
+      if (!links || !links.length) {
+        els.list.textContent = '—';
+        return;
+      }
+
+      links.forEach((link) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'card';
+        wrap.style.marginTop = '14px';
+
+        const top = document.createElement('div');
+        top.className = 'row';
+        top.style.justifyContent = 'space-between';
+
+        const left = document.createElement('div');
+        left.className = 'muted';
+        left.innerHTML = `<b>${(link.peer && link.peer.handle) || '—'}</b> <span style="opacity:.7">(${(link.peer && link.peer.comm_address) || '—'})</span>`;
+
+        const right = document.createElement('div');
+        right.className = 'badges';
+        right.appendChild(dirBadge(link));
+        right.appendChild(statusBadge(link));
+
+        top.appendChild(left);
+        top.appendChild(right);
+
+        const actions = document.createElement('div');
+        actions.className = 'row';
+        actions.style.marginTop = '12px';
+
+        const isBlocked = link.status === 'blocked';
+        const blockedByMe = isBlocked && Number(link.blocked_by || 0) === Number(UID || 0);
+
+        if (link.status === 'pending' && link.direction === 'incoming') {
+          actions.appendChild(mkBtn('accepter', async () => {
+            const r = await apiPost('/links/accept', { id: link.id });
+            show(r);
+            await refresh();
+          }));
+          actions.appendChild(mkBtn('refuser', async () => {
+            const r = await apiPost('/links/deny', { id: link.id });
+            show(r);
+            await refresh();
+          }));
+        } else if (link.status === 'pending' && link.direction === 'outgoing') {
+          actions.appendChild(mkBtn('annuler', async () => {
+            const r = await apiPost('/links/deny', { id: link.id });
+            show(r);
+            await refresh();
+          }));
+        } else if (link.status === 'accepted') {
+          actions.appendChild(mkBtn('enlever', async () => {
+            const r = await apiPost('/links/remove', { id: link.id });
+            show(r);
+            await refresh();
+          }));
+        }
+
+        if (!isBlocked) {
+          actions.appendChild(mkBtn('bloquer', async () => {
+            const r = await apiPost('/links/block', { id: link.id });
+            show(r);
+            await refresh();
+          }));
+        } else if (blockedByMe) {
+          actions.appendChild(mkBtn('débloquer', async () => {
+            const r = await apiPost('/links/remove', { id: link.id });
+            show(r);
+            await refresh();
+          }));
+        }
+
+        wrap.appendChild(top);
+        wrap.appendChild(actions);
+        els.list.appendChild(wrap);
+      });
+    }
+
+    async function bootstrap() {
+      const me = await j('/api/me');
+      if (!me.ok) {
+        els.me.textContent = 'guest';
+        els.target.disabled = true;
+        els.btnReq.disabled = true;
+        els.btnRefresh.disabled = true;
+        show(me);
+        return;
+      }
+
+      const u = me.data && me.data.user ? me.data.user : {};
+      UID = Number(u.id || 0);
+      CSRF = String(me.data && me.data.csrf ? me.data.csrf : '');
+      els.me.textContent = `${u.handle || ('o.' + (u.id || '?'))} (${u.email || '—'})`;
+
+      await refresh();
+    }
+
+    async function refresh() {
+      const r = await j('/api/links');
+      if (!r.ok) {
+        renderList([]);
+        show(r);
+        return;
+      }
+      renderList(r.data && r.data.links ? r.data.links : []);
+    }
+
+    els.btnRefresh.addEventListener('click', refresh);
+    els.btnReq.addEventListener('click', async () => {
+      const target = (els.target.value || '').trim();
+      const r = await apiPost('/links/request', { target });
+      show(r);
+      if (r.ok) {
+        els.target.value = '';
+        await refresh();
+      }
+    });
+
+    bootstrap();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+

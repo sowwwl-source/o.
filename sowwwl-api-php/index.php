@@ -138,6 +138,52 @@ if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(16));
 }
 
+// ====== Auth helpers ======
+function require_auth_uid(): int {
+    $uid = (int)($_SESSION['uid'] ?? 0);
+    if ($uid <= 0) out(401, ['guest' => true]);
+    return $uid;
+}
+
+function normalize_pair(int $u1, int $u2): array {
+    return $u1 < $u2 ? [$u1, $u2] : [$u2, $u1];
+}
+
+function resolve_user_target(PDO $pdo, string $target): int {
+    $t = trim($target);
+    if ($t === '' || mb_strlen($t) > 190) return 0;
+
+    // Handle (profiles.handle)
+    $stmt = $pdo->prepare("SELECT user_id FROM profiles WHERE handle = :t LIMIT 1");
+    $stmt->execute([':t' => $t]);
+    $row = $stmt->fetch();
+    if ($row && isset($row['user_id'])) return (int)$row['user_id'];
+
+    // Internal comm address (identities.comm_address)
+    $stmt = $pdo->prepare("SELECT user_id FROM identities WHERE comm_address = :t LIMIT 1");
+    $stmt->execute([':t' => $t]);
+    $row = $stmt->fetch();
+    if ($row && isset($row['user_id'])) return (int)$row['user_id'];
+
+    // Email (users.email)
+    if (str_contains($t, '@')) {
+        $stmt = $pdo->prepare("SELECT id AS user_id FROM users WHERE email = :t LIMIT 1");
+        $stmt->execute([':t' => strtolower($t)]);
+        $row = $stmt->fetch();
+        if ($row && isset($row['user_id'])) return (int)$row['user_id'];
+    }
+
+    // Numeric id (optional)
+    if (ctype_digit($t)) {
+        $stmt = $pdo->prepare("SELECT id AS user_id FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => (int)$t]);
+        $row = $stmt->fetch();
+        if ($row && isset($row['user_id'])) return (int)$row['user_id'];
+    }
+
+    return 0;
+}
+
 // ====== Routes ======
 if ($path === '/health') {
     out(200, ['status' => 'ok']);
@@ -275,6 +321,242 @@ if ($path === '/ux/threshold') {
     $seq = (int)($row['flip_seq'] ?? 0);
 
     out(200, ['status' => 'ok', 'flip_seq' => $seq]);
+}
+
+// ====== Links between people ======
+if ($path === '/links') {
+    require_method('GET');
+    $uid = require_auth_uid();
+
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        SELECT c.id, c.user_a, c.user_b, c.requested_by, c.status, c.blocked_by, c.created_at, c.updated_at,
+               pa.handle AS a_handle, ia.comm_address AS a_comm, ia.verified AS a_verified,
+               pb.handle AS b_handle, ib.comm_address AS b_comm, ib.verified AS b_verified
+        FROM connections c
+        JOIN profiles pa ON pa.user_id = c.user_a
+        JOIN profiles pb ON pb.user_id = c.user_b
+        JOIN identities ia ON ia.user_id = c.user_a AND ia.type = 'internal'
+        JOIN identities ib ON ib.user_id = c.user_b AND ib.type = 'internal'
+        WHERE c.user_a = :u OR c.user_b = :u
+        ORDER BY c.updated_at DESC
+    ");
+    $stmt->execute([':u' => $uid]);
+    $rows = $stmt->fetchAll();
+
+    $links = [];
+    foreach ($rows as $r) {
+        $a = (int)$r['user_a'];
+        $b = (int)$r['user_b'];
+        $peer = $a === $uid ? $b : $a;
+
+        $peer_handle = $a === $uid ? (string)$r['b_handle'] : (string)$r['a_handle'];
+        $peer_comm = $a === $uid ? (string)$r['b_comm'] : (string)$r['a_comm'];
+        $peer_verified = $a === $uid ? (int)$r['b_verified'] : (int)$r['a_verified'];
+
+        $status = (string)$r['status'];
+        $requested_by = (int)$r['requested_by'];
+        $blocked_by = $r['blocked_by'] !== null ? (int)$r['blocked_by'] : null;
+
+        $direction = $status;
+        if ($status === 'pending') {
+            $direction = ($requested_by === $uid) ? 'outgoing' : 'incoming';
+        }
+
+        $links[] = [
+            'id' => (int)$r['id'],
+            'status' => $status,
+            'direction' => $direction,
+            'requested_by' => $requested_by,
+            'blocked_by' => $blocked_by,
+            'peer' => [
+                'id' => $peer,
+                'handle' => $peer_handle,
+                'comm_address' => $peer_comm,
+                'verified' => $peer_verified,
+            ],
+            'created_at' => $r['created_at'],
+            'updated_at' => $r['updated_at'],
+        ];
+    }
+
+    out(200, ['links' => $links]);
+}
+
+if ($path === '/links/request') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $target = trim((string)($in['target'] ?? ''));
+    if ($target === '' || mb_strlen($target) > 190) out(422, ['error' => 'invalid_target']);
+
+    $pdo = db();
+    $target_id = resolve_user_target($pdo, $target);
+    if ($target_id <= 0) out(404, ['error' => 'not_found']);
+    if ($target_id === $uid) out(422, ['error' => 'self']);
+
+    [$a, $b] = normalize_pair($uid, $target_id);
+
+    $stmt = $pdo->prepare("SELECT id, requested_by, status, blocked_by FROM connections WHERE user_a = :a AND user_b = :b LIMIT 1");
+    $stmt->execute([':a' => $a, ':b' => $b]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        $status = (string)$row['status'];
+        $blocked_by = $row['blocked_by'] !== null ? (int)$row['blocked_by'] : null;
+
+        if ($status === 'blocked') {
+            out(403, ['error' => 'blocked', 'blocked_by' => $blocked_by]);
+        }
+
+        if ($status === 'accepted') {
+            out(200, ['status' => 'accepted', 'link_id' => (int)$row['id']]);
+        }
+
+        // pending
+        $requested_by = (int)$row['requested_by'];
+        if ($requested_by === $uid) {
+            out(200, ['status' => 'pending', 'link_id' => (int)$row['id']]);
+        }
+
+        // If a request already exists from the other side, accept immediately (handshake).
+        $pdo->prepare("UPDATE connections SET status = 'accepted', blocked_by = NULL WHERE id = :id")
+            ->execute([':id' => (int)$row['id']]);
+        out(200, ['status' => 'accepted', 'link_id' => (int)$row['id']]);
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO connections (user_a, user_b, requested_by, status) VALUES (:a, :b, :r, 'pending')");
+    $stmt->execute([':a' => $a, ':b' => $b, ':r' => $uid]);
+    out(201, ['status' => 'pending', 'link_id' => (int)$pdo->lastInsertId()]);
+}
+
+if ($path === '/links/accept') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $id = (int)($in['id'] ?? 0);
+    if ($id <= 0) out(422, ['error' => 'invalid_id']);
+
+    $pdo = db();
+    $stmt = $pdo->prepare("SELECT id, user_a, user_b, requested_by, status, blocked_by FROM connections WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) out(404, ['error' => 'not_found']);
+
+    $a = (int)$row['user_a'];
+    $b = (int)$row['user_b'];
+    if ($uid !== $a && $uid !== $b) out(404, ['error' => 'not_found']);
+
+    $status = (string)$row['status'];
+    if ($status === 'blocked') out(409, ['error' => 'blocked']);
+    if ($status === 'accepted') out(200, ['status' => 'accepted', 'link_id' => $id]);
+    if ($status !== 'pending') out(409, ['error' => 'bad_state']);
+
+    $requested_by = (int)$row['requested_by'];
+    if ($requested_by === $uid) out(403, ['error' => 'not_allowed']);
+
+    $pdo->prepare("UPDATE connections SET status = 'accepted', blocked_by = NULL WHERE id = :id")
+        ->execute([':id' => $id]);
+    out(200, ['status' => 'accepted', 'link_id' => $id]);
+}
+
+if ($path === '/links/deny') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $id = (int)($in['id'] ?? 0);
+    if ($id <= 0) out(422, ['error' => 'invalid_id']);
+
+    $pdo = db();
+    $stmt = $pdo->prepare("SELECT id, user_a, user_b FROM connections WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) out(404, ['error' => 'not_found']);
+
+    $a = (int)$row['user_a'];
+    $b = (int)$row['user_b'];
+    if ($uid !== $a && $uid !== $b) out(404, ['error' => 'not_found']);
+
+    $pdo->prepare("DELETE FROM connections WHERE id = :id")->execute([':id' => $id]);
+    out(200, ['status' => 'removed']);
+}
+
+if ($path === '/links/block') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $id = (int)($in['id'] ?? 0);
+    $target = trim((string)($in['target'] ?? ''));
+
+    $pdo = db();
+
+    if ($id > 0) {
+        $stmt = $pdo->prepare("SELECT id, user_a, user_b FROM connections WHERE id = :id LIMIT 1");
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+        if (!$row) out(404, ['error' => 'not_found']);
+        $a = (int)$row['user_a'];
+        $b = (int)$row['user_b'];
+        if ($uid !== $a && $uid !== $b) out(404, ['error' => 'not_found']);
+
+        $pdo->prepare("UPDATE connections SET status = 'blocked', blocked_by = :u WHERE id = :id")
+            ->execute([':u' => $uid, ':id' => $id]);
+        out(200, ['status' => 'blocked', 'link_id' => $id]);
+    }
+
+    if ($target === '' || mb_strlen($target) > 190) out(422, ['error' => 'invalid_target']);
+    $target_id = resolve_user_target($pdo, $target);
+    if ($target_id <= 0) out(404, ['error' => 'not_found']);
+    if ($target_id === $uid) out(422, ['error' => 'self']);
+    [$a, $b] = normalize_pair($uid, $target_id);
+
+    $stmt = $pdo->prepare("SELECT id FROM connections WHERE user_a = :a AND user_b = :b LIMIT 1");
+    $stmt->execute([':a' => $a, ':b' => $b]);
+    $row = $stmt->fetch();
+    if ($row) {
+        $id = (int)$row['id'];
+        $pdo->prepare("UPDATE connections SET status = 'blocked', blocked_by = :u WHERE id = :id")
+            ->execute([':u' => $uid, ':id' => $id]);
+        out(200, ['status' => 'blocked', 'link_id' => $id]);
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO connections (user_a, user_b, requested_by, status, blocked_by)
+        VALUES (:a, :b, :r, 'blocked', :u)
+    ");
+    $stmt->execute([':a' => $a, ':b' => $b, ':r' => $uid, ':u' => $uid]);
+    out(201, ['status' => 'blocked', 'link_id' => (int)$pdo->lastInsertId()]);
+}
+
+if ($path === '/links/remove') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $id = (int)($in['id'] ?? 0);
+    if ($id <= 0) out(422, ['error' => 'invalid_id']);
+
+    $pdo = db();
+    $stmt = $pdo->prepare("SELECT id, user_a, user_b FROM connections WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) out(404, ['error' => 'not_found']);
+
+    $a = (int)$row['user_a'];
+    $b = (int)$row['user_b'];
+    if ($uid !== $a && $uid !== $b) out(404, ['error' => 'not_found']);
+
+    $pdo->prepare("DELETE FROM connections WHERE id = :id")->execute([':id' => $id]);
+    out(200, ['status' => 'removed']);
 }
 
 if ($path === '/bote') {

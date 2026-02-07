@@ -42,3 +42,23 @@ CREATE TABLE IF NOT EXISTS ux_state (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Links between people (minimal social graph)
+CREATE TABLE IF NOT EXISTS connections (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_a INT UNSIGNED NOT NULL,
+  user_b INT UNSIGNED NOT NULL,
+  requested_by INT UNSIGNED NOT NULL,
+  status ENUM('pending','accepted','blocked') NOT NULL DEFAULT 'pending',
+  blocked_by INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_pair (user_a, user_b),
+  INDEX idx_user_a (user_a),
+  INDEX idx_user_b (user_b),
+  INDEX idx_status (status),
+  FOREIGN KEY (user_a) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_b) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (blocked_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
