@@ -184,6 +184,110 @@ function resolve_user_target(PDO $pdo, string $target): int {
     return 0;
 }
 
+// ====== D0RS / presence / COUR helpers ======
+function new_door_id(): string {
+    return bin2hex(random_bytes(16));
+}
+
+function ensure_door(PDO $pdo, int $uid): array {
+    try {
+        $stmt = $pdo->prepare("SELECT door_id, tz_offset_min, lat_q, lon_q, updated_at FROM doors WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        if ($row && isset($row['door_id'])) return $row;
+    } catch (Throwable) {
+        // Table may not exist yet (during rollout); caller will handle.
+    }
+
+    for ($i = 0; $i < 4; $i++) {
+        $door = new_door_id();
+        try {
+            $stmt = $pdo->prepare("INSERT INTO doors (user_id, door_id) VALUES (:u, :d)");
+            $stmt->execute([':u' => $uid, ':d' => $door]);
+            return ['door_id' => $door, 'tz_offset_min' => null, 'lat_q' => null, 'lon_q' => null, 'updated_at' => null];
+        } catch (Throwable $e) {
+            if (str_contains($e->getMessage(), 'Duplicate')) continue;
+            throw $e;
+        }
+    }
+
+    // Last resort: re-select.
+    $stmt = $pdo->prepare("SELECT door_id, tz_offset_min, lat_q, lon_q, updated_at FROM doors WHERE user_id = :u LIMIT 1");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch();
+    return $row ?: ['door_id' => '', 'tz_offset_min' => null, 'lat_q' => null, 'lon_q' => null, 'updated_at' => null];
+}
+
+function ensure_cour(PDO $pdo, int $uid): void {
+    try {
+        $pdo->prepare("INSERT IGNORE INTO cour (user_id, content) VALUES (:u, '')")->execute([':u' => $uid]);
+    } catch (Throwable) {
+        // Rollout-safe: ignore if table isn't there yet.
+    }
+}
+
+function uid_from_door(PDO $pdo, string $door_id): int {
+    $d = strtolower(trim($door_id));
+    if ($d === '' || strlen($d) !== 32 || !ctype_xdigit($d)) return 0;
+    $stmt = $pdo->prepare("SELECT user_id FROM doors WHERE door_id = :d LIMIT 1");
+    $stmt->execute([':d' => $d]);
+    $row = $stmt->fetch();
+    return $row && isset($row['user_id']) ? (int)$row['user_id'] : 0;
+}
+
+function clamp_int(int $v, int $lo, int $hi): int {
+    return min($hi, max($lo, $v));
+}
+
+function clamp_float(float $v, float $lo, float $hi): float {
+    return min($hi, max($lo, $v));
+}
+
+function quantize_deg(?float $v, int $step, int $lo, int $hi): ?int {
+    if ($v === null) return null;
+    $vv = clamp_float($v, (float)$lo, (float)$hi);
+    $q = (int)round($vv / $step) * $step;
+    return clamp_int($q, $lo, $hi);
+}
+
+function door_noise(string $door_id, string $salt, int $span): int {
+    if ($span <= 0) return 0;
+    $h = hash('sha256', $door_id . '|' . $salt, true);
+    $n = ord($h[0] ?? "\0");
+    return ($n % ($span * 2 + 1)) - $span; // [-span..span]
+}
+
+function connection_request(PDO $pdo, int $uid, int $target_id): array {
+    if ($target_id <= 0) return [404, ['error' => 'not_found']];
+    if ($target_id === $uid) return [422, ['error' => 'self']];
+
+    [$a, $b] = normalize_pair($uid, $target_id);
+
+    $stmt = $pdo->prepare("SELECT id, requested_by, status, blocked_by FROM connections WHERE user_a = :a AND user_b = :b LIMIT 1");
+    $stmt->execute([':a' => $a, ':b' => $b]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        $status = (string)$row['status'];
+        $blocked_by = $row['blocked_by'] !== null ? (int)$row['blocked_by'] : null;
+
+        if ($status === 'blocked') return [403, ['error' => 'blocked', 'blocked_by' => $blocked_by]];
+        if ($status === 'accepted') return [200, ['status' => 'accepted', 'link_id' => (int)$row['id']]];
+
+        $requested_by = (int)$row['requested_by'];
+        if ($requested_by === $uid) return [200, ['status' => 'pending', 'link_id' => (int)$row['id']]];
+
+        // If a request already exists from the other side, accept immediately (handshake).
+        $pdo->prepare("UPDATE connections SET status = 'accepted', blocked_by = NULL WHERE id = :id")
+            ->execute([':id' => (int)$row['id']]);
+        return [200, ['status' => 'accepted', 'link_id' => (int)$row['id']]];
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO connections (user_a, user_b, requested_by, status) VALUES (:a, :b, :r, 'pending')");
+    $stmt->execute([':a' => $a, ':b' => $b, ':r' => $uid]);
+    return [201, ['status' => 'pending', 'link_id' => (int)$pdo->lastInsertId()]];
+}
+
 // ====== Routes ======
 if ($path === '/health') {
     out(200, ['status' => 'ok']);
@@ -222,6 +326,17 @@ if ($path === '/auth/register') {
         // Server-driven UX token (multi-device)
         $pdo->prepare("INSERT INTO ux_state (user_id, flip_seq) VALUES (:u, 0)")
             ->execute([':u' => $uid]);
+
+        // D0RS + COUR (best-effort; rollout-safe)
+        try {
+            $door = new_door_id();
+            $pdo->prepare("INSERT INTO doors (user_id, door_id) VALUES (:u, :d)")
+                ->execute([':u' => $uid, ':d' => $door]);
+            $pdo->prepare("INSERT INTO cour (user_id, content) VALUES (:u, '')")
+                ->execute([':u' => $uid]);
+        } catch (Throwable) {
+            // Ignore; /me and /d0rs can lazy-create later.
+        }
 
         $pdo->commit();
 
@@ -298,6 +413,20 @@ if ($path === '/me') {
 
     if (!$row) out(401, ['guest' => true]);
 
+    // Attach door (identity-less) + ensure cour exists.
+    try {
+        $door = ensure_door($pdo, $uid);
+        ensure_cour($pdo, $uid);
+        if (!empty($door['door_id'])) {
+            $row['door_id'] = (string)$door['door_id'];
+            $row['tz_offset_min'] = $door['tz_offset_min'] ?? null;
+            $row['lat_q'] = $door['lat_q'] ?? null;
+            $row['lon_q'] = $door['lon_q'] ?? null;
+        }
+    } catch (Throwable) {
+        // Rollout-safe: ignore.
+    }
+
     out(200, ['user' => $row, 'csrf' => $_SESSION['csrf']]);
 }
 
@@ -332,12 +461,15 @@ if ($path === '/links') {
     $stmt = $pdo->prepare("
         SELECT c.id, c.user_a, c.user_b, c.requested_by, c.status, c.blocked_by, c.created_at, c.updated_at,
                pa.handle AS a_handle, ia.comm_address AS a_comm, ia.verified AS a_verified,
-               pb.handle AS b_handle, ib.comm_address AS b_comm, ib.verified AS b_verified
+               pb.handle AS b_handle, ib.comm_address AS b_comm, ib.verified AS b_verified,
+               da.door_id AS a_door, db.door_id AS b_door
         FROM connections c
         JOIN profiles pa ON pa.user_id = c.user_a
         JOIN profiles pb ON pb.user_id = c.user_b
         JOIN identities ia ON ia.user_id = c.user_a AND ia.type = 'internal'
         JOIN identities ib ON ib.user_id = c.user_b AND ib.type = 'internal'
+        LEFT JOIN doors da ON da.user_id = c.user_a
+        LEFT JOIN doors db ON db.user_id = c.user_b
         WHERE c.user_a = :u OR c.user_b = :u
         ORDER BY c.updated_at DESC
     ");
@@ -353,6 +485,7 @@ if ($path === '/links') {
         $peer_handle = $a === $uid ? (string)$r['b_handle'] : (string)$r['a_handle'];
         $peer_comm = $a === $uid ? (string)$r['b_comm'] : (string)$r['a_comm'];
         $peer_verified = $a === $uid ? (int)$r['b_verified'] : (int)$r['a_verified'];
+        $peer_door = $a === $uid ? (string)($r['b_door'] ?? '') : (string)($r['a_door'] ?? '');
 
         $status = (string)$r['status'];
         $requested_by = (int)$r['requested_by'];
@@ -374,6 +507,7 @@ if ($path === '/links') {
                 'handle' => $peer_handle,
                 'comm_address' => $peer_comm,
                 'verified' => $peer_verified,
+                'door_id' => $peer_door !== '' ? $peer_door : null,
             ],
             'created_at' => $r['created_at'],
             'updated_at' => $r['updated_at'],
@@ -394,42 +528,8 @@ if ($path === '/links/request') {
 
     $pdo = db();
     $target_id = resolve_user_target($pdo, $target);
-    if ($target_id <= 0) out(404, ['error' => 'not_found']);
-    if ($target_id === $uid) out(422, ['error' => 'self']);
-
-    [$a, $b] = normalize_pair($uid, $target_id);
-
-    $stmt = $pdo->prepare("SELECT id, requested_by, status, blocked_by FROM connections WHERE user_a = :a AND user_b = :b LIMIT 1");
-    $stmt->execute([':a' => $a, ':b' => $b]);
-    $row = $stmt->fetch();
-
-    if ($row) {
-        $status = (string)$row['status'];
-        $blocked_by = $row['blocked_by'] !== null ? (int)$row['blocked_by'] : null;
-
-        if ($status === 'blocked') {
-            out(403, ['error' => 'blocked', 'blocked_by' => $blocked_by]);
-        }
-
-        if ($status === 'accepted') {
-            out(200, ['status' => 'accepted', 'link_id' => (int)$row['id']]);
-        }
-
-        // pending
-        $requested_by = (int)$row['requested_by'];
-        if ($requested_by === $uid) {
-            out(200, ['status' => 'pending', 'link_id' => (int)$row['id']]);
-        }
-
-        // If a request already exists from the other side, accept immediately (handshake).
-        $pdo->prepare("UPDATE connections SET status = 'accepted', blocked_by = NULL WHERE id = :id")
-            ->execute([':id' => (int)$row['id']]);
-        out(200, ['status' => 'accepted', 'link_id' => (int)$row['id']]);
-    }
-
-    $stmt = $pdo->prepare("INSERT INTO connections (user_a, user_b, requested_by, status) VALUES (:a, :b, :r, 'pending')");
-    $stmt->execute([':a' => $a, ':b' => $b, ':r' => $uid]);
-    out(201, ['status' => 'pending', 'link_id' => (int)$pdo->lastInsertId()]);
+    [$code, $payload] = connection_request($pdo, $uid, $target_id);
+    out($code, $payload);
 }
 
 if ($path === '/links/accept') {
@@ -557,6 +657,237 @@ if ($path === '/links/remove') {
 
     $pdo->prepare("DELETE FROM connections WHERE id = :id")->execute([':id' => $id]);
     out(200, ['status' => 'removed']);
+}
+
+// ====== D0RS (public list) ======
+if ($path === '/d0rs') {
+    require_method('GET');
+    $pdo = db();
+
+    // Lazy-create doors for existing users (bounded).
+    try {
+        $stmt = $pdo->prepare("
+            SELECT u.id
+            FROM users u
+            LEFT JOIN doors d ON d.user_id = u.id
+            WHERE d.user_id IS NULL
+            LIMIT 250
+        ");
+        $stmt->execute();
+        $missing = $stmt->fetchAll();
+        foreach ($missing as $m) {
+            $mid = (int)($m['id'] ?? 0);
+            if ($mid > 0) ensure_door($pdo, $mid);
+        }
+    } catch (Throwable) {
+        // Ignore rollout hiccups.
+    }
+
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 900;
+    $limit = clamp_int($limit, 1, 2500);
+
+    $stmt = $pdo->prepare("SELECT door_id, tz_offset_min, lat_q, lon_q, updated_at FROM doors ORDER BY updated_at DESC LIMIT :l");
+    $stmt->bindValue(':l', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+
+    $doors = [];
+    foreach ($rows as $r) {
+        $doors[] = [
+            'door_id' => (string)($r['door_id'] ?? ''),
+            'tz_offset_min' => $r['tz_offset_min'] !== null ? (int)$r['tz_offset_min'] : null,
+            'lat_q' => $r['lat_q'] !== null ? (int)$r['lat_q'] : null,
+            'lon_q' => $r['lon_q'] !== null ? (int)$r['lon_q'] : null,
+            'updated_at' => $r['updated_at'] ?? null,
+        ];
+    }
+
+    out(200, ['doors' => $doors]);
+}
+
+if ($path === '/d0rs/me') {
+    require_method('GET');
+    $uid = require_auth_uid();
+
+    $pdo = db();
+    $door = ensure_door($pdo, $uid);
+    ensure_cour($pdo, $uid);
+
+    out(200, ['door' => $door]);
+}
+
+if ($path === '/d0rs/presence') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $pdo = db();
+    $doorRow = ensure_door($pdo, $uid);
+    $doorId = (string)($doorRow['door_id'] ?? '');
+
+    $in = json_input();
+
+    $fields = [];
+    $params = [':u' => $uid];
+
+    if (array_key_exists('tz_offset_min', $in)) {
+        if (!is_numeric($in['tz_offset_min'])) out(422, ['error' => 'invalid_tz']);
+        $tz = clamp_int((int)$in['tz_offset_min'], -720, 840);
+        $fields[] = "tz_offset_min = :tz";
+        $params[':tz'] = $tz;
+    }
+
+    if (array_key_exists('lat', $in)) {
+        if ($in['lat'] !== null && !is_numeric($in['lat'])) out(422, ['error' => 'invalid_lat']);
+        $lat = $in['lat'] === null ? null : (float)$in['lat'];
+        $lat_q = quantize_deg($lat, 10, -80, 80);
+        if ($lat_q !== null && $doorId !== '') {
+            $lat_q = clamp_int($lat_q + (door_noise($doorId, 'lat', 1) * 10), -80, 80);
+        }
+        $fields[] = "lat_q = :lat";
+        $params[':lat'] = $lat_q;
+    }
+
+    if (array_key_exists('lon', $in)) {
+        if ($in['lon'] !== null && !is_numeric($in['lon'])) out(422, ['error' => 'invalid_lon']);
+        $lon = $in['lon'] === null ? null : (float)$in['lon'];
+        $lon_q = quantize_deg($lon, 10, -180, 180);
+        if ($lon_q !== null && $doorId !== '') {
+            $lon_q = clamp_int($lon_q + (door_noise($doorId, 'lon', 2) * 10), -180, 180);
+        }
+        $fields[] = "lon_q = :lon";
+        $params[':lon'] = $lon_q;
+    }
+
+    if (!empty($fields)) {
+        $sql = "UPDATE doors SET " . implode(', ', $fields) . " WHERE user_id = :u";
+        $pdo->prepare($sql)->execute($params);
+    }
+
+    $door = ensure_door($pdo, $uid);
+    out(200, ['status' => 'ok', 'door' => $door]);
+}
+
+if ($path === '/d0rs/knock') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $door = trim((string)($in['door_id'] ?? ''));
+    if ($door === '' || strlen($door) !== 32) out(422, ['error' => 'invalid_door']);
+
+    $pdo = db();
+    $target_id = uid_from_door($pdo, $door);
+    [$code, $payload] = connection_request($pdo, $uid, $target_id);
+    out($code, $payload);
+}
+
+if ($path === '/d0rs/block') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $in = json_input();
+    $door = trim((string)($in['door_id'] ?? ''));
+    if ($door === '' || strlen($door) !== 32) out(422, ['error' => 'invalid_door']);
+
+    $pdo = db();
+    $target_id = uid_from_door($pdo, $door);
+    if ($target_id <= 0) out(404, ['error' => 'not_found']);
+    if ($target_id === $uid) out(422, ['error' => 'self']);
+
+    [$a, $b] = normalize_pair($uid, $target_id);
+
+    $stmt = $pdo->prepare("SELECT id FROM connections WHERE user_a = :a AND user_b = :b LIMIT 1");
+    $stmt->execute([':a' => $a, ':b' => $b]);
+    $row = $stmt->fetch();
+
+    if ($row) {
+        $id = (int)$row['id'];
+        $pdo->prepare("UPDATE connections SET status = 'blocked', blocked_by = :u WHERE id = :id")
+            ->execute([':u' => $uid, ':id' => $id]);
+        out(200, ['status' => 'blocked', 'link_id' => $id]);
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO connections (user_a, user_b, requested_by, status, blocked_by)
+        VALUES (:a, :b, :r, 'blocked', :u)
+    ");
+    $stmt->execute([':a' => $a, ':b' => $b, ':r' => $uid, ':u' => $uid]);
+    out(201, ['status' => 'blocked', 'link_id' => (int)$pdo->lastInsertId()]);
+}
+
+// ====== COUR (public personal space) ======
+if ($path === '/cour') {
+    if ($method === 'GET') {
+        $door = trim((string)($_GET['door'] ?? ''));
+        if ($door === '' || strlen($door) !== 32) out(422, ['error' => 'invalid_door']);
+
+        $pdo = db();
+        $stmt = $pdo->prepare("
+            SELECT d.door_id, c.content, c.updated_at
+            FROM doors d
+            LEFT JOIN cour c ON c.user_id = d.user_id
+            WHERE d.door_id = :d
+            LIMIT 1
+        ");
+        $stmt->execute([':d' => strtolower($door)]);
+        $row = $stmt->fetch();
+        if (!$row) out(404, ['error' => 'not_found']);
+
+        out(200, [
+            'door_id' => (string)$row['door_id'],
+            'cour' => [
+                'content' => (string)($row['content'] ?? ''),
+                'updated_at' => $row['updated_at'] ?? null,
+            ],
+        ]);
+    }
+
+    if ($method === 'POST') {
+        $uid = require_auth_uid();
+        require_csrf();
+
+        $in = json_input();
+        $content = (string)($in['content'] ?? '');
+        if (mb_strlen($content) > 200_000) out(413, ['error' => 'content_too_large']);
+
+        $pdo = db();
+        ensure_door($pdo, $uid);
+        ensure_cour($pdo, $uid);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO cour (user_id, content) VALUES (:u, :c)
+            ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = CURRENT_TIMESTAMP
+        ");
+        $stmt->execute([':u' => $uid, ':c' => $content]);
+
+        out(200, ['status' => 'saved']);
+    }
+
+    out(405, ['error' => 'method_not_allowed']);
+}
+
+if ($path === '/cour/me') {
+    require_method('GET');
+    $uid = require_auth_uid();
+
+    $pdo = db();
+    $door = ensure_door($pdo, $uid);
+    ensure_cour($pdo, $uid);
+
+    $stmt = $pdo->prepare("SELECT content, updated_at FROM cour WHERE user_id = :u LIMIT 1");
+    $stmt->execute([':u' => $uid]);
+    $row = $stmt->fetch() ?: ['content' => '', 'updated_at' => null];
+
+    out(200, [
+        'door_id' => (string)($door['door_id'] ?? ''),
+        'cour' => [
+            'content' => (string)($row['content'] ?? ''),
+            'updated_at' => $row['updated_at'] ?? null,
+        ],
+    ]);
 }
 
 if ($path === '/bote') {

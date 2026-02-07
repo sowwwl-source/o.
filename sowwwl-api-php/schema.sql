@@ -62,3 +62,22 @@ CREATE TABLE IF NOT EXISTS connections (
   FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (blocked_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Doors (public, identity-less entry points) + coarse presence
+CREATE TABLE IF NOT EXISTS doors (
+  user_id INT UNSIGNED PRIMARY KEY,
+  door_id CHAR(32) NOT NULL UNIQUE,
+  tz_offset_min SMALLINT NULL,
+  lat_q SMALLINT NULL,
+  lon_q SMALLINT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Cour (public personal space; no private interaction here)
+CREATE TABLE IF NOT EXISTS cour (
+  user_id INT UNSIGNED PRIMARY KEY,
+  content MEDIUMTEXT NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

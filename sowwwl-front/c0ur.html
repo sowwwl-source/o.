@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>c0ur — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/d0rs.html">↩</a>
+      <span class="muted">COUR</span>
+    </header>
+
+    <section class="card" aria-label="Cour">
+      <h1 class="muted">// c0ur //</h1>
+      <p class="muted">Espace public personnel. Pas de privé ici.</p>
+      <p class="muted" style="margin-top:10px">P0rte: <code id="door">—</code></p>
+      <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+
+      <div class="row" style="margin-top:14px">
+        <button id="btnKnock" class="btn" type="button" disabled>knock</button>
+        <button id="btnBlock" class="btn" type="button" disabled>bloquer</button>
+        <a class="btn" href="/li3ns.html">li3ns</a>
+        <a class="btn" href="/etat.html">état</a>
+      </div>
+
+      <p class="muted" style="margin-top:12px">Cour:</p>
+      <pre id="view" class="card" style="margin-top:10px;white-space:pre-wrap">—</pre>
+
+      <div id="edit" style="display:none">
+        <p class="muted" style="margin-top:16px">Éditer (toi)</p>
+        <textarea id="src" spellcheck="false" style="width:100%;min-height:36vh"></textarea>
+        <div class="row" style="margin-top:12px">
+          <button id="btnSave" class="btn" type="button">sauver</button>
+          <button id="btnReload" class="btn" type="button">recharger</button>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:12px">Réponse:</p>
+      <pre id="out" class="muted" style="margin-top:10px;white-space:pre-wrap">—</pre>
+    </section>
+  </main>
+
+  <script>
+    const els = {
+      door: document.getElementById('door'),
+      me: document.getElementById('me'),
+      view: document.getElementById('view'),
+      out: document.getElementById('out'),
+      edit: document.getElementById('edit'),
+      src: document.getElementById('src'),
+      btnSave: document.getElementById('btnSave'),
+      btnReload: document.getElementById('btnReload'),
+      btnKnock: document.getElementById('btnKnock'),
+      btnBlock: document.getElementById('btnBlock'),
+    };
+
+    function show(x) { els.out.textContent = typeof x === 'string' ? x : JSON.stringify(x, null, 2); }
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function qs(name) {
+      const u = new URL(window.location.href);
+      return u.searchParams.get(name);
+    }
+
+    let DOOR = String(qs('d') || '').trim();
+    const ME_FLAG = qs('me') === '1';
+    function setDoor(d) {
+      DOOR = String(d || '').trim();
+      els.door.textContent = DOOR ? (DOOR.slice(0, 6) + '…' + DOOR.slice(-4)) : '—';
+    }
+    setDoor(DOOR);
+
+    let CSRF = '';
+    let MY_DOOR = '';
+
+    async function load() {
+      const me = await j('/api/me');
+      const authed = me.ok;
+      if (!authed) {
+        els.me.textContent = 'guest';
+      } else {
+        const u = me.data && me.data.user ? me.data.user : {};
+        CSRF = String(me.data && me.data.csrf ? me.data.csrf : '');
+        MY_DOOR = String(u.door_id || '');
+        els.me.textContent = u.handle || ('o.' + (u.id || '?'));
+      }
+
+      if (!DOOR || DOOR.length !== 32) {
+        if (!authed) {
+          els.view.textContent = 'Passe une p0rte valide (?d=...)';
+          els.btnKnock.disabled = true;
+          els.btnBlock.disabled = true;
+          return;
+        }
+
+        const mine = await j('/api/cour/me');
+        if (!mine.ok) {
+          els.view.textContent = '—';
+          show(mine);
+          return;
+        }
+
+        setDoor(String(mine.data && mine.data.door_id ? mine.data.door_id : ''));
+        const content = (mine.data && mine.data.cour) ? String(mine.data.cour.content || '') : '';
+        els.view.textContent = content || '—';
+        els.src.value = content;
+        els.edit.style.display = 'block';
+        els.btnKnock.disabled = true;
+        els.btnBlock.disabled = true;
+        return;
+      }
+
+      const cour = await j('/api/cour?door=' + encodeURIComponent(DOOR));
+      if (!cour.ok) {
+        els.view.textContent = '—';
+        show(cour);
+      } else {
+        const content = (cour.data && cour.data.cour) ? String(cour.data.cour.content || '') : '';
+        els.view.textContent = content || '—';
+        els.src.value = content;
+      }
+
+      const isMine = Boolean(MY_DOOR) && MY_DOOR === DOOR;
+      const canEdit = authed && isMine;
+      els.edit.style.display = canEdit ? 'block' : 'none';
+
+      els.btnKnock.disabled = !authed || !CSRF || isMine;
+      els.btnBlock.disabled = !authed || !CSRF || isMine;
+
+      if (ME_FLAG && !isMine) {
+        // If someone manually added ?me=1 but it's not their door, ignore silently.
+      }
+    }
+
+    els.btnReload.addEventListener('click', load);
+    els.btnSave.addEventListener('click', async () => {
+      if (!CSRF) return;
+      const r = await j('/api/cour', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ content: els.src.value }),
+      });
+      show(r);
+      if (r.ok) await load();
+    });
+
+    els.btnKnock.addEventListener('click', async () => {
+      if (!CSRF) return;
+      const r = await j('/api/d0rs/knock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ door_id: DOOR }),
+      });
+      show(r);
+    });
+
+    els.btnBlock.addEventListener('click', async () => {
+      if (!CSRF) return;
+      const r = await j('/api/d0rs/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ door_id: DOOR }),
+      });
+      show(r);
+    });
+
+    load();
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>d0rs — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+  <style>
+    .graph-card{padding:0;overflow:hidden}
+    #view3d{height:min(72vh, 780px);width:100%;touch-action:none}
+    @media (max-width: 700px){ #view3d{height:72vh} }
+    .hint{opacity:.7;font-size:12px;margin-top:10px}
+    .dock{margin-top:14px}
+    .dock pre{margin:0}
+  </style>
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/0.html">↩</a>
+      <span class="muted">D0RS</span>
+    </header>
+
+    <section class="card" aria-label="Infos">
+      <h1 class="muted">// d0rs //</h1>
+      <p class="muted">Espace social global. Portes sans nom. (prototype)</p>
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Moi: <code id="me">—</code></span>
+        <span class="muted">P0rtes: <code id="count">—</code></span>
+        <span class="muted">API: <code id="api">—</code></span>
+      </div>
+      <p class="hint muted">Drag = tourner • scroll = zoom • click porte = sélectionner.</p>
+    </section>
+
+    <section class="card graph-card" aria-label="Graph" data-no-glitch data-no-flip>
+      <div id="view3d"></div>
+    </section>
+
+    <section class="card dock" aria-label="Dock" data-no-glitch>
+      <div class="row" style="justify-content:space-between;gap:18px;align-items:center">
+        <span class="muted">sélection: <code id="sel">—</code></span>
+        <div class="row">
+          <button id="btnCour" class="btn" type="button" disabled>cour</button>
+          <button id="btnKnock" class="btn" type="button" disabled>knock</button>
+        </div>
+      </div>
+      <pre id="out" class="muted" style="margin-top:12px;white-space:pre-wrap">—</pre>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
+  <script>
+    const els = {
+      me: document.getElementById('me'),
+      api: document.getElementById('api'),
+      count: document.getElementById('count'),
+      sel: document.getElementById('sel'),
+      out: document.getElementById('out'),
+      view: document.getElementById('view3d'),
+      btnCour: document.getElementById('btnCour'),
+      btnKnock: document.getElementById('btnKnock'),
+    };
+
+    function show(x) { els.out.textContent = typeof x === 'string' ? x : JSON.stringify(x, null, 2); }
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function cssVar(name, fallback) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
+
+    function palette() {
+      return {
+        green: cssVar('--accent-green', '#56ffa6'),
+        amber: cssVar('--accent-amber', '#ffe7c7'),
+        line: cssVar('--line', 'rgba(255,231,199,.22)'),
+        fg: getComputedStyle(document.body).color || '#fff',
+      };
+    }
+
+    function hexColor(c) {
+      // Accept rgb/rgba from css vars as-is (Three supports CSS strings).
+      return c;
+    }
+
+    function hash01(s, salt) {
+      // Tiny, stable hash -> 0..1 (no crypto dependency)
+      const str = String(s || '') + '|' + String(salt || '');
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      // >>> 0 keeps uint32, divide by 2^32
+      return ((h >>> 0) / 4294967296);
+    }
+
+    function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+
+    function doorPlacement(door) {
+      const id = door.door_id || '';
+      const tzMin = typeof door.tz_offset_min === 'number' ? door.tz_offset_min : null;
+      const latQ = typeof door.lat_q === 'number' ? door.lat_q : null;
+
+      // Timezone -> longitude sector (minutes east of UTC).
+      const hours = tzMin === null ? ((hash01(id, 'tz') * 24) - 12) : (tzMin / 60);
+      const theta0 = (hours / 24) * Math.PI * 2;
+      const dTheta = (hash01(id, 'dtheta') * 2 - 1) * 0.22;
+      const theta = theta0 + dTheta;
+
+      // Latitude band (coarse, privacy-safe).
+      const lat = latQ === null ? ((hash01(id, 'lat') * 2 - 1) * 0.72) : clamp(latQ / 90, -0.9, 0.9);
+      const phi0 = lat * (Math.PI / 2);
+      const dPhi = (hash01(id, 'dphi') * 2 - 1) * 0.18;
+      const phi = clamp(phi0 + dPhi, -1.2, 1.2);
+
+      // Radius (invisible sphere).
+      const r = 240 + (hash01(id, 'r') * 22 - 11);
+      const cp = Math.cos(phi);
+      return {
+        x: r * cp * Math.cos(theta),
+        y: r * Math.sin(phi),
+        z: r * cp * Math.sin(theta),
+      };
+    }
+
+    function durerGeometry(size, cut) {
+      const c = cut;
+      const v = [
+        // 6 original cube vertices (excluding the 2 truncated corners)
+        [ 1, 1,-1], // 0
+        [ 1,-1, 1], // 1
+        [-1, 1, 1], // 2
+        [-1,-1, 1], // 3
+        [-1, 1,-1], // 4
+        [ 1,-1,-1], // 5
+        // 3 new verts near (1,1,1)
+        [ 1, 1, 1-2*c], // 6
+        [ 1, 1-2*c, 1], // 7
+        [ 1-2*c, 1, 1], // 8
+        // 3 new verts near (-1,-1,-1)
+        [-1,-1,-1+2*c], // 9
+        [-1,-1+2*c,-1], // 10
+        [-1+2*c,-1,-1], // 11
+      ];
+
+      const verts = v.flat();
+
+      const faces = [
+        // Truncated triangles
+        6,7,8,
+        9,10,11,
+
+        // 6 pentagons (triangulated)
+        // x = +1: [0,6,7,1,5]
+        0,6,7, 0,7,1, 0,1,5,
+        // y = +1: [0,6,8,2,4]
+        0,6,8, 0,8,2, 0,2,4,
+        // z = +1: [1,7,8,2,3]
+        1,7,8, 1,8,2, 1,2,3,
+        // x = -1: [2,4,10,9,3]
+        2,4,10, 2,10,9, 2,9,3,
+        // y = -1: [1,3,9,11,5]
+        1,3,9, 1,9,11, 1,11,5,
+        // z = -1: [0,5,11,10,4]
+        0,5,11, 0,11,10, 0,10,4,
+      ];
+
+      const g = new THREE.PolyhedronGeometry(verts, faces, size, 0);
+      g.computeVertexNormals();
+      return g;
+    }
+
+    function fmtDoor(doorId) {
+      const s = String(doorId || '');
+      if (s.length <= 10) return s;
+      return s.slice(0, 6) + '…' + s.slice(-4);
+    }
+
+    function linkColor(doorId, relMap, meDoor) {
+      const { green, amber, line } = palette();
+      if (doorId && meDoor && doorId === meDoor) return amber;
+      const link = doorId ? relMap.get(doorId) : null;
+      if (!link) return line;
+      if (link.status === 'accepted') return green;
+      if (link.status === 'blocked') return 'rgba(255,231,199,.35)';
+      return amber; // pending
+    }
+
+    (async () => {
+      const health = await j('/api/health');
+      els.api.textContent = health.ok ? 'ok' : `fail:${health.status}`;
+
+      const me = await j('/api/me');
+      const authed = me.ok;
+      let CSRF = '';
+      let myDoor = '';
+      let myUid = 0;
+      if (!authed) {
+        els.me.textContent = 'guest';
+      } else {
+        const u = me.data && me.data.user ? me.data.user : {};
+        myUid = Number(u.id || 0);
+        CSRF = String(me.data && me.data.csrf ? me.data.csrf : '');
+        myDoor = String(u.door_id || '');
+        const handle = u.handle || ('o.' + (u.id || '?'));
+        els.me.textContent = `${handle}`;
+      }
+
+      // Best-effort: update presence (timezone only).
+      if (authed && CSRF) {
+        const tz = -new Date().getTimezoneOffset(); // minutes east of UTC
+        j('/api/d0rs/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+          body: JSON.stringify({ tz_offset_min: tz }),
+        }).catch(() => {});
+      }
+
+      const links = authed ? await j('/api/links') : { ok: false, data: { links: [] } };
+      const rel = new Map();
+      const linksArr = (links.data && links.data.links) ? links.data.links : [];
+      linksArr.forEach((l) => {
+        const d = l && l.peer ? l.peer.door_id : null;
+        if (typeof d === 'string' && d.length === 32) rel.set(d, l);
+      });
+
+      const doorsRes = await j('/api/d0rs?limit=1200');
+      if (!doorsRes.ok) {
+        show(doorsRes);
+        return;
+      }
+      const doors = (doorsRes.data && doorsRes.data.doors) ? doorsRes.data.doors : [];
+      els.count.textContent = String(doors.length);
+
+      // ===== 3D setup =====
+      const rootEl = els.view;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
+      camera.position.set(0, 0, 520);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      rootEl.appendChild(renderer.domElement);
+
+      const world = new THREE.Group();
+      scene.add(world);
+
+      // Dürer polyhedron (wireframe + edges)
+      const poly = durerGeometry(150, 0.45);
+      const polyMat = new THREE.MeshBasicMaterial({ color: hexColor(palette().line), wireframe: true, transparent: true, opacity: 0.55 });
+      const polyMesh = new THREE.Mesh(poly, polyMat);
+      world.add(polyMesh);
+
+      const edges = new THREE.EdgesGeometry(poly, 40);
+      const edgesMat = new THREE.LineBasicMaterial({ color: hexColor(palette().fg), transparent: true, opacity: 0.16 });
+      const edgeLines = new THREE.LineSegments(edges, edgesMat);
+      world.add(edgeLines);
+
+      // Doors (instanced)
+      const doorGeo = new THREE.SphereGeometry(2.1, 14, 14);
+      const doorMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95 });
+      const doorMesh = new THREE.InstancedMesh(doorGeo, doorMat, doors.length);
+      world.add(doorMesh);
+
+      const baseColors = [];
+      const tmpMat = new THREE.Matrix4();
+      const tmpPos = new THREE.Vector3();
+      doors.forEach((d, i) => {
+        const p = doorPlacement(d);
+        tmpPos.set(p.x, p.y, p.z);
+        tmpMat.makeTranslation(tmpPos.x, tmpPos.y, tmpPos.z);
+        doorMesh.setMatrixAt(i, tmpMat);
+        const c = new THREE.Color(linkColor(d.door_id, rel, myDoor));
+        baseColors[i] = c.clone();
+        doorMesh.setColorAt(i, c);
+      });
+      if (doorMesh.instanceColor) doorMesh.instanceColor.needsUpdate = true;
+
+      // Drag orbit (minimal)
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+      let velX = 0;
+      let velY = 0;
+
+      rootEl.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        rootEl.setPointerCapture(e.pointerId);
+      });
+      rootEl.addEventListener('pointerup', () => { dragging = false; });
+      rootEl.addEventListener('pointercancel', () => { dragging = false; });
+      rootEl.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        velY = dx * 0.004;
+        velX = dy * 0.004;
+        world.rotation.y += velY;
+        world.rotation.x += velX;
+        world.rotation.x = clamp(world.rotation.x, -1.2, 1.2);
+      });
+      rootEl.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const dz = e.deltaY * 0.55;
+        camera.position.z = clamp(camera.position.z + dz, 220, 1300);
+      }, { passive: false });
+
+      // Picking
+      const ray = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      let hovered = null;
+      let selected = null;
+
+      function setHover(next) {
+        if (hovered === next) return;
+        if (hovered !== null && baseColors[hovered]) {
+          doorMesh.setColorAt(hovered, baseColors[hovered]);
+        }
+        hovered = next;
+        if (hovered !== null) {
+          const { green } = palette();
+          doorMesh.setColorAt(hovered, new THREE.Color(green));
+        }
+        if (doorMesh.instanceColor) doorMesh.instanceColor.needsUpdate = true;
+      }
+
+      rootEl.addEventListener('pointermove', (e) => {
+        const r = renderer.domElement.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        const y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+        mouse.set(x, y);
+        ray.setFromCamera(mouse, camera);
+        const hits = ray.intersectObject(doorMesh, false);
+        if (!hits.length) return setHover(null);
+        const inst = hits[0].instanceId;
+        if (typeof inst !== 'number') return setHover(null);
+        setHover(inst);
+      });
+
+      function setSelected(i) {
+        selected = i;
+        if (selected === null) {
+          els.sel.textContent = '—';
+          els.btnCour.disabled = true;
+          els.btnKnock.disabled = true;
+          return;
+        }
+        const d = doors[selected];
+        const doorId = d && d.door_id ? d.door_id : '';
+        els.sel.textContent = fmtDoor(doorId);
+        els.btnCour.disabled = !doorId;
+        els.btnKnock.disabled = !authed || !CSRF || !doorId || (doorId && myDoor && doorId === myDoor);
+      }
+
+      rootEl.addEventListener('click', (e) => {
+        if (dragging) return;
+        const r = renderer.domElement.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        const y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+        mouse.set(x, y);
+        ray.setFromCamera(mouse, camera);
+        const hits = ray.intersectObject(doorMesh, false);
+        if (!hits.length) return setSelected(null);
+        const inst = hits[0].instanceId;
+        if (typeof inst !== 'number') return setSelected(null);
+        setSelected(inst);
+      });
+
+      els.btnCour.addEventListener('click', () => {
+        if (selected === null) return;
+        const d = doors[selected];
+        const doorId = d && d.door_id ? d.door_id : '';
+        if (!doorId) return;
+        const meFlag = myDoor && doorId === myDoor ? '&me=1' : '';
+        window.location.href = `/c0ur.html?d=${encodeURIComponent(doorId)}${meFlag}`;
+      });
+
+      els.btnKnock.addEventListener('click', async () => {
+        if (selected === null) return;
+        const d = doors[selected];
+        const doorId = d && d.door_id ? d.door_id : '';
+        if (!doorId || !authed || !CSRF) return;
+        const r = await j('/api/d0rs/knock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+          body: JSON.stringify({ door_id: doorId }),
+        });
+        show(r);
+      });
+
+      function applyTheme() {
+        const p = palette();
+        polyMat.color = new THREE.Color(p.line);
+        edgesMat.color = new THREE.Color(p.fg);
+        polyMat.needsUpdate = true;
+        edgesMat.needsUpdate = true;
+
+        doors.forEach((d, i) => {
+          const c = new THREE.Color(linkColor(d.door_id, rel, myDoor));
+          baseColors[i] = c.clone();
+          if (hovered !== i) doorMesh.setColorAt(i, c);
+        });
+        if (doorMesh.instanceColor) doorMesh.instanceColor.needsUpdate = true;
+      }
+
+      new MutationObserver(() => applyTheme()).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+      function resize() {
+        const r = rootEl.getBoundingClientRect();
+        renderer.setSize(r.width, r.height, false);
+        camera.aspect = r.width / Math.max(1, r.height);
+        camera.updateProjectionMatrix();
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function tick() {
+        // Slow drift when idle
+        if (!dragging) {
+          world.rotation.y += 0.0012;
+        }
+        renderer.render(scene, camera);
+        requestAnimationFrame(tick);
+      }
+      tick();
+
+      show({ ok: true, me: authed ? myUid : 'guest', doors: doors.length });
+    })();
+  </script>
+
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+
