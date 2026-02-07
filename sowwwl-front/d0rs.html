@@ -279,12 +279,22 @@
       const doorMesh = new THREE.InstancedMesh(doorGeo, doorMat, doors.length);
       world.add(doorMesh);
 
+      // One-shot luminous signals (safe) — used for selection + knock feedback.
+      const reduceMotion = (() => {
+        try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
+      })();
+      const fx = new THREE.Group();
+      world.add(fx);
+      const pulses = [];
+
       const baseColors = [];
+      const doorPoints = [];
       const tmpMat = new THREE.Matrix4();
       const tmpPos = new THREE.Vector3();
       doors.forEach((d, i) => {
         const p = doorPlacement(d);
         tmpPos.set(p.x, p.y, p.z);
+        doorPoints[i] = tmpPos.clone();
         tmpMat.makeTranslation(tmpPos.x, tmpPos.y, tmpPos.z);
         doorMesh.setMatrixAt(i, tmpMat);
         const c = new THREE.Color(linkColor(d.door_id, rel, myDoor));
@@ -292,6 +302,37 @@
         doorMesh.setColorAt(i, c);
       });
       if (doorMesh.instanceColor) doorMesh.instanceColor.needsUpdate = true;
+
+      function signalOnce(index, kind) {
+        if (reduceMotion) return;
+        if (typeof index !== 'number' || index < 0 || index >= doorPoints.length) return;
+        const pos = doorPoints[index];
+        if (!pos) return;
+
+        const p = palette();
+        const isKnock = kind === 'knock';
+
+        const ringGeo = new THREE.RingGeometry(isKnock ? 3.2 : 2.6, isKnock ? 4.6 : 3.6, 48);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(p.amber),
+          transparent: true,
+          opacity: isKnock ? 0.22 : 0.14,
+          side: THREE.DoubleSide,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.copy(pos);
+        fx.add(ring);
+
+        pulses.push({
+          mesh: ring,
+          start: performance.now(),
+          dur: isKnock ? 720 : 520,
+          scaleSpan: isKnock ? 3.8 : 2.6,
+          baseOpacity: isKnock ? 0.22 : 0.14,
+        });
+      }
 
       // Drag orbit (minimal)
       let dragging = false;
@@ -371,6 +412,9 @@
         els.sel.textContent = fmtDoor(doorId);
         els.btnCour.disabled = !doorId;
         els.btnKnock.disabled = !authed || !CSRF || !doorId || (doorId && myDoor && doorId === myDoor);
+
+        // Safe signal, once.
+        signalOnce(selected, 'select');
       }
 
       rootEl.addEventListener('click', (e) => {
@@ -408,6 +452,7 @@
         });
         show(r);
         if (r.ok) {
+          signalOnce(selected, 'knock');
           await refreshLinks().catch(() => {});
           applyTheme();
         }
@@ -444,6 +489,29 @@
         if (!dragging) {
           world.rotation.y += 0.0012;
         }
+
+        // One-shot rings (safe luminous signal)
+        if (pulses.length) {
+          const now = performance.now();
+          for (let i = pulses.length - 1; i >= 0; i--) {
+            const fxp = pulses[i];
+            const t = (now - fxp.start) / fxp.dur;
+            if (t >= 1) {
+              fx.remove(fxp.mesh);
+              fxp.mesh.geometry.dispose();
+              fxp.mesh.material.dispose();
+              pulses.splice(i, 1);
+              continue;
+            }
+            const k = 1 - t; // fade-out
+            const scale = 1 + (1 - k) * fxp.scaleSpan;
+            fxp.mesh.scale.setScalar(scale);
+            fxp.mesh.material.opacity = k * fxp.baseOpacity;
+            fxp.mesh.material.color = new THREE.Color(palette().amber);
+            fxp.mesh.lookAt(camera.position);
+          }
+        }
+
         renderer.render(scene, camera);
         requestAnimationFrame(tick);
       }
