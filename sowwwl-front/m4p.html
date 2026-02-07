@@ -51,12 +51,26 @@
       return { ok: res.ok, status: res.status, data };
     }
 
+    function cssVar(name, fallback) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
+
+    function palette() {
+      // Matches the algae/minitel/amber theme from o.css.
+      const green = cssVar('--accent-green', '#56ffa6');
+      const amber = cssVar('--accent-amber', '#ffe7c7');
+      const line = cssVar('--line', 'rgba(255,231,199,.22)');
+      return { green, amber, line };
+    }
+
     function statusColor(s) {
-      if (s === 'ok') return '#7dffb8';
-      if (s === 'off') return '#ff6b6b';
-      if (s === 'soon') return '#ffd27a';
-      if (s === 'locked') return 'rgba(245,243,238,.55)';
-      return 'rgba(245,243,238,.75)';
+      const { green, amber, line } = palette();
+      if (s === 'ok') return green;
+      if (s === 'off') return line;
+      if (s === 'soon') return amber;
+      if (s === 'locked') return 'rgba(255,231,199,.45)';
+      return amber;
     }
 
     function nodeText(n) {
@@ -86,6 +100,9 @@
       const nodes = [
         { id: 'O.', word: 'O.', href: '/index.html', status: 'ok' },
         { id: '0', word: '0', href: '/0.html', status: 'ok' },
+        { id: 'm4p', word: 'm4p', href: '/m4p.html', status: 'ok' },
+        { id: 'manif3st', word: 'manif3st', href: '/manif3st.html', status: 'ok' },
+        { id: 'qu3st', word: 'qu3st', href: '/qu3st.html', status: 'ok' },
         { id: 'sh0re', word: 'sh0re', href: '/sh0re.html', status: 'ok' },
         { id: 'b0té', word: 'b0té', href: '/b0te.html', status: boteReady ? 'ok' : 'soon', locked: !authed },
         { id: 'état', word: 'état', href: '/etat.html', status: 'ok' },
@@ -103,6 +120,9 @@
 
       const links = [
         { source: 'O.', target: '0' },
+        { source: '0', target: 'm4p' },
+        { source: 'O.', target: 'manif3st' },
+        { source: 'O.', target: 'qu3st' },
         { source: '0', target: 'sh0re' },
         { source: '0', target: 'b0té' },
         { source: '0', target: 'sal00ns' },
@@ -121,6 +141,15 @@
       function applyTheme() {
         const bg = getComputedStyle(document.body).backgroundColor || '#000';
         Graph.backgroundColor(bg);
+        const { line } = palette();
+        Graph.linkColor(() => line);
+
+        // Refresh node colors (theme inversion etc.)
+        nodeObjects.forEach((sprite, id) => {
+          const node = nodes.find((n) => n.id === id);
+          if (!node) return;
+          sprite.color = statusColor(node.locked ? 'locked' : node.status);
+        });
       }
 
       const nodeObjects = new Map();
@@ -155,4 +184,3 @@
   <script src="/assets/js/bicolor.js" defer></script>
 </body>
 </html>
-
