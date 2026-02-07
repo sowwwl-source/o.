@@ -101,8 +101,6 @@ jobs:
             fi
 
             cd "${APP_DIR}"
-            # docker-compose.prod.yml references `env_file: .env`, so mirror the server env here.
-            cp /opt/sowwwl/.env "${APP_DIR}/.env"
             GHCR_USER="${{ github.repository_owner }}"
             GHCR_TOKEN="${{ secrets.GHCR_READ_TOKEN }}"
             if [ -z "${GHCR_TOKEN}" ]; then

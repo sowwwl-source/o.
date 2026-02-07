@@ -182,14 +182,14 @@ sowwwl.com, www.sowwwl.com {
 
     # Same-origin proxy for cookies/auth (strips /api)
     handle_path /api/* {
-        reverse_proxy localhost:8000
+        reverse_proxy 127.0.0.1:8000
     }
 
     file_server
 }
 
 api.sowwwl.com {
-    reverse_proxy localhost:8000
+    reverse_proxy 127.0.0.1:8000
 }
 ```
 

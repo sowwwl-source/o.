@@ -6,7 +6,7 @@ sowwwl.com, www.sowwwl.com {
     root * /var/www/sowwwl-front
 
     handle_path /api/* {
-        reverse_proxy localhost:8000
+        reverse_proxy 127.0.0.1:8000
     }
 
     header {
@@ -21,7 +21,7 @@ sowwwl.com, www.sowwwl.com {
 
 # Optional: direct API domain
 api.sowwwl.com {
-    reverse_proxy localhost:8000
+    reverse_proxy 127.0.0.1:8000
 
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
