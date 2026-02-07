@@ -1,11 +1,14 @@
 :root{
   color-scheme: dark;
-  --bg0:#060607;
-  --fg0:#f5f3ee;
+  /* Algae / minitel / timetable amber */
+  --bg0:#04120b;
+  --fg0:#ffe7c7;
   --bg:var(--bg0);
   --fg:var(--fg0);
-  --line:rgba(245,243,238,.22);
-  --shade:rgba(245,243,238,.08);
+  --line:rgba(255,231,199,.22);
+  --shade:rgba(255,231,199,.08);
+  --accent-green:#56ffa6;
+  --accent-amber:#ffe7c7;
 
   --pad:clamp(20px,5vw,64px);
   --max:78ch;
@@ -23,8 +26,8 @@ html.is-inverted{
   color-scheme: light;
   --bg:var(--fg0);
   --fg:var(--bg0);
-  --line:rgba(6,6,7,.22);
-  --shade:rgba(6,6,7,.08);
+  --line:rgba(4,18,11,.22);
+  --shade:rgba(4,18,11,.08);
 }
 
 *{box-sizing:border-box}
@@ -38,6 +41,29 @@ body{
   line-height:1.55;
   text-rendering:optimizeLegibility;
   -webkit-font-smoothing:antialiased;
+  text-shadow: 0 0 14px rgba(86,255,166,.05);
+}
+
+/* Minitel-ish scanlines (very subtle) */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  opacity:.08;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,.18) 0,
+      rgba(0,0,0,.18) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode:overlay;
+}
+html.is-inverted body::before{
+  opacity:.06;
+  mix-blend-mode:multiply;
 }
 
 ::selection{background:var(--fg);color:var(--bg)}
@@ -146,13 +172,27 @@ html[data-focus="dot"] .mark-dot{transform:scale(var(--zoom))}
 
 /* Glitch links */
 .glitch-link{
-  color:#ff3d00;
+  color:var(--accent-green);
   text-decoration:none;
   border-radius:10px;
   padding:0 .12em;
 }
-.glitch-link:hover{background:rgba(255,61,0,.16)}
+.glitch-link:hover{background:rgba(86,255,166,.14)}
 .glitch-link:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+
+/* Typography glitch (JS toggles classes on <html>) */
+html.is-glitch body{
+  text-shadow:
+    0.8px 0 0 rgba(86,255,166,.38),
+    -0.8px 0 0 rgba(255,231,199,.20),
+    0 0 18px rgba(86,255,166,.10);
+}
+a.glitch-reveal{
+  color:var(--accent-green);
+  text-decoration:underline;
+  text-decoration-color:var(--accent-green);
+}
+a.glitch-mute{opacity:.28}
 
 /* Forms */
 button,

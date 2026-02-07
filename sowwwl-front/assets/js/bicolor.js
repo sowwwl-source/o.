@@ -191,4 +191,85 @@
     },
     { capture: true },
   );
+
+  // ====== Light typography glitch: reveal/mute some links ======
+  const reduceMotion = (() => {
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  })();
+
+  function rand01() {
+    try {
+      const a = new Uint32Array(1);
+      crypto.getRandomValues(a);
+      return a[0] / 4294967296;
+    } catch {
+      return Math.random();
+    }
+  }
+
+  function randInt(minInclusive, maxInclusive) {
+    const min = Math.ceil(minInclusive);
+    const max = Math.floor(maxInclusive);
+    return Math.floor(rand01() * (max - min + 1)) + min;
+  }
+
+  function shuffleInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rand01() * (i + 1));
+      const tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function glitchCandidates() {
+    const links = Array.from(document.querySelectorAll("a[href]"));
+    return links.filter((a) => {
+      if (!(a instanceof HTMLAnchorElement)) return false;
+      if (a.classList.contains("btn")) return false;
+      if (a.classList.contains("o-card")) return false;
+      if (a.classList.contains("glitch-link")) return false;
+      if (a.closest("[data-no-glitch]")) return false;
+      // Ignore empty anchors
+      if (!a.textContent || a.textContent.trim() === "") return false;
+      return true;
+    });
+  }
+
+  function scheduleGlitch() {
+    if (reduceMotion) return;
+    const delay = randInt(4200, 16000);
+    setTimeout(runGlitch, delay);
+  }
+
+  function runGlitch() {
+    if (reduceMotion) return;
+    if (document.hidden) return scheduleGlitch();
+    if (flipping) return scheduleGlitch();
+
+    const rootEl = document.documentElement;
+    rootEl.classList.add("is-glitch");
+
+    const candidates = glitchCandidates();
+    shuffleInPlace(candidates);
+    const pick = candidates.slice(0, randInt(2, Math.min(10, candidates.length || 2)));
+
+    const mode = rand01() < 0.68 ? "reveal" : "mute";
+    const className = mode === "reveal" ? "glitch-reveal" : "glitch-mute";
+    pick.forEach((a) => a.classList.add(className));
+
+    const duration = randInt(80, 180);
+    setTimeout(() => {
+      rootEl.classList.remove("is-glitch");
+      pick.forEach((a) => a.classList.remove("glitch-reveal", "glitch-mute"));
+      scheduleGlitch();
+    }, duration);
+  }
+
+  scheduleGlitch();
 })();
