@@ -23,6 +23,9 @@ Complete CI/CD pipeline with Docker, GitHub Actions, and production deployment.
 ## 🚀 Quick Start (Local Development)
 
 ```bash
+# Live preview (frontend + /api proxy to production, no Docker needed)
+make preview
+
 # Start everything
 make dev
 

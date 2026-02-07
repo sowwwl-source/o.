@@ -6,6 +6,9 @@ help: ## Show this help message
 	@echo 'Available targets:'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+preview: ## Live preview (no Docker): serve front + proxy /api to prod
+	node scripts/dev-web.mjs
+
 dev: ## Start development environment
 	docker compose up -d
 	@echo ""
@@ -14,6 +17,14 @@ dev: ## Start development environment
 	@echo "  Database: localhost:3306"
 	@echo ""
 	@echo "Test health: curl http://localhost:8000/health"
+
+live: ## Start dev + local website (front + /api proxy)
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+	@echo ""
+	@echo "Local website started:"
+	@echo "  Site:     http://localhost:8080"
+	@echo "  API:      http://localhost:8080/api/health"
+	@echo "  DB:       localhost:3306 (docker)"
 
 up: dev ## Alias for dev
 

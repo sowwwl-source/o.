@@ -1,0 +1,11 @@
+:80 {
+  root * /srv
+  encode gzip
+
+  # Same-origin API like prod: /api/* -> API container (/health, /me, ...)
+  handle_path /api/* {
+    reverse_proxy api:8000
+  }
+
+  file_server
+}

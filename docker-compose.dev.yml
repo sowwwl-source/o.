@@ -1,0 +1,18 @@
+services:
+  # Local reverse proxy: serves ./sowwwl-front as the site root and proxies /api/* to the PHP API.
+  # This keeps the same-origin /api/* setup (no CORS) like production.
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./sowwwl-front:/srv:ro
+      - ./scripts/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+
+  # Dev override: mount API source so edits are reflected immediately (PHP is interpreted per request).
+  api:
+    volumes:
+      - ./sowwwl-api-php:/var/www/html

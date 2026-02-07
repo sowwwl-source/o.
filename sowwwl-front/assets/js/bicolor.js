@@ -272,4 +272,231 @@
   }
 
   scheduleGlitch();
+
+  // ====== C0ntr0l: accelerometer / orientation scroll (mobile, opt-in) ======
+  // Goal: on smartphones, allow scrolling with device tilt AFTER explicit permission request.
+  (() => {
+    const isPreview = Boolean(window.__O_PREVIEW__);
+    const isCoarse = (() => {
+      try {
+        return window.matchMedia("(pointer: coarse)").matches;
+      } catch {
+        return false;
+      }
+    })();
+    const hasTouch = typeof navigator !== "undefined" && (navigator.maxTouchPoints || 0) > 0;
+    const isMobile = isPreview || isCoarse || hasTouch;
+
+    const hasMotion =
+      typeof window.DeviceOrientationEvent !== "undefined" ||
+      typeof window.DeviceMotionEvent !== "undefined";
+
+    if (!isMobile || (!hasMotion && !isPreview)) return;
+
+    // UI
+    const wrap = document.createElement("div");
+    wrap.className = "o-c0ntr0l";
+    wrap.setAttribute("data-no-flip", "");
+    wrap.setAttribute("data-no-glitch", "");
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn o-c0ntr0l-btn";
+    btn.setAttribute("aria-pressed", "false");
+
+    const label = document.createElement("span");
+    label.textContent = "C0ntr0l";
+
+    const state = document.createElement("span");
+    state.className = "o-c0ntr0l-state";
+    state.textContent = "0";
+
+    const msg = document.createElement("div");
+    msg.className = "o-c0ntr0l-msg muted";
+    msg.textContent = "";
+
+    btn.appendChild(label);
+    btn.appendChild(state);
+    wrap.appendChild(btn);
+    wrap.appendChild(msg);
+    document.body.appendChild(wrap);
+
+    // Motion state
+    const CFG = {
+      deadDeg: 3.5,
+      maxDeg: 26,
+      maxSpeedPxPerS: 1700,
+      smooth: 0.14,
+    };
+
+    let enabled = false;
+    let baseAxis = null;
+    let axis = 0;
+    let velocity = 0;
+    let raf = 0;
+    let lastTs = 0;
+
+    function clamp(n, lo, hi) {
+      return Math.min(hi, Math.max(lo, n));
+    }
+
+    function angle() {
+      const a = window.screen?.orientation?.angle;
+      if (typeof a === "number") return a;
+      // eslint-disable-next-line no-undef
+      const w = window.orientation;
+      if (typeof w === "number") return w;
+      return 0;
+    }
+
+    function axisFrom(beta, gamma) {
+      const a = angle();
+      // Normalize common values
+      const ang = a === -90 ? 270 : a;
+      if (ang === 90) return -gamma;
+      if (ang === 270) return gamma;
+      if (ang === 180) return -beta;
+      return beta;
+    }
+
+    function tiltToSpeed(deg) {
+      const sign = deg < 0 ? -1 : 1;
+      const abs = Math.abs(deg);
+      if (abs < CFG.deadDeg) return 0;
+      const clipped = clamp(abs, CFG.deadDeg, CFG.maxDeg);
+      const n = (clipped - CFG.deadDeg) / (CFG.maxDeg - CFG.deadDeg); // 0..1
+      const curve = n * n;
+      return sign * curve * CFG.maxSpeedPxPerS;
+    }
+
+    function onOrientation(e) {
+      if (!enabled) return;
+      const beta = e.beta;
+      const gamma = e.gamma;
+      if (typeof beta !== "number" || typeof gamma !== "number") return;
+      const ax = axisFrom(beta, gamma);
+      if (baseAxis === null) baseAxis = ax;
+      axis = ax - baseAxis;
+    }
+
+    function step(ts) {
+      if (!enabled) return;
+      const scroller = document.scrollingElement || document.documentElement;
+      const maxScroll = Math.max(0, scroller.scrollHeight - window.innerHeight);
+
+      const dt = lastTs ? (ts - lastTs) / 1000 : 0;
+      lastTs = ts;
+
+      const activeEl = document.activeElement;
+      const editing =
+        activeEl instanceof Element && activeEl.matches("input, textarea, select, option");
+
+      const target = editing ? 0 : tiltToSpeed(axis);
+      velocity = velocity * (1 - CFG.smooth) + target * CFG.smooth;
+
+      if (dt > 0 && maxScroll > 0) {
+        const next = clamp(scroller.scrollTop + velocity * dt, 0, maxScroll);
+        scroller.scrollTop = next;
+      }
+
+      raf = requestAnimationFrame(step);
+    }
+
+    function setUI(on, errorText = "") {
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      state.textContent = on ? "1" : "0";
+      state.classList.toggle("on", on);
+      state.classList.toggle("err", !on && Boolean(errorText));
+      msg.textContent = errorText || (on ? "incline → scroll" : "");
+    }
+
+    async function requestPermissionIfNeeded() {
+      // iOS Safari: permission requests exist and must be called from user gesture.
+      // Some browsers require secure context; handle errors gracefully.
+      const isLocal =
+        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+      const reqs = [];
+      let needsPrompt = false;
+      try {
+        // eslint-disable-next-line no-undef
+        if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+          // eslint-disable-next-line no-undef
+          needsPrompt = true;
+          reqs.push(DeviceOrientationEvent.requestPermission());
+        }
+      } catch {}
+
+      try {
+        // eslint-disable-next-line no-undef
+        if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+          // eslint-disable-next-line no-undef
+          needsPrompt = true;
+          reqs.push(DeviceMotionEvent.requestPermission());
+        }
+      } catch {}
+
+      if (needsPrompt && !window.isSecureContext && !isLocal) {
+        throw new Error("secure_context_required");
+      }
+
+      if (!reqs.length) return;
+      const results = await Promise.allSettled(reqs);
+      const granted = results.some((r) => r.status === "fulfilled" && r.value === "granted");
+      if (!granted) throw new Error("permission_denied");
+    }
+
+    function enable() {
+      enabled = true;
+      baseAxis = null;
+      axis = 0;
+      velocity = 0;
+      lastTs = 0;
+      window.addEventListener("deviceorientation", onOrientation, { passive: true });
+      raf = requestAnimationFrame(step);
+      setUI(true);
+
+      // If the browser never emits sensor values, fail softly.
+      setTimeout(() => {
+        if (!enabled) return;
+        if (baseAxis === null) disable("capteur off");
+      }, 1800);
+    }
+
+    function disable(errorText = "") {
+      enabled = false;
+      window.removeEventListener("deviceorientation", onOrientation);
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      setUI(false, errorText);
+    }
+
+    // Toggle
+    btn.addEventListener("click", async () => {
+      if (enabled) return disable();
+      setUI(false, "");
+      try {
+        await requestPermissionIfNeeded();
+        enable();
+      } catch (e) {
+        const msg = String(e?.message || e);
+        if (msg === "secure_context_required") return disable("HTTPS requis");
+        if (msg === "permission_denied") return disable("refusé");
+        return disable("indisponible");
+      }
+    });
+
+    // Double tap = calibrate (re-center)
+    btn.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      if (!enabled) return;
+      baseAxis = null;
+      axis = 0;
+      velocity = 0;
+      setUI(true, "recalibré");
+      setTimeout(() => setUI(true), 900);
+    });
+
+    setUI(false);
+  })();
 })();
