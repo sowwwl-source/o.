@@ -23,13 +23,7 @@
 
     <section class="card" aria-label="Solutions">
       <h2 class="muted">solutions</h2>
-      <div class="row" style="margin-top:14px">
-        <a class="btn" href="/sh0re.html">// sh0re //</a>
-        <a class="btn" href="/b0te.html">// b0té //</a>
-        <a class="btn" href="/etat.html">// état //</a>
-        <a class="btn" href="/login.html">// login //</a>
-      </div>
-      <p class="muted" style="margin-top:14px">À venir : salons / posts / groupes privés / mail / appel / visio.</p>
+      <div id="cards" class="cards" aria-label="Cartes">—</div>
     </section>
 
     <section class="card" aria-label="Portes">
@@ -53,20 +47,115 @@
       return { ok: res.ok, status: res.status, data };
     }
 
+    function badge(label, cls) {
+      const s = document.createElement('span');
+      s.className = 'badge ' + cls;
+      s.textContent = label;
+      return s;
+    }
+
+    function cardLink(href, title, desc, badges) {
+      const a = document.createElement('a');
+      a.className = 'o-card';
+      a.href = href;
+
+      const top = document.createElement('div');
+      top.className = 'o-card-top';
+
+      const h = document.createElement('h3');
+      h.className = 'muted';
+      h.textContent = title;
+
+      const b = document.createElement('div');
+      b.className = 'badges';
+      (badges || []).forEach((x) => b.appendChild(x));
+
+      top.appendChild(h);
+      top.appendChild(b);
+
+      const p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = desc;
+
+      a.appendChild(top);
+      a.appendChild(p);
+      return a;
+    }
+
     (async () => {
+      const cardsRoot = document.getElementById('cards');
+      cardsRoot.textContent = '';
+
       const health = await j('/api/health');
       document.getElementById('api').textContent = health.ok ? 'ok' : `fail:${health.status}`;
 
       const me = await j('/api/me');
       if (!me.ok) {
         document.getElementById('me').textContent = 'guest';
-        return;
+      } else {
+        const u = me.data?.user || {};
+        document.getElementById('me').textContent = `${u.handle || ('o.' + (u.id || '?'))} (${u.email || '—'})`;
       }
-      const u = me.data?.user || {};
-      document.getElementById('me').textContent = `${u.handle || ('o.' + (u.id || '?'))} (${u.email || '—'})`;
+
+      const authed = me.ok;
+
+      const apiBadge = health.ok ? badge('1', 'ok') : badge('0', 'off');
+
+      // Probe bote endpoint to know if it's already deployed on the API image.
+      const boteProbe = await j('/api/bote');
+      const boteReady = boteProbe.status === 200 || boteProbe.status === 401;
+
+      const cards = [
+        {
+          href: '/sh0re.html',
+          title: '// sh0re //',
+          desc: 'Arborescence des lands visibles.',
+          badges: [apiBadge],
+        },
+        {
+          href: '/b0te.html',
+          title: '// b0té //',
+          desc: 'Éditer + voir ta b0té (1 par compte).',
+          badges: [
+            boteReady ? badge('1', 'ok') : badge('s0o0n', 'soon'),
+            authed ? null : badge('locked', 'lock'),
+          ].filter(Boolean),
+        },
+        {
+          href: '/etat.html',
+          title: '// état //',
+          desc: 'Diagnostic : /me, logout, chaîne front→api→db.',
+          badges: [apiBadge],
+        },
+        {
+          href: '/login.html',
+          title: '// login //',
+          desc: 'Créer un compte, se connecter, fixer la session.',
+          badges: [badge('1', 'ok')],
+        },
+        {
+          href: '#',
+          title: '// sal00ns //',
+          desc: 'Forum / discussions / groupes privés.',
+          badges: [badge('s0o0n', 'soon'), badge('locked', 'lock')],
+        },
+        {
+          href: '#',
+          title: '// call //',
+          desc: 'Appel / visio (pont minimal).',
+          badges: [badge('s0o0n', 'soon'), badge('locked', 'lock')],
+        },
+        {
+          href: '#',
+          title: '// mail //',
+          desc: 'Messages / invitations / liens signés.',
+          badges: [badge('s0o0n', 'soon'), badge('locked', 'lock')],
+        },
+      ];
+
+      cards.forEach((c) => cardsRoot.appendChild(cardLink(c.href, c.title, c.desc, c.badges)));
     })();
   </script>
   <script src="/assets/js/bicolor.js" defer></script>
 </body>
 </html>
-
