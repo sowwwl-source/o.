@@ -69,80 +69,54 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare server directory
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            set -euo pipefail
-            sudo rm -rf /opt/sowwwl/app
-            sudo mkdir -p /opt/sowwwl/app/sowwwl-api-php
+      - name: Deploy to DigitalOcean (ssh + scp)
+        env:
+          DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USER: ${{ secrets.DO_USER }}
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+          GHCR_USER: ${{ github.repository_owner }}
+          GHCR_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_FALLBACK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
 
-      - name: Upload docker-compose.yml
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: "docker-compose.yml"
-          target: "/opt/sowwwl/app"
+          # Sanity check: ensure files exist in the workspace (helps debug runner issues)
+          ls -la docker-compose.yml sowwwl-api-php/docker-compose.prod.yml sowwwl-api-php/schema.sql .env.example
 
-      - name: Upload production overrides
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: "sowwwl-api-php/docker-compose.prod.yml"
-          target: "/opt/sowwwl/app"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${DO_SSH_KEY}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Upload database schema
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: "sowwwl-api-php/schema.sql"
-          target: "/opt/sowwwl/app"
+          # Prepare directory
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo rm -rf /opt/sowwwl/app; sudo mkdir -p /opt/sowwwl/app/sowwwl-api-php'
 
-      - name: Upload env template
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: ".env.example"
-          target: "/opt/sowwwl/app"
+          # Upload files
+          scp -i ~/.ssh/id_deploy docker-compose.yml "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/docker-compose.yml"
+          scp -i ~/.ssh/id_deploy sowwwl-api-php/docker-compose.prod.yml "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/docker-compose.prod.yml"
+          scp -i ~/.ssh/id_deploy sowwwl-api-php/schema.sql "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/schema.sql"
+          scp -i ~/.ssh/id_deploy .env.example "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/.env.example"
 
-      - name: Deploy to DigitalOcean
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            set -euo pipefail
-
-            APP_DIR="/opt/sowwwl/app"
-            REF="${{ github.ref_name }}"
-
-            if [ ! -f /opt/sowwwl/.env ]; then
-              echo "Missing /opt/sowwwl/.env (create it from /opt/sowwwl/app/.env.example)"
-              exit 1
-            fi
-
-            cd "${APP_DIR}"
-            GHCR_USER="${{ github.repository_owner }}"
-            GHCR_TOKEN="${{ secrets.GHCR_READ_TOKEN }}"
-            if [ -z "${GHCR_TOKEN}" ]; then
-              GHCR_TOKEN="${{ secrets.GITHUB_TOKEN }}"
-            fi
-            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
-            IMAGE_BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-            if [ "$REF" = "main" ]; then TAG="latest"; else TAG="$REF"; fi
-            FULL_IMAGE="${IMAGE_BASE}:${TAG}"
-            docker pull "$FULL_IMAGE"
-            API_IMAGE="$FULL_IMAGE" docker compose --env-file /opt/sowwwl/.env -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
-            docker system prune -f
+          # Deploy (pull + compose up)
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            "set -euo pipefail
+             APP_DIR=/opt/sowwwl/app
+             REF='${REF}'
+             if [ ! -f /opt/sowwwl/.env ]; then
+               echo 'Missing /opt/sowwwl/.env (create it from /opt/sowwwl/app/.env.example)'
+               exit 1
+             fi
+             cd \"\$APP_DIR\"
+             GHCR_TOKEN='${GHCR_TOKEN}'
+             if [ -z \"\$GHCR_TOKEN\" ]; then GHCR_TOKEN='${GHCR_FALLBACK_TOKEN}'; fi
+             echo \"\$GHCR_TOKEN\" | docker login ${REGISTRY} -u '${GHCR_USER}' --password-stdin
+             IMAGE_BASE='${REGISTRY}/${IMAGE_NAME}'
+             if [ \"\$REF\" = 'main' ]; then TAG='latest'; else TAG=\"\$REF\"; fi
+             FULL_IMAGE=\"\$IMAGE_BASE:\$TAG\"
+             docker pull \"\$FULL_IMAGE\"
+             API_IMAGE=\"\$FULL_IMAGE\" docker compose --env-file /opt/sowwwl/.env -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
+             docker system prune -f"
