@@ -80,14 +80,40 @@ jobs:
             sudo rm -rf /opt/sowwwl/app
             sudo mkdir -p /opt/sowwwl/app/sowwwl-api-php
 
-      - name: Upload compose files
+      - name: Upload docker-compose.yml
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
-          # NOTE: scp-action expects a comma-separated string (newlines can be treated as a single pattern).
-          source: "docker-compose.yml,sowwwl-api-php/docker-compose.prod.yml,sowwwl-api-php/schema.sql,.env.example"
+          source: "docker-compose.yml"
+          target: "/opt/sowwwl/app"
+
+      - name: Upload production overrides
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "sowwwl-api-php/docker-compose.prod.yml"
+          target: "/opt/sowwwl/app"
+
+      - name: Upload database schema
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "sowwwl-api-php/schema.sql"
+          target: "/opt/sowwwl/app"
+
+      - name: Upload env template
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: ".env.example"
           target: "/opt/sowwwl/app"
 
       - name: Deploy to DigitalOcean
