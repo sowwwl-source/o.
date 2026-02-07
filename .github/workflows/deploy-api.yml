@@ -62,6 +62,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
     permissions:
       contents: read
+      packages: read
     
     steps:
       - name: Deploy to DigitalOcean
@@ -100,7 +101,12 @@ jobs:
             fi
 
             cd "${APP_DIR}"
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            GHCR_USER="${{ github.repository_owner }}"
+            GHCR_TOKEN="${{ secrets.GHCR_READ_TOKEN }}"
+            if [ -z "${GHCR_TOKEN}" ]; then
+              GHCR_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+            fi
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
             IMAGE_BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
             if [ "$REF" = "main" ]; then TAG="latest"; else TAG="$REF"; fi
             FULL_IMAGE="${IMAGE_BASE}:${TAG}"
