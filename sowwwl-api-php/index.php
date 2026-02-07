@@ -257,10 +257,10 @@ if ($path === '/me') {
 
 if ($path === '/ux/threshold') {
     require_method('POST');
-    require_csrf();
 
     $uid = (int)($_SESSION['uid'] ?? 0);
     if ($uid <= 0) out(401, ['guest' => true]);
+    require_csrf();
 
     $pdo = db();
     $stmt = $pdo->prepare("
