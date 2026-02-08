@@ -128,7 +128,15 @@ export function HelmDock({ size = 56, panelWidth = 560, panelHeight = 560 }: Pro
       className={`uzyxDock ${helmOpen ? "open" : ""}`}
       href="#"
       aria-label={helmOpen ? "helm close" : "helm open"}
-      style={{ left: pos.x, top: pos.y, width: size, height: size } as React.CSSProperties}
+      style={
+        {
+          left: pos.x,
+          top: pos.y,
+          width: size,
+          height: size,
+          ["--dock-size" as any]: `${size}px`,
+        } as React.CSSProperties
+      }
       onClick={(e) => {
         e.preventDefault();
         if (dragRef.current.moved) return;

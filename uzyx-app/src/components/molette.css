@@ -1,7 +1,7 @@
 .helmOverlay{
   position:fixed;
   inset:0;
-  z-index:40;
+  z-index:99990;
   touch-action:none;
   user-select:none;
   color:var(--fg);
@@ -12,8 +12,6 @@
       color-mix(in srgb, var(--bg) 84%, transparent) 62%,
       color-mix(in srgb, var(--bg) 92%, transparent) 100%
     );
-  backdrop-filter:blur(5px);
-  -webkit-backdrop-filter:blur(5px);
   --helm-halo:var(--halo);
 }
 
@@ -54,6 +52,7 @@
   height:var(--uzyx-helm-h, 560px);
   pointer-events:none;
   opacity:.92;
+  transition:opacity 90ms ease;
   background:
     radial-gradient(
       ellipse at 50% 50%,
@@ -66,13 +65,8 @@
     radial-gradient(ellipse at 50% 50%, #000 0 68%, transparent 92% 100%);
 }
 
-.helmHaloFlash{
+.helmOverlay.is-flash .helmHalo{
   opacity:0;
-  transition:opacity 90ms ease;
-}
-
-.helmOverlay.is-flash .helmHaloFlash{
-  opacity:.92;
 }
 
 @supports ((backdrop-filter: invert(1)) or (-webkit-backdrop-filter: invert(1))){
@@ -327,10 +321,6 @@
 }
 
 @media (prefers-reduced-motion: reduce){
-  .helmOverlay{
-    backdrop-filter:none;
-    -webkit-backdrop-filter:none;
-  }
   .helmBirdField{ animation:none; }
   .oPointOrbit,
   .oPointAlive{ animation:none; }

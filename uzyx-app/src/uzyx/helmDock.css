@@ -1,6 +1,8 @@
 .uzyxDock{
   position:fixed;
-  z-index:60;
+  z-index:100000;
+  cursor:pointer;
+  pointer-events:auto;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -13,8 +15,16 @@
   font-size:11px;
   letter-spacing:.34em;
   text-transform:uppercase;
+  --dock-size:56px;
+  --petal-r:calc(var(--dock-size) * 0.11);
+  --petal-r2:calc(var(--petal-r) + 1px);
+  --petal-c:color-mix(in srgb, currentColor 22%, transparent);
 
   background:
+    radial-gradient(circle at 50% 18%, var(--petal-c) 0 var(--petal-r), transparent var(--petal-r2)),
+    radial-gradient(circle at 82% 50%, var(--petal-c) 0 var(--petal-r), transparent var(--petal-r2)),
+    radial-gradient(circle at 50% 82%, var(--petal-c) 0 var(--petal-r), transparent var(--petal-r2)),
+    radial-gradient(circle at 18% 50%, var(--petal-c) 0 var(--petal-r), transparent var(--petal-r2)),
     radial-gradient(
       circle at 50% 50%,
       transparent 0 42%,
@@ -30,6 +40,19 @@
   /* Circle without border-radius (rule: radius=false). */
   mask:
     radial-gradient(circle at 50% 50%, #000 0 60%, transparent 62% 100%);
+}
+
+.uzyxDock::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  pointer-events:none;
+  opacity:.82;
+  background:color-mix(in srgb, var(--fg) 6%, transparent);
+  box-shadow:0 10px 30px color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  mask:radial-gradient(circle at 50% 50%, #000 0 60%, transparent 62% 100%);
 }
 
 .uzyxDock::after{
@@ -48,6 +71,14 @@
 .uzyxDock.open{
   opacity:1;
   text-shadow:0 0 18px var(--halo);
+}
+
+.uzyxDock.open::before{
+  background:color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+.uzyxDock.open::after{
+  box-shadow:0 0 18px var(--halo);
 }
 
 .uzyxDockText{
@@ -73,4 +104,3 @@
     50%{ transform:translateZ(0) scale(1.018); }
   }
 }
-

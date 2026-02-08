@@ -442,7 +442,6 @@ export function Molette(props: { current: NodeId }) {
       }}
     >
       <div className="helmHalo" aria-hidden="true" />
-      <div className="helmHalo helmHaloFlash" aria-hidden="true" />
       <div className="helmWheel" aria-hidden="true">
         <div className="helmRing" />
         <div className="helmPoint" aria-hidden="true" />
