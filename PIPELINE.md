@@ -12,6 +12,7 @@
 ### CI/CD
 - `.github/workflows/deploy-api.yml` - Automated API deployment
 - `.github/workflows/deploy-frontend.yml` - Automated frontend deployment
+- `.github/workflows/deploy-uzyx.yml` - Automated uzyx-app deployment to `/var/www/o` (keeps `/var/www/o/signals`)
 
 ### Scripts & Utilities
 - `Makefile` - Quick commands for local development

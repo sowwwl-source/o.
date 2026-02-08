@@ -1,0 +1,59 @@
+name: Deploy Uzyx (O signals)
+
+on:
+  push:
+    branches: [main, production]
+    paths:
+      - 'uzyx-app/**'
+      - '.github/workflows/deploy-uzyx.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: uzyx-app/package-lock.json
+
+      - name: Install + build
+        run: |
+          set -euo pipefail
+          cd uzyx-app
+          npm ci
+          npm run build
+
+      - name: Deploy to DigitalOcean (rsync over ssh)
+        env:
+          DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USER: ${{ secrets.DO_USER }}
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update -y
+          sudo apt-get install -y rsync openssh-client
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${DO_SSH_KEY}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Ensure directories exist (and keep /var/www/o/signals reserved for server-side drops).
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            'set -euo pipefail; sudo mkdir -p /var/www/o; sudo mkdir -p /var/www/o/signals; sudo chown -R www-data:www-data /var/www/o/signals || true'
+
+          # Deploy uzyx-app build output to /var/www/o (do not touch signals/)
+          rsync -az --delete --exclude "signals/" -e "ssh -i ~/.ssh/id_deploy" uzyx-app/dist/ "${DO_USER}@${DO_HOST}:/var/www/o/"
+
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            'set -euo pipefail; sudo chmod -R a+rX /var/www/o; sudo chown -R www-data:www-data /var/www/o/signals || true'
+
