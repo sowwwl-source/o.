@@ -1,0 +1,76 @@
+.uzyxDock{
+  position:fixed;
+  z-index:60;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--fg);
+  opacity:.72;
+  user-select:none;
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:11px;
+  letter-spacing:.34em;
+  text-transform:uppercase;
+
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 42%,
+      color-mix(in srgb, currentColor 44%, transparent) 44% 45.6%,
+      transparent 47% 100%
+    ),
+    repeating-conic-gradient(
+      from 0deg,
+      transparent 0 18deg,
+      color-mix(in srgb, currentColor 58%, transparent) 18deg 18.7deg
+    );
+
+  /* Circle without border-radius (rule: radius=false). */
+  mask:
+    radial-gradient(circle at 50% 50%, #000 0 60%, transparent 62% 100%);
+}
+
+.uzyxDock::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:6px;
+  height:6px;
+  transform:translate(-50%,-50%);
+  background:currentColor;
+  mask:radial-gradient(circle at 50% 50%, #000 0 62%, transparent 64% 100%);
+  opacity:.84;
+}
+
+.uzyxDock.open{
+  opacity:1;
+  text-shadow:0 0 18px var(--halo);
+}
+
+.uzyxDockText{
+  opacity:.86;
+  transform:translateX(.05em);
+}
+
+.uzyxDock:hover{ opacity:1; }
+.uzyxDock:focus-visible{
+  outline:2px solid var(--fg);
+  outline-offset:6px;
+}
+
+@media (prefers-reduced-motion: no-preference){
+  .uzyxDock{
+    animation:uzyxDockBreathe 6.8s ease-in-out infinite;
+  }
+  .uzyxDock.open{
+    animation-duration:5.4s;
+  }
+  @keyframes uzyxDockBreathe{
+    0%,100%{ transform:translateZ(0) scale(1); }
+    50%{ transform:translateZ(0) scale(1.018); }
+  }
+}
+

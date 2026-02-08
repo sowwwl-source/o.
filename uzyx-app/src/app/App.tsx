@@ -24,6 +24,7 @@ import { toggleThemeInverse } from "@/theme/useThemeToggle";
 import { ONoteProvider, useONoteAPI } from "@/oNote/oNote.store";
 import type { OScore } from "@/oNote/oNote.types";
 import { useOEvent } from "@/oNote/oNote.hooks";
+import { HelmDock } from "@/uzyx/HelmDock";
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
@@ -219,6 +220,7 @@ function AppGate(props: { id: NodeId }) {
         <LandPage />
       )}
       <Molette current={id} />
+      <HelmDock />
     </PerceptionProvider>
   );
 }

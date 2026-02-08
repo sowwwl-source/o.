@@ -56,6 +56,24 @@ function ghostFor(id: string | null) {
   return "—";
 }
 
+function readRootPxVar(key: string, fallback: number): number {
+  if (typeof document === "undefined") return fallback;
+  const raw = document.documentElement.style.getPropertyValue(key);
+  const t = String(raw || "").trim();
+  if (!t) return fallback;
+  const n = t.endsWith("px") ? Number(t.slice(0, -2)) : Number(t);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function helmCenterPx(): { x: number; y: number } {
+  const fx = typeof window !== "undefined" ? window.innerWidth / 2 : 0;
+  const fy = typeof window !== "undefined" ? window.innerHeight / 2 : 0;
+  return {
+    x: readRootPxVar("--uzyx-helm-cx", fx),
+    y: readRootPxVar("--uzyx-helm-cy", fy),
+  };
+}
+
 export function Molette(props: { current: NodeId }) {
   const store = usePerceptionStore();
   const current = props.current;
@@ -68,6 +86,15 @@ export function Molette(props: { current: NodeId }) {
   const open = helm.open;
   const [theta, setTheta] = useState(0);
   const [phase, setPhase] = useState<"idle" | "deploy" | "traverse">("idle");
+  const [flash, setFlash] = useState(false);
+  const flashTimerRef = useRef<number | null>(null);
+
+  const triggerFlash = () => {
+    if (store.getReducedMotion()) return;
+    setFlash(true);
+    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => setFlash(false), 180);
+  };
   const sel = useMemo(() => {
     if (adjacent.length === 0) return null;
     const idx = angleToIndex(theta + Math.PI / 2, adjacent.length);
@@ -174,6 +201,7 @@ export function Molette(props: { current: NodeId }) {
       }
       if (k === "enter") {
         e.preventDefault();
+        triggerFlash();
         commitRef.current.busy = true;
         setPhase("traverse");
         const jump = () => {
@@ -190,6 +218,12 @@ export function Molette(props: { current: NodeId }) {
     window.addEventListener("keydown", onKey, { capture: true });
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, adjacent.length, store, sel?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -300,9 +334,10 @@ export function Molette(props: { current: NodeId }) {
     setTheta((t) => normalizeAngle(t + d * k));
   };
 
-  const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-
-  const angleOf = (clientX: number, clientY: number) => Math.atan2(clientY - center.y, clientX - center.x);
+  const angleOf = (clientX: number, clientY: number) => {
+    const c = helmCenterPx();
+    return Math.atan2(clientY - c.y, clientX - c.x);
+  };
 
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (e.defaultPrevented) return;
@@ -339,6 +374,7 @@ export function Molette(props: { current: NodeId }) {
     if (commitRef.current.busy) return;
     const id = sel?.id;
     if (!id) return;
+    triggerFlash();
     commitRef.current.busy = true;
     setPhase("traverse");
     const jump = () => {
@@ -380,7 +416,7 @@ export function Molette(props: { current: NodeId }) {
 
   return (
     <div
-      className={`helmOverlay ${phase === "deploy" ? "is-deploy" : ""} ${phase === "traverse" ? "is-traversing" : ""}`}
+      className={`helmOverlay ${phase === "deploy" ? "is-deploy" : ""} ${phase === "traverse" ? "is-traversing" : ""} ${flash ? "is-flash" : ""}`}
       role="dialog"
       aria-label="helm"
       data-mode={helm.mode}
@@ -405,6 +441,8 @@ export function Molette(props: { current: NodeId }) {
         onCommit();
       }}
     >
+      <div className="helmHalo" aria-hidden="true" />
+      <div className="helmHalo helmHaloFlash" aria-hidden="true" />
       <div className="helmWheel" aria-hidden="true">
         <div className="helmRing" />
         <div className="helmPoint" aria-hidden="true" />
