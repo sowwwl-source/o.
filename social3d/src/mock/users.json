@@ -1,0 +1,1442 @@
+[
+  {
+    "id": "u0001",
+    "tzOffsetMinutes": 120,
+    "latBucket": 0,
+    "lonBucket": 30,
+    "publicCourName": "fjord // arch.68",
+    "soundAura": {
+      "type": "noise",
+      "seed": 100695
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0002",
+    "tzOffsetMinutes": 570,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "fjord // field.36",
+    "soundAura": {
+      "type": "noise",
+      "seed": 108062
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0003",
+    "tzOffsetMinutes": -300,
+    "latBucket": -20,
+    "lonBucket": -90,
+    "publicCourName": "silt // d0rs.00",
+    "soundAura": {
+      "type": "hum",
+      "seed": 116192
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0004",
+    "tzOffsetMinutes": 420,
+    "latBucket": 40,
+    "lonBucket": 90,
+    "publicCourName": "kelp // d0rs.85",
+    "soundAura": {
+      "type": "noise",
+      "seed": 123883
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0005",
+    "tzOffsetMinutes": -420,
+    "latBucket": 60,
+    "lonBucket": -120,
+    "publicCourName": "sh0re // sal00n.00",
+    "soundAura": {
+      "type": "noise",
+      "seed": 132357
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0006",
+    "tzOffsetMinutes": -420,
+    "latBucket": -20,
+    "lonBucket": -120,
+    "publicCourName": "m0ss // door.09",
+    "soundAura": {
+      "type": "noise",
+      "seed": 140209
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0007",
+    "tzOffsetMinutes": 600,
+    "latBucket": -60,
+    "lonBucket": 150,
+    "publicCourName": "kelp // arch.03",
+    "soundAura": {
+      "type": "noise",
+      "seed": 147550
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0008",
+    "tzOffsetMinutes": 360,
+    "latBucket": -40,
+    "lonBucket": 90,
+    "publicCourName": "fjord // arch.77",
+    "soundAura": {
+      "type": "noise",
+      "seed": 155661
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0009",
+    "tzOffsetMinutes": 330,
+    "latBucket": 40,
+    "lonBucket": 90,
+    "publicCourName": "fjord // arch.16",
+    "soundAura": {
+      "type": "click",
+      "seed": 164183
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0010",
+    "tzOffsetMinutes": 420,
+    "latBucket": -40,
+    "lonBucket": 90,
+    "publicCourName": "durer // phase.69",
+    "soundAura": {
+      "type": "click",
+      "seed": 172188
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0011",
+    "tzOffsetMinutes": 600,
+    "latBucket": -40,
+    "lonBucket": 150,
+    "publicCourName": "delta // phase.30",
+    "soundAura": {
+      "type": "silence",
+      "seed": 179917
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0012",
+    "tzOffsetMinutes": -360,
+    "latBucket": -20,
+    "lonBucket": -90,
+    "publicCourName": "fjord // minitel.47",
+    "soundAura": {
+      "type": "click",
+      "seed": 187485
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0013",
+    "tzOffsetMinutes": 180,
+    "latBucket": 40,
+    "lonBucket": 30,
+    "publicCourName": "fjord // field.33",
+    "soundAura": {
+      "type": "silence",
+      "seed": 195248
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0014",
+    "tzOffsetMinutes": 360,
+    "latBucket": -20,
+    "lonBucket": 90,
+    "publicCourName": "delta // phase.28",
+    "soundAura": {
+      "type": "hum",
+      "seed": 203571
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0015",
+    "tzOffsetMinutes": -660,
+    "latBucket": 60,
+    "lonBucket": -150,
+    "publicCourName": "silt // c0ntr0l.84",
+    "soundAura": {
+      "type": "click",
+      "seed": 211209
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0016",
+    "tzOffsetMinutes": 0,
+    "latBucket": 20,
+    "lonBucket": 0,
+    "publicCourName": "brume // lag00n.14",
+    "soundAura": {
+      "type": "click",
+      "seed": 219336
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0017",
+    "tzOffsetMinutes": -480,
+    "latBucket": 0,
+    "lonBucket": -120,
+    "publicCourName": "brume // lag00n.71",
+    "soundAura": {
+      "type": "noise",
+      "seed": 227600
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0018",
+    "tzOffsetMinutes": 360,
+    "latBucket": 40,
+    "lonBucket": 90,
+    "publicCourName": "delta // field.10",
+    "soundAura": {
+      "type": "click",
+      "seed": 235054
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0019",
+    "tzOffsetMinutes": 660,
+    "latBucket": -40,
+    "lonBucket": 150,
+    "publicCourName": "delta // node.41",
+    "soundAura": {
+      "type": "hum",
+      "seed": 242802
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0020",
+    "tzOffsetMinutes": -300,
+    "latBucket": 0,
+    "lonBucket": -90,
+    "publicCourName": "fjord // arch.18",
+    "soundAura": {
+      "type": "hum",
+      "seed": 251211
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0021",
+    "tzOffsetMinutes": -420,
+    "latBucket": -40,
+    "lonBucket": -120,
+    "publicCourName": "durer // minitel.17",
+    "soundAura": {
+      "type": "hum",
+      "seed": 258618
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0022",
+    "tzOffsetMinutes": 360,
+    "latBucket": 40,
+    "lonBucket": 90,
+    "publicCourName": "delta // arch.08",
+    "soundAura": {
+      "type": "noise",
+      "seed": 266902
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0023",
+    "tzOffsetMinutes": 120,
+    "latBucket": 40,
+    "lonBucket": 30,
+    "publicCourName": "kelp // d0rs.10",
+    "soundAura": {
+      "type": "silence",
+      "seed": 274249
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0024",
+    "tzOffsetMinutes": 660,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "brume // minitel.76",
+    "soundAura": {
+      "type": "hum",
+      "seed": 282496
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0025",
+    "tzOffsetMinutes": -240,
+    "latBucket": 60,
+    "lonBucket": -60,
+    "publicCourName": "silt // c0ntr0l.12",
+    "soundAura": {
+      "type": "hum",
+      "seed": 290738
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0026",
+    "tzOffsetMinutes": 540,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "m0ss // door.07",
+    "soundAura": {
+      "type": "noise",
+      "seed": 298094
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0027",
+    "tzOffsetMinutes": 420,
+    "latBucket": 0,
+    "lonBucket": 120,
+    "publicCourName": "grain // minitel.55",
+    "soundAura": {
+      "type": "noise",
+      "seed": 306684
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0028",
+    "tzOffsetMinutes": 120,
+    "latBucket": -20,
+    "lonBucket": 30,
+    "publicCourName": "grain // signal.38",
+    "soundAura": {
+      "type": "hum",
+      "seed": 314132
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0029",
+    "tzOffsetMinutes": -300,
+    "latBucket": 60,
+    "lonBucket": -90,
+    "publicCourName": "sh0re // c0ur.20",
+    "soundAura": {
+      "type": "noise",
+      "seed": 322384
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0030",
+    "tzOffsetMinutes": -300,
+    "latBucket": -20,
+    "lonBucket": -90,
+    "publicCourName": "silt // lag00n.08",
+    "soundAura": {
+      "type": "noise",
+      "seed": 330476
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0031",
+    "tzOffsetMinutes": 330,
+    "latBucket": -60,
+    "lonBucket": 90,
+    "publicCourName": "brume // d0rs.78",
+    "soundAura": {
+      "type": "hum",
+      "seed": 338043
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0032",
+    "tzOffsetMinutes": 660,
+    "latBucket": -20,
+    "lonBucket": 150,
+    "publicCourName": "sh0re // door.65",
+    "soundAura": {
+      "type": "hum",
+      "seed": 346145
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0033",
+    "tzOffsetMinutes": -420,
+    "latBucket": -20,
+    "lonBucket": -120,
+    "publicCourName": "grain // signal.42",
+    "soundAura": {
+      "type": "noise",
+      "seed": 353682
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0034",
+    "tzOffsetMinutes": -60,
+    "latBucket": 20,
+    "lonBucket": -30,
+    "publicCourName": "durer // minitel.17",
+    "soundAura": {
+      "type": "noise",
+      "seed": 362037
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0035",
+    "tzOffsetMinutes": -60,
+    "latBucket": -20,
+    "lonBucket": 0,
+    "publicCourName": "brume // c0ntr0l.27",
+    "soundAura": {
+      "type": "hum",
+      "seed": 370044
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0036",
+    "tzOffsetMinutes": -300,
+    "latBucket": 40,
+    "lonBucket": -90,
+    "publicCourName": "sh0re // sal00n.09",
+    "soundAura": {
+      "type": "noise",
+      "seed": 377401
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0037",
+    "tzOffsetMinutes": 600,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "brume // signal.22",
+    "soundAura": {
+      "type": "noise",
+      "seed": 385643
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0038",
+    "tzOffsetMinutes": 600,
+    "latBucket": 40,
+    "lonBucket": 150,
+    "publicCourName": "vault // signal.44",
+    "soundAura": {
+      "type": "hum",
+      "seed": 393322
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0039",
+    "tzOffsetMinutes": 0,
+    "latBucket": 60,
+    "lonBucket": 0,
+    "publicCourName": "reef // door.54",
+    "soundAura": {
+      "type": "click",
+      "seed": 401110
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0040",
+    "tzOffsetMinutes": -660,
+    "latBucket": 60,
+    "lonBucket": -150,
+    "publicCourName": "fjord // signal.66",
+    "soundAura": {
+      "type": "noise",
+      "seed": 409523
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0041",
+    "tzOffsetMinutes": 720,
+    "latBucket": -60,
+    "lonBucket": 150,
+    "publicCourName": "silt // phase.26",
+    "soundAura": {
+      "type": "noise",
+      "seed": 417569
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0042",
+    "tzOffsetMinutes": -180,
+    "latBucket": 0,
+    "lonBucket": -60,
+    "publicCourName": "grain // field.76",
+    "soundAura": {
+      "type": "noise",
+      "seed": 424698
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0043",
+    "tzOffsetMinutes": -60,
+    "latBucket": -40,
+    "lonBucket": -30,
+    "publicCourName": "delta // d0rs.57",
+    "soundAura": {
+      "type": "hum",
+      "seed": 433339
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0044",
+    "tzOffsetMinutes": 660,
+    "latBucket": -40,
+    "lonBucket": 150,
+    "publicCourName": "grain // lag00n.48",
+    "soundAura": {
+      "type": "click",
+      "seed": 440657
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0045",
+    "tzOffsetMinutes": -600,
+    "latBucket": -20,
+    "lonBucket": -150,
+    "publicCourName": "durer // d0rs.77",
+    "soundAura": {
+      "type": "noise",
+      "seed": 449335
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0046",
+    "tzOffsetMinutes": -120,
+    "latBucket": 20,
+    "lonBucket": -30,
+    "publicCourName": "vault // lag00n.86",
+    "soundAura": {
+      "type": "hum",
+      "seed": 456530
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0047",
+    "tzOffsetMinutes": 300,
+    "latBucket": 40,
+    "lonBucket": 60,
+    "publicCourName": "grain // node.44",
+    "soundAura": {
+      "type": "hum",
+      "seed": 464531
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0048",
+    "tzOffsetMinutes": -60,
+    "latBucket": 0,
+    "lonBucket": -30,
+    "publicCourName": "reef // signal.42",
+    "soundAura": {
+      "type": "silence",
+      "seed": 472734
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0049",
+    "tzOffsetMinutes": 300,
+    "latBucket": -60,
+    "lonBucket": 60,
+    "publicCourName": "quiet // c0ntr0l.91",
+    "soundAura": {
+      "type": "hum",
+      "seed": 480944
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0050",
+    "tzOffsetMinutes": 240,
+    "latBucket": -20,
+    "lonBucket": 60,
+    "publicCourName": "reef // c0ntr0l.41",
+    "soundAura": {
+      "type": "silence",
+      "seed": 488045
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0051",
+    "tzOffsetMinutes": 360,
+    "latBucket": -40,
+    "lonBucket": 90,
+    "publicCourName": "quiet // minitel.23",
+    "soundAura": {
+      "type": "click",
+      "seed": 496771
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0052",
+    "tzOffsetMinutes": -300,
+    "latBucket": -60,
+    "lonBucket": -90,
+    "publicCourName": "quiet // minitel.38",
+    "soundAura": {
+      "type": "noise",
+      "seed": 504201
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0053",
+    "tzOffsetMinutes": 720,
+    "latBucket": -20,
+    "lonBucket": 150,
+    "publicCourName": "delta // door.11",
+    "soundAura": {
+      "type": "noise",
+      "seed": 511849
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0054",
+    "tzOffsetMinutes": -120,
+    "latBucket": 0,
+    "lonBucket": -30,
+    "publicCourName": "delta // c0ntr0l.13",
+    "soundAura": {
+      "type": "silence",
+      "seed": 520322
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0055",
+    "tzOffsetMinutes": 180,
+    "latBucket": -60,
+    "lonBucket": 30,
+    "publicCourName": "sh0re // lag00n.33",
+    "soundAura": {
+      "type": "noise",
+      "seed": 527683
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0056",
+    "tzOffsetMinutes": 240,
+    "latBucket": -40,
+    "lonBucket": 60,
+    "publicCourName": "reef // phase.12",
+    "soundAura": {
+      "type": "silence",
+      "seed": 536202
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0057",
+    "tzOffsetMinutes": 570,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "silt // node.72",
+    "soundAura": {
+      "type": "hum",
+      "seed": 543465
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0058",
+    "tzOffsetMinutes": -300,
+    "latBucket": 0,
+    "lonBucket": -90,
+    "publicCourName": "durer // c0ur.23",
+    "soundAura": {
+      "type": "click",
+      "seed": 551434
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0059",
+    "tzOffsetMinutes": -180,
+    "latBucket": -60,
+    "lonBucket": -60,
+    "publicCourName": "kelp // sal00n.84",
+    "soundAura": {
+      "type": "noise",
+      "seed": 559962
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0060",
+    "tzOffsetMinutes": 660,
+    "latBucket": -40,
+    "lonBucket": 150,
+    "publicCourName": "grain // phase.10",
+    "soundAura": {
+      "type": "click",
+      "seed": 567452
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0061",
+    "tzOffsetMinutes": -540,
+    "latBucket": 20,
+    "lonBucket": -150,
+    "publicCourName": "brume // minitel.44",
+    "soundAura": {
+      "type": "click",
+      "seed": 575500
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0062",
+    "tzOffsetMinutes": -420,
+    "latBucket": -60,
+    "lonBucket": -120,
+    "publicCourName": "reef // phase.00",
+    "soundAura": {
+      "type": "noise",
+      "seed": 583615
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0063",
+    "tzOffsetMinutes": 570,
+    "latBucket": 40,
+    "lonBucket": 150,
+    "publicCourName": "m0ss // signal.82",
+    "soundAura": {
+      "type": "noise",
+      "seed": 591477
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0064",
+    "tzOffsetMinutes": 60,
+    "latBucket": 0,
+    "lonBucket": 0,
+    "publicCourName": "silt // arch.40",
+    "soundAura": {
+      "type": "noise",
+      "seed": 599261
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0065",
+    "tzOffsetMinutes": -600,
+    "latBucket": -20,
+    "lonBucket": -150,
+    "publicCourName": "delta // field.56",
+    "soundAura": {
+      "type": "noise",
+      "seed": 607267
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0066",
+    "tzOffsetMinutes": 480,
+    "latBucket": 40,
+    "lonBucket": 120,
+    "publicCourName": "m0ss // c0ntr0l.87",
+    "soundAura": {
+      "type": "hum",
+      "seed": 615166
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0067",
+    "tzOffsetMinutes": 60,
+    "latBucket": -60,
+    "lonBucket": 0,
+    "publicCourName": "silt // c0ur.79",
+    "soundAura": {
+      "type": "click",
+      "seed": 623138
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0068",
+    "tzOffsetMinutes": 660,
+    "latBucket": -60,
+    "lonBucket": 150,
+    "publicCourName": "durer // arch.65",
+    "soundAura": {
+      "type": "silence",
+      "seed": 631446
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0069",
+    "tzOffsetMinutes": 360,
+    "latBucket": 20,
+    "lonBucket": 90,
+    "publicCourName": "sh0re // c0ntr0l.42",
+    "soundAura": {
+      "type": "silence",
+      "seed": 638975
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0070",
+    "tzOffsetMinutes": 660,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "silt // door.04",
+    "soundAura": {
+      "type": "noise",
+      "seed": 647078
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0071",
+    "tzOffsetMinutes": -480,
+    "latBucket": 60,
+    "lonBucket": -120,
+    "publicCourName": "vault // c0ntr0l.95",
+    "soundAura": {
+      "type": "hum",
+      "seed": 654389
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0072",
+    "tzOffsetMinutes": 60,
+    "latBucket": -40,
+    "lonBucket": 0,
+    "publicCourName": "silt // d0rs.38",
+    "soundAura": {
+      "type": "click",
+      "seed": 663162
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0073",
+    "tzOffsetMinutes": -300,
+    "latBucket": -60,
+    "lonBucket": -90,
+    "publicCourName": "silt // minitel.76",
+    "soundAura": {
+      "type": "click",
+      "seed": 670770
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0074",
+    "tzOffsetMinutes": -180,
+    "latBucket": -40,
+    "lonBucket": -60,
+    "publicCourName": "durer // c0ur.57",
+    "soundAura": {
+      "type": "noise",
+      "seed": 678417
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0075",
+    "tzOffsetMinutes": -240,
+    "latBucket": 40,
+    "lonBucket": -60,
+    "publicCourName": "delta // arch.08",
+    "soundAura": {
+      "type": "noise",
+      "seed": 686450
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0076",
+    "tzOffsetMinutes": 600,
+    "latBucket": 0,
+    "lonBucket": 150,
+    "publicCourName": "fjord // field.88",
+    "soundAura": {
+      "type": "noise",
+      "seed": 694296
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0077",
+    "tzOffsetMinutes": -720,
+    "latBucket": 20,
+    "lonBucket": -150,
+    "publicCourName": "silt // signal.77",
+    "soundAura": {
+      "type": "noise",
+      "seed": 701965
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0078",
+    "tzOffsetMinutes": 720,
+    "latBucket": 40,
+    "lonBucket": 150,
+    "publicCourName": "silt // d0rs.35",
+    "soundAura": {
+      "type": "noise",
+      "seed": 710330
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0079",
+    "tzOffsetMinutes": 120,
+    "latBucket": 60,
+    "lonBucket": 30,
+    "publicCourName": "fjord // door.01",
+    "soundAura": {
+      "type": "noise",
+      "seed": 718117
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0080",
+    "tzOffsetMinutes": 600,
+    "latBucket": -40,
+    "lonBucket": 150,
+    "publicCourName": "m0ss // d0rs.24",
+    "soundAura": {
+      "type": "hum",
+      "seed": 725802
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0081",
+    "tzOffsetMinutes": 330,
+    "latBucket": 20,
+    "lonBucket": 90,
+    "publicCourName": "silt // lag00n.45",
+    "soundAura": {
+      "type": "click",
+      "seed": 733901
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0082",
+    "tzOffsetMinutes": 60,
+    "latBucket": 60,
+    "lonBucket": 30,
+    "publicCourName": "grain // node.83",
+    "soundAura": {
+      "type": "noise",
+      "seed": 741641
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0083",
+    "tzOffsetMinutes": 60,
+    "latBucket": 0,
+    "lonBucket": 0,
+    "publicCourName": "vault // minitel.94",
+    "soundAura": {
+      "type": "noise",
+      "seed": 750349
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0084",
+    "tzOffsetMinutes": 480,
+    "latBucket": -20,
+    "lonBucket": 120,
+    "publicCourName": "durer // c0ur.20",
+    "soundAura": {
+      "type": "hum",
+      "seed": 758271
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0085",
+    "tzOffsetMinutes": -120,
+    "latBucket": 60,
+    "lonBucket": -30,
+    "publicCourName": "m0ss // c0ntr0l.80",
+    "soundAura": {
+      "type": "click",
+      "seed": 765601
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0086",
+    "tzOffsetMinutes": -240,
+    "latBucket": 20,
+    "lonBucket": -60,
+    "publicCourName": "reef // lag00n.34",
+    "soundAura": {
+      "type": "noise",
+      "seed": 773971
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0087",
+    "tzOffsetMinutes": -300,
+    "latBucket": 0,
+    "lonBucket": -90,
+    "publicCourName": "vault // lag00n.60",
+    "soundAura": {
+      "type": "click",
+      "seed": 781243
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0088",
+    "tzOffsetMinutes": 720,
+    "latBucket": 20,
+    "lonBucket": 150,
+    "publicCourName": "silt // signal.96",
+    "soundAura": {
+      "type": "hum",
+      "seed": 789529
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0089",
+    "tzOffsetMinutes": 540,
+    "latBucket": -60,
+    "lonBucket": 120,
+    "publicCourName": "vault // c0ur.15",
+    "soundAura": {
+      "type": "click",
+      "seed": 797664
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0090",
+    "tzOffsetMinutes": -180,
+    "latBucket": 40,
+    "lonBucket": -60,
+    "publicCourName": "grain // c0ur.96",
+    "soundAura": {
+      "type": "noise",
+      "seed": 805511
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0091",
+    "tzOffsetMinutes": 300,
+    "latBucket": 60,
+    "lonBucket": 90,
+    "publicCourName": "sh0re // arch.01",
+    "soundAura": {
+      "type": "noise",
+      "seed": 813624
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0092",
+    "tzOffsetMinutes": -120,
+    "latBucket": -60,
+    "lonBucket": -30,
+    "publicCourName": "sh0re // field.41",
+    "soundAura": {
+      "type": "click",
+      "seed": 820843
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0093",
+    "tzOffsetMinutes": 300,
+    "latBucket": -60,
+    "lonBucket": 60,
+    "publicCourName": "durer // phase.92",
+    "soundAura": {
+      "type": "noise",
+      "seed": 829375
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0094",
+    "tzOffsetMinutes": 240,
+    "latBucket": -20,
+    "lonBucket": 60,
+    "publicCourName": "m0ss // lag00n.73",
+    "soundAura": {
+      "type": "silence",
+      "seed": 836537
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0095",
+    "tzOffsetMinutes": 120,
+    "latBucket": -20,
+    "lonBucket": 30,
+    "publicCourName": "durer // lag00n.32",
+    "soundAura": {
+      "type": "noise",
+      "seed": 845340
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0096",
+    "tzOffsetMinutes": -120,
+    "latBucket": -20,
+    "lonBucket": -30,
+    "publicCourName": "sh0re // sal00n.27",
+    "soundAura": {
+      "type": "noise",
+      "seed": 852676
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0097",
+    "tzOffsetMinutes": -540,
+    "latBucket": 60,
+    "lonBucket": -150,
+    "publicCourName": "durer // signal.61",
+    "soundAura": {
+      "type": "noise",
+      "seed": 860277
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0098",
+    "tzOffsetMinutes": 330,
+    "latBucket": -60,
+    "lonBucket": 90,
+    "publicCourName": "kelp // minitel.15",
+    "soundAura": {
+      "type": "noise",
+      "seed": 868423
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0099",
+    "tzOffsetMinutes": 360,
+    "latBucket": -20,
+    "lonBucket": 90,
+    "publicCourName": "quiet // lag00n.08",
+    "soundAura": {
+      "type": "noise",
+      "seed": 876378
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0100",
+    "tzOffsetMinutes": 300,
+    "latBucket": 20,
+    "lonBucket": 60,
+    "publicCourName": "grain // field.86",
+    "soundAura": {
+      "type": "hum",
+      "seed": 884238
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0101",
+    "tzOffsetMinutes": 60,
+    "latBucket": -60,
+    "lonBucket": 0,
+    "publicCourName": "durer // c0ntr0l.78",
+    "soundAura": {
+      "type": "click",
+      "seed": 892177
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0102",
+    "tzOffsetMinutes": -300,
+    "latBucket": 60,
+    "lonBucket": -90,
+    "publicCourName": "fjord // arch.34",
+    "soundAura": {
+      "type": "noise",
+      "seed": 900643
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0103",
+    "tzOffsetMinutes": -60,
+    "latBucket": -20,
+    "lonBucket": -30,
+    "publicCourName": "silt // sal00n.04",
+    "soundAura": {
+      "type": "noise",
+      "seed": 907978
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0104",
+    "tzOffsetMinutes": 240,
+    "latBucket": -40,
+    "lonBucket": 60,
+    "publicCourName": "kelp // door.95",
+    "soundAura": {
+      "type": "silence",
+      "seed": 916581
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0105",
+    "tzOffsetMinutes": 480,
+    "latBucket": 60,
+    "lonBucket": 120,
+    "publicCourName": "brume // field.84",
+    "soundAura": {
+      "type": "noise",
+      "seed": 924458
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0106",
+    "tzOffsetMinutes": 420,
+    "latBucket": 60,
+    "lonBucket": 90,
+    "publicCourName": "m0ss // signal.23",
+    "soundAura": {
+      "type": "hum",
+      "seed": 932365
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0107",
+    "tzOffsetMinutes": 60,
+    "latBucket": -40,
+    "lonBucket": 0,
+    "publicCourName": "grain // d0rs.07",
+    "soundAura": {
+      "type": "noise",
+      "seed": 939624
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0108",
+    "tzOffsetMinutes": 360,
+    "latBucket": 40,
+    "lonBucket": 90,
+    "publicCourName": "fjord // field.09",
+    "soundAura": {
+      "type": "click",
+      "seed": 948305
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0109",
+    "tzOffsetMinutes": 570,
+    "latBucket": -40,
+    "lonBucket": 150,
+    "publicCourName": "vault // phase.52",
+    "soundAura": {
+      "type": "noise",
+      "seed": 955266
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0110",
+    "tzOffsetMinutes": 240,
+    "latBucket": -40,
+    "lonBucket": 60,
+    "publicCourName": "sh0re // c0ntr0l.34",
+    "soundAura": {
+      "type": "noise",
+      "seed": 963791
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0111",
+    "tzOffsetMinutes": 180,
+    "latBucket": 40,
+    "lonBucket": 30,
+    "publicCourName": "kelp // sal00n.29",
+    "soundAura": {
+      "type": "noise",
+      "seed": 971296
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0112",
+    "tzOffsetMinutes": -300,
+    "latBucket": 40,
+    "lonBucket": -90,
+    "publicCourName": "durer // arch.86",
+    "soundAura": {
+      "type": "noise",
+      "seed": 979220
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0113",
+    "tzOffsetMinutes": -660,
+    "latBucket": 60,
+    "lonBucket": -150,
+    "publicCourName": "durer // node.28",
+    "soundAura": {
+      "type": "click",
+      "seed": 987148
+    },
+    "presence": "present"
+  },
+  {
+    "id": "u0114",
+    "tzOffsetMinutes": 570,
+    "latBucket": 40,
+    "lonBucket": 150,
+    "publicCourName": "kelp // c0ur.29",
+    "soundAura": {
+      "type": "click",
+      "seed": 995153
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0115",
+    "tzOffsetMinutes": 420,
+    "latBucket": -20,
+    "lonBucket": 90,
+    "publicCourName": "sh0re // signal.43",
+    "soundAura": {
+      "type": "hum",
+      "seed": 1002786
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0116",
+    "tzOffsetMinutes": 420,
+    "latBucket": -20,
+    "lonBucket": 90,
+    "publicCourName": "kelp // c0ur.25",
+    "soundAura": {
+      "type": "noise",
+      "seed": 1011145
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0117",
+    "tzOffsetMinutes": 720,
+    "latBucket": 20,
+    "lonBucket": 150,
+    "publicCourName": "quiet // signal.09",
+    "soundAura": {
+      "type": "noise",
+      "seed": 1018911
+    },
+    "presence": "idle"
+  },
+  {
+    "id": "u0118",
+    "tzOffsetMinutes": -600,
+    "latBucket": 40,
+    "lonBucket": -150,
+    "publicCourName": "durer // c0ur.64",
+    "soundAura": {
+      "type": "noise",
+      "seed": 1026617
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0119",
+    "tzOffsetMinutes": -60,
+    "latBucket": 0,
+    "lonBucket": -30,
+    "publicCourName": "brume // signal.60",
+    "soundAura": {
+      "type": "silence",
+      "seed": 1035095
+    },
+    "presence": "offline"
+  },
+  {
+    "id": "u0120",
+    "tzOffsetMinutes": -120,
+    "latBucket": 60,
+    "lonBucket": -30,
+    "publicCourName": "m0ss // field.64",
+    "soundAura": {
+      "type": "noise",
+      "seed": 1042519
+    },
+    "presence": "present"
+  }
+]
