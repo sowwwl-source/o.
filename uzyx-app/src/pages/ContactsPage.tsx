@@ -49,8 +49,8 @@ export function ContactsPage() {
     setTick((t) => t + 1);
   };
 
-  const onRemove = (id: string) => {
-    contactsStore.remove(id);
+  const onRemove = (contactId: string) => {
+    contactsStore.remove(contactId);
     setTick((t) => t + 1);
   };
 
@@ -59,6 +59,12 @@ export function ContactsPage() {
   const onHautHoldStill = () => {
     if (store.getFrame().pointer.speed > 220) return;
     store.toggleDeltaZ();
+  };
+
+  const onAddKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    onAdd();
   };
 
   return (
@@ -75,19 +81,35 @@ export function ContactsPage() {
       <section aria-label="add">
         <div className="contactsLine">
           <span className="contactsKey">id</span>
-          <input className="contactsInput" aria-label="contact id" value={id} onChange={(e) => setId(e.target.value)} placeholder="HANDLE" />
+          <input
+            className="contactsInput"
+            aria-label="contact id"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            onKeyDown={onAddKeyDown}
+            placeholder="HANDLE"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+          />
           <span className="contactsKey">note</span>
-          <input className="contactsInput" aria-label="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="optionnel" />
-          <button className="contactsAction" onClick={onAdd}>
-            add
-          </button>
+          <input
+            className="contactsInput"
+            aria-label="note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={onAddKeyDown}
+            placeholder="optionnel"
+            autoCorrect="off"
+            spellCheck={false}
+          />
         </div>
       </section>
 
       <section aria-label="list">
         <ul className="contactsList">
           {contacts.map((c) => (
-            <ContactRow key={c.id} contact={c} onRemove={onRemove} />
+            <ContactRow key={c.id} contact={c} onRemove={() => onRemove(c.id)} />
           ))}
         </ul>
       </section>
@@ -95,7 +117,7 @@ export function ContactsPage() {
   );
 }
 
-function ContactRow(props: { contact: Contact; onRemove: (id: string) => void }) {
+function ContactRow(props: { contact: Contact; onRemove: () => void }) {
   const { contact, onRemove } = props;
   const [primed, setPrimed] = useState(false);
   const holdRef = useRef<{ t: number | null; fired: boolean; x: number; y: number; pid: number | null }>({ t: null, fired: false, x: 0, y: 0, pid: null });
@@ -121,7 +143,7 @@ function ContactRow(props: { contact: Contact; onRemove: (id: string) => void })
     }, 580);
   };
 
-  const onPointerDown: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (e.button !== 0) return;
     holdRef.current.pid = e.pointerId;
     holdRef.current.x = e.clientX;
@@ -132,7 +154,7 @@ function ContactRow(props: { contact: Contact; onRemove: (id: string) => void })
     } catch {}
   };
 
-  const onPointerMove: React.PointerEventHandler<HTMLButtonElement> = (e) => {
+  const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (holdRef.current.t === null) return;
     if (holdRef.current.pid !== e.pointerId) return;
     if (Math.hypot(e.clientX - holdRef.current.x, e.clientY - holdRef.current.y) > 10) clear({ resetFired: true });
@@ -141,23 +163,23 @@ function ContactRow(props: { contact: Contact; onRemove: (id: string) => void })
   const onPointerUp = () => clear({ resetFired: true });
   const onPointerCancel = () => clear({ resetFired: true });
 
-  const onKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
+  const onKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
     if (e.repeat) return;
     if (e.key === "Backspace") {
       e.preventDefault();
-      onRemove(contact.id);
+      onRemove();
       return;
     }
     if (e.key !== "Enter" && e.key !== " ") return;
     startHold();
   };
 
-  const onKeyUp: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
+  const onKeyUp: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     clear({ resetFired: true });
   };
 
-  const onClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+  const onClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
     if (!holdRef.current.fired) return;
     e.preventDefault();
     e.stopPropagation();
@@ -166,9 +188,10 @@ function ContactRow(props: { contact: Contact; onRemove: (id: string) => void })
 
   return (
     <li className="contactRow">
-      <button
-        className={`contactRowBtn ${primed ? "contactPrimed" : ""}`}
+      <div
+        className={`contactToken ${primed ? "contactPrimed" : ""}`}
         aria-label={`contact ${contact.id}`}
+        tabIndex={0}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -177,12 +200,10 @@ function ContactRow(props: { contact: Contact; onRemove: (id: string) => void })
         onKeyUp={onKeyUp}
         onClick={onClick}
       >
+        <span className="contactDot" aria-hidden="true" />
         <span className="contactId">{contact.id}</span>
-      </button>
-      {contact.note ? <span className="contactNote">{contact.note}</span> : null}
-      <button className="contactRowBtn" onClick={() => onRemove(contact.id)} aria-label={`remove ${contact.id}`}>
-        rm
-      </button>
+        {contact.note ? <span className="contactNote">{contact.note}</span> : null}
+      </div>
     </li>
   );
 }

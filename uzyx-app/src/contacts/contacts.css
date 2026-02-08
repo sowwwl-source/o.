@@ -55,29 +55,12 @@
 
 .contactsInput{
   background:transparent;
-  border:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
+  border:0;
+  border-bottom:1px solid color-mix(in srgb, var(--fg) 26%, transparent);
   color:var(--fg);
-  padding:6px 10px;
+  padding:4px 0;
   font:inherit;
   min-width:160px;
-}
-
-.contactsAction{
-  border:0;
-  background:transparent;
-  color:inherit;
-  padding:0;
-  font:inherit;
-  text-transform:uppercase;
-  letter-spacing:.26em;
-  cursor:pointer;
-  opacity:.82;
-}
-
-.contactsAction:hover,
-.contactsAction:focus-visible{
-  opacity:1;
-  text-shadow:0 0 24px var(--halo);
 }
 
 .contactsList{
@@ -93,8 +76,31 @@
 .contactRow{
   display:flex;
   align-items:baseline;
-  gap:12px;
+  gap:10px;
   letter-spacing:.12em;
+}
+
+.contactDot{
+  width:6px;
+  height:6px;
+  background:var(--fg);
+  opacity:.55;
+  display:inline-block;
+}
+
+.contactToken{
+  display:inline-flex;
+  align-items:baseline;
+  gap:10px;
+  cursor:default;
+  opacity:.76;
+  user-select:none;
+}
+
+.contactToken:hover,
+.contactToken:focus-visible{
+  opacity:1;
+  text-shadow:0 0 24px var(--halo);
 }
 
 .contactId{
@@ -107,22 +113,6 @@
   letter-spacing:.12em;
 }
 
-.contactRowBtn{
-  border:0;
-  background:transparent;
-  color:inherit;
-  padding:0;
-  font:inherit;
-  cursor:pointer;
-  opacity:.72;
-}
-
-.contactRowBtn:hover,
-.contactRowBtn:focus-visible{
-  opacity:1;
-  text-shadow:0 0 24px var(--halo);
-}
-
 .contactPrimed{
   opacity:1;
   text-shadow:0 0 28px var(--halo);
@@ -131,4 +121,3 @@
 @media (prefers-reduced-motion: reduce){
   .contactPrimed{ text-shadow:none; }
 }
-

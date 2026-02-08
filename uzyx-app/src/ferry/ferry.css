@@ -66,29 +66,40 @@
 
 .ferryInput{
   background:transparent;
-  border:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
+  border:0;
+  border-bottom:1px solid color-mix(in srgb, var(--fg) 26%, transparent);
   color:var(--fg);
-  padding:6px 10px;
+  padding:4px 0;
   font:inherit;
   min-width:140px;
 }
 
-.ferryAction{
-  border:0;
-  background:transparent;
-  color:inherit;
-  padding:0;
-  font:inherit;
+.ferryToken{
+  display:inline-flex;
+  align-items:baseline;
+  gap:10px;
   text-transform:uppercase;
   letter-spacing:.26em;
-  cursor:pointer;
-  opacity:.8;
+  cursor:default;
+  opacity:.74;
+  user-select:none;
 }
 
-.ferryAction:hover,
-.ferryAction:focus-visible{
+.ferryToken:hover,
+.ferryToken:focus-visible{
   opacity:1;
   text-shadow:0 0 24px var(--halo);
+}
+
+.ferryDot{
+  width:6px;
+  height:6px;
+  background:var(--fg);
+  opacity:.55;
+}
+
+.ferryTokenId{
+  letter-spacing:.26em;
 }
 
 .ferryPresence{
@@ -150,4 +161,3 @@
 @media (prefers-reduced-motion: reduce){
   .pulse{ animation:none; }
 }
-

@@ -10,7 +10,7 @@ export function UzyxImplicitAssist() {
   const uzyx = useUzyxState();
   const towardO = Boolean(uzyx.towardO);
 
-  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const btnRef = useRef<HTMLSpanElement | null>(null);
   const [visible, setVisible] = useState(false);
 
   // Show at most once per user (localStorage key). If ignored: disappears.
@@ -62,12 +62,24 @@ export function UzyxImplicitAssist() {
   if (!offer) return null;
 
   return (
-    <button
+    <span
       ref={btnRef}
-      type="button"
       className="uzyxAssist"
       aria-label={offer.id}
+      role="link"
+      tabIndex={0}
       onClick={() => {
+        setVisible(false);
+        try {
+          window.dispatchEvent(new Event("uzyx:offer:reshape"));
+        } catch {}
+      }}
+      onKeyDown={(e) => {
+        if (e.defaultPrevented) return;
+        if (e.repeat) return;
+        const k = String(e.key || "");
+        if (k !== "Enter" && k !== " ") return;
+        e.preventDefault();
         setVisible(false);
         try {
           window.dispatchEvent(new Event("uzyx:offer:reshape"));
@@ -75,6 +87,6 @@ export function UzyxImplicitAssist() {
       }}
     >
       {offer.label}
-    </button>
+    </span>
   );
 }

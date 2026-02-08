@@ -94,8 +94,16 @@ export function FerryPage() {
   const onCodeKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    if (e.ctrlKey || e.metaKey) create();
-    else join(codeInput);
+    const v = codeInput.trim().toUpperCase();
+    if (e.ctrlKey || e.metaKey) return create();
+    if (!v) return create();
+    join(v);
+  };
+
+  const onDestKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    setDest();
   };
 
   const onTitleHoldStill = () => {
@@ -130,13 +138,10 @@ export function FerryPage() {
               onChange={(e) => setCodeInput(e.target.value)}
               onKeyDown={onCodeKeyDown}
               placeholder="XXXX"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
             />
-            <button className="ferryAction" onClick={() => join(codeInput)}>
-              rejoindre
-            </button>
-            <button className="ferryAction" onClick={create}>
-              creer
-            </button>
           </div>
         </section>
       ) : (
@@ -171,13 +176,10 @@ export function FerryPage() {
                 aria-label="destination"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
+                onKeyDown={onDestKeyDown}
+                autoCorrect="off"
+                spellCheck={false}
               />
-              <button className="ferryAction" onClick={setDest}>
-                fixer
-              </button>
-              <button className="ferryAction" onClick={board}>
-                traverser
-              </button>
             </div>
           </section>
 
@@ -186,9 +188,7 @@ export function FerryPage() {
               <div className="ferryLine">
                 <span className="ferryKey">invite</span>
                 {contacts.map((c) => (
-                  <button key={c.id} className="ferryAction" onClick={() => sessionRef.current?.invite(c.id)} aria-label={`inviter ${c.id}`}>
-                    {c.id}
-                  </button>
+                  <InviteToken key={c.id} id={c.id} onInvite={() => sessionRef.current?.invite(c.id)} />
                 ))}
               </div>
             </section>
@@ -212,6 +212,87 @@ export function FerryPage() {
       {/* Intention: hold the title (still) to trigger traversal. No explicit UI. */}
       <FerryTitleHold onHoldStill={onTitleHoldStill} />
     </main>
+  );
+}
+
+function InviteToken(props: { id: string; onInvite: () => void }) {
+  const { id, onInvite } = props;
+  const holdRef = useRef<{ t: number | null; fired: boolean; x: number; y: number; pid: number | null }>({ t: null, fired: false, x: 0, y: 0, pid: null });
+
+  const clear = (opts?: { resetFired?: boolean }) => {
+    if (holdRef.current.t !== null) window.clearTimeout(holdRef.current.t);
+    holdRef.current.t = null;
+    holdRef.current.pid = null;
+    if (opts?.resetFired) holdRef.current.fired = false;
+  };
+
+  useEffect(() => () => clear({ resetFired: true }), []);
+
+  const startHold = () => {
+    clear();
+    holdRef.current.fired = false;
+    holdRef.current.t = window.setTimeout(() => {
+      holdRef.current.t = null;
+      holdRef.current.fired = true;
+      onInvite();
+    }, 520);
+  };
+
+  const onPointerDown: React.PointerEventHandler<HTMLSpanElement> = (e) => {
+    if (e.button !== 0) return;
+    holdRef.current.pid = e.pointerId;
+    holdRef.current.x = e.clientX;
+    holdRef.current.y = e.clientY;
+    startHold();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const onPointerMove: React.PointerEventHandler<HTMLSpanElement> = (e) => {
+    if (holdRef.current.t === null) return;
+    if (holdRef.current.pid !== e.pointerId) return;
+    if (Math.hypot(e.clientX - holdRef.current.x, e.clientY - holdRef.current.y) > 10) clear({ resetFired: true });
+  };
+
+  const onPointerUp = () => clear({ resetFired: true });
+  const onPointerCancel = () => clear({ resetFired: true });
+
+  const onKeyDown: React.KeyboardEventHandler<HTMLSpanElement> = (e) => {
+    if (e.repeat) return;
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    startHold();
+  };
+
+  const onKeyUp: React.KeyboardEventHandler<HTMLSpanElement> = (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    clear({ resetFired: true });
+  };
+
+  const onClick: React.MouseEventHandler<HTMLSpanElement> = (e) => {
+    if (!holdRef.current.fired) return;
+    e.preventDefault();
+    e.stopPropagation();
+    holdRef.current.fired = false;
+  };
+
+  return (
+    <span
+      className="ferryToken"
+      tabIndex={0}
+      aria-label={`invite ${id}`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onKeyDown={onKeyDown}
+      onKeyUp={onKeyUp}
+      onClick={onClick}
+    >
+      <span className="ferryDot" aria-hidden="true" />
+      <span className="ferryTokenId">{id}</span>
+    </span>
   );
 }
 
