@@ -1,4 +1,5 @@
 import type { OCopy, OEvent, OScore, ORenderMode } from "./oNote.types";
+import { applyDelta0 } from "./oNote.math";
 
 type Ladder = {
   event: OEvent;
@@ -97,15 +98,8 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
 } as const;
 
-function clampScore(n: number): OScore {
-  const v = Math.max(0, Math.min(11, Math.round(n)));
-  return v as OScore;
-}
-
 export function applyDelta(o: OScore, event: OEvent): OScore {
-  const d = O_NOTE_TABLE[event]?.delta ?? 0;
-  const next = clampScore(o + d);
-  return next;
+  return applyDelta0(o, DELTA0[event] ?? 0);
 }
 
 export function pickCopy(event: OEvent, o: OScore, mode: ORenderMode): OCopy {

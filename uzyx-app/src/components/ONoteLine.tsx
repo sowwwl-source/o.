@@ -1,12 +1,12 @@
 import React, { useEffect } from "react";
 import "./oNoteLine.css";
-import { O_COPY_TABLE } from "@/oNote/oNoteCopyTable";
+import { resolveCopy } from "@/oNote/oNote.math";
 import { useONote } from "@/oNote/oNoteStore";
 import { oNoteStore } from "@/oNote/oNoteStore";
 
 export function ONoteLine(props: { align?: "left" | "right"; muted?: boolean } = {}) {
   const { state } = useONote();
-  const display = state.copy ?? O_COPY_TABLE[state.o];
+  const display = state.copy ?? resolveCopy(state.o, state.floor);
   const align = props.align ?? "left";
   const muted = props.muted ? "is-muted" : "";
 

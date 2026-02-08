@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import type { OCopy, OEvent, OScore, ORenderMode } from "./oNote.types";
-import { applyDelta, pickCopy } from "./oNoteTable";
+import { applyDelta0, clampO } from "./oNote.math";
+import { DELTA0, pickCopy } from "./oNoteTable";
 
 export type ONState = {
   o: OScore;
@@ -14,18 +15,13 @@ type Listener = () => void;
 
 const LS_KEY = "sowwwl:oNote:v1";
 
-function clampScore(n: number): OScore {
-  const v = Math.max(0, Math.min(11, Math.round(n)));
-  return v as OScore;
-}
-
 function loadInitialO(): OScore {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return 0;
     const parsed = JSON.parse(raw);
     const o = typeof parsed?.o === "number" ? parsed.o : 0;
-    return clampScore(o);
+    return clampO(o);
   } catch {
     return 0;
   }
@@ -125,7 +121,6 @@ export const oNoteStore = {
   emit(event: OEvent, modeOverride: ORenderMode | undefined = undefined): void {
     const now = Date.now();
     const floor = computeFloor();
-    const base = effectiveO(floor);
     const useMode = modeOverride ?? state.mode;
     // persist chosen mode as an operator preference (lightweight)
     mode = useMode;
@@ -147,7 +142,7 @@ export const oNoteStore = {
       errWindowStartedAt = 0;
     }
 
-    rawO = applyDelta(base, evt);
+    rawO = applyDelta0(rawO, DELTA0[evt] ?? 0);
     saveO(rawO);
 
     lastEvent = evt;
@@ -156,7 +151,7 @@ export const oNoteStore = {
     commit();
   },
   setO(o: OScore): void {
-    rawO = clampScore(o);
+    rawO = clampO(o);
     saveO(rawO);
     copy = null;
     lastEvent = null;
