@@ -1,0 +1,41 @@
+.hautPoint{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:2;
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  text-transform:uppercase;
+  letter-spacing:.28em;
+  font-size:12px;
+  line-height:1;
+  user-select:none;
+  cursor:pointer;
+
+  /* Camouflage (fg == bg) */
+  color:var(--bg);
+}
+
+.hautPointDot{
+  width:6px;
+  height:6px;
+  background:currentColor;
+}
+
+[data-invert="true"] .hautPoint,
+.hautPoint.is-glitch{
+  color:var(--fg);
+}
+
+.hautPoint.is-glitch{
+  transform:translate(-50%,-50%) translate(1px,-1px);
+}
+
+.hautPoint:focus-visible{
+  outline:1px solid var(--fg);
+  outline-offset:8px;
+}
+

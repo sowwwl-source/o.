@@ -1,50 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import { applyTokens, TOKENS } from "./tokens";
-import { BoardPage } from "./board/BoardPage";
-import { StreamPage } from "./stream/StreamPage";
-import { FerryPage } from "./ferry/FerryPage";
-import { ContactsPage } from "./contacts/ContactsPage";
-import { FooterNarrativeMask } from "@/uzyx";
-import { useUzyxSignals } from "./uzyx/useUzyxSignals";
-import { useUzyxFailSafeGuard } from "./uzyx/useUzyxFailSafeGuard";
-import { UzyxImplicitAssist } from "./uzyx/UzyxImplicitAssist";
-
-applyTokens(TOKENS);
+import { BoardPage } from "./pages/BoardPage";
+import type { NodeId } from "@/graph/graph";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Missing #app");
 
-function useHashRoute() {
-  const [route, setRoute] = useState(() => window.location.hash || "#/board");
-  useEffect(() => {
-    const onHash = () => setRoute(window.location.hash || "#/board");
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-  return route.replace("#", "");
+function parseNodeFromHash(hash: string): NodeId {
+  const raw = String(hash || "").replace(/^#\/?/, "").replace(/^\/+/, "");
+  const key = raw.trim().toUpperCase();
+  if (key === "" || key === "HAUT" || key === "B0ARD" || key === "BOARD") return "HAUT";
+  if (key === "LAND") return "LAND";
+  if (key === "FERRY") return "FERRY";
+  if (key === "STR3M" || key === "STR3AM" || key === "STREAM") return "STR3M";
+  if (key === "CONTACT" || key === "CONTACTS") return "CONTACT";
+  return "HAUT";
 }
 
 function App() {
-  useUzyxSignals();
-  useUzyxFailSafeGuard();
+  const [active, setActive] = useState<NodeId>(() => parseNodeFromHash(window.location.hash));
 
-  const route = useHashRoute();
-  const page = (() => {
-    if (route.startsWith("/stream")) return <StreamPage />;
-    if (route.startsWith("/ferry")) return <FerryPage />;
-    if (route.startsWith("/contacts")) return <ContactsPage />;
-    return <BoardPage />;
-  })();
+  useEffect(() => {
+    const onHash = () => setActive(parseNodeFromHash(window.location.hash));
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
 
-  return (
-    <>
-      {page}
-      <UzyxImplicitAssist />
-      <FooterNarrativeMask />
-    </>
-  );
+  return <BoardPage active={active} />;
 }
 
 createRoot(app).render(

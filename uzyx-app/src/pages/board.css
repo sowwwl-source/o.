@@ -1,0 +1,118 @@
+.oBoard{
+  position:relative;
+  min-height:100vh;
+  min-height:100svh;
+  background:var(--bg);
+  color:var(--fg);
+  overflow:hidden;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+}
+
+/* typographic "matter" (slashes), no images */
+.oBoard::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.07;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 16px,
+      color-mix(in srgb, var(--fg) 22%, transparent) 16px 17px
+    );
+  mix-blend-mode:overlay;
+}
+[data-invert="true"] .oBoard::before{mix-blend-mode:multiply}
+
+.oEdges{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  opacity:.46;
+}
+.oEdge{
+  stroke:var(--fg);
+  stroke-opacity:.20;
+  stroke-width:.55;
+  stroke-linecap:square;
+  stroke-dasharray:1.2 2.4;
+}
+.oEdge.is-hot{
+  stroke:var(--accent);
+  stroke-opacity:.44;
+  stroke-width:.7;
+  stroke-dasharray:1.2 2;
+}
+.oBoard[data-active="HAUT"] .oEdge{stroke-opacity:.16}
+
+.oNode{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  display:inline-flex;
+  align-items:baseline;
+  gap:10px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+  text-decoration:none;
+  font:inherit;
+  font-size:12px;
+  letter-spacing:.26em;
+  text-transform:uppercase;
+  line-height:1;
+  cursor:pointer;
+  user-select:none;
+  opacity:.72;
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    text-shadow var(--motion-fast) ease;
+}
+
+.oNode.is-near{
+  opacity:.9;
+}
+
+.oNodeDot{
+  opacity:.66;
+}
+
+.oNodeDeg{
+  opacity:.42;
+  letter-spacing:.16em;
+}
+
+.oNode:hover,
+.oNode:focus-visible{
+  opacity:1;
+  transform:translate(-50%,-50%) translateY(-1px);
+  text-shadow: 0 0 24px var(--halo);
+}
+
+.oNode.is-active{
+  opacity:1;
+  color:var(--accent);
+  text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference){
+  .oNode:hover,
+  .oNode:focus-visible{
+    animation:oNodeBreathe 880ms ease-in-out infinite;
+  }
+}
+
+@keyframes oNodeBreathe{
+  0%{ transform:translate(-50%,-50%) translateY(-1px); }
+  50%{ transform:translate(-50%,-50%) translateY(-2px); }
+  100%{ transform:translate(-50%,-50%) translateY(-1px); }
+}
