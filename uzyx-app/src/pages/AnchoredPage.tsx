@@ -1,11 +1,10 @@
 import React, { useEffect } from "react";
 import "./anchored.css";
 import { useSession } from "@/api/sessionStore";
-import { useONoteFloor } from "@/oNote/useONoteFloor";
-import { oNoteStore } from "@/oNote/oNoteStore";
+import { useOEvent } from "@/oNote/oNote.hooks";
 
 export function AnchoredPage() {
-  useONoteFloor(4);
+  const dispatch = useOEvent();
 
   const session = useSession();
   useEffect(() => {
@@ -17,8 +16,8 @@ export function AnchoredPage() {
   }, [session.state.phase]);
 
   useEffect(() => {
-    oNoteStore.emit("completed_first_run", "short");
-  }, []);
+    dispatch("completed_first_run");
+  }, [dispatch]);
 
   return (
     <main className="anchoredRoot" aria-label="anchored">
@@ -45,4 +44,3 @@ export function AnchoredPage() {
     </main>
   );
 }
-

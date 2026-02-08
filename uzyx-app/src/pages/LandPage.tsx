@@ -3,14 +3,20 @@ import "./land.css";
 import { HautPoint } from "@/components/HautPoint";
 import { usePerceptionStore } from "@/perception/PerceptionProvider";
 import { isInverted, setInvert } from "@/theme/invert";
+import { useONoteAPI } from "@/oNote/oNote.store";
 
 export function LandPage() {
   const store = usePerceptionStore();
+  const { setContext } = useONoteAPI();
   const rootRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     store.setBaseProfile("land");
   }, [store]);
+
+  useEffect(() => {
+    setContext({ hasLand: true });
+  }, [setContext]);
 
   // Entering LAND is an interior flip (inversion is functional, not cosmetic).
   useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./board.css";
 import { computeConstellation, edges, neighbors, type NodeId } from "@/graph/graph";
-import { toggleInvert } from "@/theme/invert";
+import { toggleThemeInverse } from "@/theme/useThemeToggle";
 import { ODot } from "@/components/ODot";
 import { usePerceptionFrame, usePerceptionStore } from "@/perception/PerceptionProvider";
 import { usePreviewNav } from "@/engines/previewNav";
@@ -85,7 +85,7 @@ export function BoardPage(props: { active?: NodeId }) {
     holdRef.current.fired = false;
     holdRef.current.t = window.setTimeout(() => {
       holdRef.current.fired = true;
-      toggleInvert();
+      toggleThemeInverse();
     }, 520);
   };
 

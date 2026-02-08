@@ -1,11 +1,10 @@
 import React, { useEffect } from "react";
 import "./home.css";
-import { useONoteFloor } from "@/oNote/useONoteFloor";
-import { oNoteStore } from "@/oNote/oNoteStore";
+import { useOEvent } from "@/oNote/oNote.hooks";
 import { useSession } from "@/api/sessionStore";
 
 export function HomePage() {
-  useONoteFloor(0);
+  const dispatch = useOEvent();
 
   const session = useSession();
   useEffect(() => {
@@ -13,8 +12,8 @@ export function HomePage() {
   }, [session.api]);
 
   useEffect(() => {
-    if (session.state.phase === "authed") oNoteStore.emit("session_restored", "short");
-  }, [session.state.phase]);
+    if (session.state.phase === "authed") dispatch("session_restored");
+  }, [session.state.phase, dispatch]);
 
   return (
     <main className="homeRoot" aria-label="home">
@@ -44,4 +43,3 @@ export function HomePage() {
     </main>
   );
 }
-

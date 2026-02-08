@@ -1,20 +1,12 @@
-import React, { useEffect } from "react";
+import React from "react";
 import "./oNoteLine.css";
-import { resolveCopy } from "@/oNote/oNote.math";
-import { useONote } from "@/oNote/oNoteStore";
-import { oNoteStore } from "@/oNote/oNoteStore";
+import type { OScore } from "@/oNote/oNote.types";
+import { useOCopy } from "@/oNote/oNote.hooks";
 
-export function ONoteLine(props: { align?: "left" | "right"; muted?: boolean } = {}) {
-  const { state } = useONote();
-  const display = state.copy ?? resolveCopy(state.o, state.floor);
+export function ONoteLine(props: { align?: "left" | "right"; muted?: boolean; min_o?: OScore } = {}) {
+  const display = useOCopy(props.min_o);
   const align = props.align ?? "left";
   const muted = props.muted ? "is-muted" : "";
-
-  useEffect(() => {
-    if (!state.copy) return;
-    const t = window.setTimeout(() => oNoteStore.clearCopy(), 2100);
-    return () => window.clearTimeout(t);
-  }, [state.copy, state.lastEvent]);
 
   return (
     <div className={`oNoteLine ${muted}`} data-align={align} aria-label="o n0t3">
@@ -22,7 +14,7 @@ export function ONoteLine(props: { align?: "left" | "right"; muted?: boolean } =
         o n0t3
       </span>
       <span className="oNoteVal" aria-hidden="true">
-        {state.o}
+        {display.o}
       </span>
       <span className="oNoteSep" aria-hidden="true">
         ·

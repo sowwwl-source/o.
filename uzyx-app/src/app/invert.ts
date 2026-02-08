@@ -1,13 +1,15 @@
 export function isInverted(): boolean {
-  return document.documentElement.dataset.invert === "true";
+  const d = document.documentElement.dataset;
+  return d.theme === "inverse" || d.invert === "true";
 }
 
 export function setInvert(next: boolean): void {
-  document.documentElement.dataset.invert = next ? "true" : "false";
+  const root = document.documentElement;
+  root.dataset.invert = next ? "true" : "false";
+  if (next) root.dataset.theme = "inverse";
+  else delete root.dataset.theme;
 }
 
 export function toggleInvert(): void {
-  document.documentElement.dataset.invert =
-    document.documentElement.dataset.invert === "true" ? "false" : "true";
+  setInvert(!isInverted());
 }
-

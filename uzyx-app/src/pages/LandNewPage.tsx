@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./landNew.css";
 import { useSession } from "@/api/sessionStore";
 import { apiLandCreate, apiLandGet } from "@/api/apiClient";
-import { useONoteFloor } from "@/oNote/useONoteFloor";
-import { oNoteStore } from "@/oNote/oNoteStore";
+import { useOEvent } from "@/oNote/oNote.hooks";
+import { useONoteAPI } from "@/oNote/oNote.store";
 
 type LandType = "A" | "B" | "C";
 
 export function LandNewPage() {
-  useONoteFloor(5);
+  const dispatch = useOEvent();
+  const { setContext } = useONoteAPI();
 
   const session = useSession();
   const [busy, setBusy] = useState<LandType | null>(null);
@@ -28,17 +29,18 @@ export function LandNewPage() {
       const r = await apiLandGet();
       if (!alive) return;
       if (r.ok && r.data.created) {
+        setContext({ hasLand: true });
         window.location.hash = "#/app";
         return;
       }
       if (!r.ok) {
-        oNoteStore.emit(r.status === 0 ? "network_error" : "form_validation_error", "plain");
+        dispatch(r.status === 0 ? "network_error" : "form_validation_error");
       }
     })();
     return () => {
       alive = false;
     };
-  }, [session.state.phase]);
+  }, [session.state.phase, dispatch, setContext]);
 
   const choices = useMemo(
     () =>
@@ -56,11 +58,12 @@ export function LandNewPage() {
     try {
       const r = await apiLandCreate(t);
       if (r.ok) {
-        oNoteStore.emit("land_created", "short");
+        setContext({ hasLand: true });
+        dispatch("land_created");
         window.location.hash = "#/app";
         return;
       }
-      oNoteStore.emit(r.status === 0 ? "network_error" : "form_validation_error", "plain");
+      dispatch(r.status === 0 ? "network_error" : "form_validation_error");
     } finally {
       setBusy(null);
     }

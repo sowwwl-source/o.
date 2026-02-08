@@ -1,0 +1,8 @@
+@import "../app/tokens.css";
+
+/* Theme inversion (alias): dataset-based toggle requested by spec. */
+html[data-theme="inverse"]{
+  --bg:#ffe7c7;
+  --fg:#04120b;
+}
+

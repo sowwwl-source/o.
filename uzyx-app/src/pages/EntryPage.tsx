@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./entry.css";
 import { useSession } from "@/api/sessionStore";
 import { apiAuthLogin, apiAuthRegister } from "@/api/apiClient";
-import { useONoteFloor } from "@/oNote/useONoteFloor";
-import { oNoteStore } from "@/oNote/oNoteStore";
+import { useOEvent } from "@/oNote/oNote.hooks";
 
 function normalizeLine(s: string, max = 96): string {
   const one = String(s || "")
@@ -74,7 +73,7 @@ async function createLocalPasskey(label: string): Promise<{ id: string } | null>
 
 export function EntryPage() {
   const canPasskey = useMemo(() => isPasskeySupported(), []);
-  useONoteFloor(canPasskey ? 8 : 7);
+  const dispatch = useOEvent();
 
   const session = useSession();
   useEffect(() => {
@@ -83,9 +82,9 @@ export function EntryPage() {
 
   useEffect(() => {
     if (session.state.phase !== "authed") return;
-    oNoteStore.emit("session_restored", "short");
+    dispatch("session_restored");
     window.location.hash = "#/app";
-  }, [session.state.phase]);
+  }, [session.state.phase, dispatch]);
 
   const [identity, setIdentity] = useState(() => localStorage.getItem("sowwwl:identity_public") || "");
   const [address, setAddress] = useState(() => localStorage.getItem("sowwwl:identity_address") || "");
@@ -107,7 +106,7 @@ export function EntryPage() {
   const onPasskey = async () => {
     if (busy) return;
     if (!canPasskey) {
-      oNoteStore.emit("auth_passkey_failed", "plain");
+      dispatch("auth_passkey_failed");
       return;
     }
 
@@ -116,20 +115,20 @@ export function EntryPage() {
       const label = identity || address || "sowwwl";
       const r = await createLocalPasskey(label);
       if (!r) {
-        oNoteStore.emit("auth_passkey_failed", "plain");
+        dispatch("auth_passkey_failed");
         return;
       }
       try {
         localStorage.setItem("sowwwl:passkey_id_v1", r.id);
       } catch {}
 
-      oNoteStore.emit("auth_passkey_success", "short");
+      dispatch("auth_passkey_success");
     } catch (e: any) {
       const name = String(e?.name || "");
       if (name === "NotAllowedError" || name === "AbortError") {
-        oNoteStore.emit("auth_passkey_cancelled", "short");
+        dispatch("auth_passkey_cancelled");
       } else {
-        oNoteStore.emit("auth_passkey_failed", "plain");
+        dispatch("auth_passkey_failed");
       }
     } finally {
       setBusy(null);
@@ -142,7 +141,7 @@ export function EntryPage() {
     const rescue = String(code || "");
 
     if (!looksLikeEmail(email) || !looksLikeRescueCode(rescue)) {
-      oNoteStore.emit("form_validation_error", "plain");
+      dispatch("form_validation_error");
       return;
     }
 
@@ -164,13 +163,13 @@ export function EntryPage() {
           window.location.hash = "#/anchored";
           return;
         }
-        if (log.status === 0) oNoteStore.emit("network_error", "plain");
-        else oNoteStore.emit("form_validation_error", "plain");
+        if (log.status === 0) dispatch("network_error");
+        else dispatch("form_validation_error");
         return;
       }
 
-      if (reg.status === 0) oNoteStore.emit("network_error", "plain");
-      else oNoteStore.emit("form_validation_error", "plain");
+      if (reg.status === 0) dispatch("network_error");
+      else dispatch("form_validation_error");
     } finally {
       setBusy(null);
     }

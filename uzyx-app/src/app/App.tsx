@@ -20,9 +20,10 @@ import { assertBicolorVars } from "@/guards/bicolor";
 import { assertNoImagesInDOM } from "@/guards/noImages";
 import { useSession } from "@/api/sessionStore";
 import { ONoteLine } from "@/components/ONoteLine";
-import { toggleInvert } from "@/theme/invert";
-import { useONoteFloor } from "@/oNote/useONoteFloor";
-import { oNoteStore } from "@/oNote/oNoteStore";
+import { toggleThemeInverse } from "@/theme/useThemeToggle";
+import { ONoteProvider, useONoteAPI } from "@/oNote/oNote.store";
+import type { OScore } from "@/oNote/oNote.types";
+import { useOEvent } from "@/oNote/oNote.hooks";
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
@@ -75,8 +76,22 @@ function parseRouteFromHash(hash: string): Route {
   return { kind: "home" };
 }
 
+function isPasskeySupported(): boolean {
+  return typeof window !== "undefined" && "PublicKeyCredential" in window && !!navigator.credentials?.create;
+}
+
+function minOForRoute(route: Route): OScore {
+  if (route.kind === "home") return 0;
+  if (route.kind === "entry") return isPasskeySupported() ? 8 : 7;
+  if (route.kind === "anchored") return 4;
+  if (route.kind === "lande_new") return 5;
+  if (route.kind === "app") return route.id === "LAND" ? 6 : route.id === "FERRY" ? 4 : route.id === "CONTACT" ? 4 : route.id === "STR3M" ? 3 : 2;
+  return 0;
+}
+
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseRouteFromHash(window.location.hash));
+  const min_o = minOForRoute(route);
 
   useUzyxSignals();
   useUzyxFailSafe();
@@ -96,7 +111,7 @@ export function App() {
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       if (isTypingTarget(e.target)) return;
       e.preventDefault();
-      toggleInvert();
+      toggleThemeInverse();
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () => window.removeEventListener("keydown", onKey, true);
@@ -111,7 +126,7 @@ export function App() {
   }, []);
 
   return (
-    <>
+    <ONoteProvider>
       {route.kind === "home" ? (
         <HomePage />
       ) : route.kind === "entry" ? (
@@ -132,15 +147,16 @@ export function App() {
         <AppGate id={route.id} />
       )}
 
-      <ONoteLine muted align={route.kind === "app" ? "right" : "left"} />
+      <ONoteLine muted align={route.kind === "app" ? "right" : "left"} min_o={min_o} />
       <UzyxImplicitAssist />
-    </>
+      <ONoteContextBridge />
+    </ONoteProvider>
   );
 }
 
 function AppGate(props: { id: NodeId }) {
   const id = props.id;
-  useONoteFloor(id === "LAND" ? 6 : id === "FERRY" ? 4 : id === "CONTACT" ? 4 : id === "STR3M" ? 3 : 2);
+  const dispatch = useOEvent();
 
   const session = useSession();
 
@@ -154,8 +170,8 @@ function AppGate(props: { id: NodeId }) {
 
   useEffect(() => {
     if (session.state.phase !== "error") return;
-    oNoteStore.emit("network_error", "plain");
-  }, [session.state.phase]);
+    dispatch("network_error");
+  }, [session.state.phase, dispatch]);
 
   if (session.state.phase === "checking" || session.state.phase === "unknown") {
     return (
@@ -205,4 +221,16 @@ function AppGate(props: { id: NodeId }) {
       <Molette current={id} />
     </PerceptionProvider>
   );
+}
+
+function ONoteContextBridge() {
+  const session = useSession();
+  const { setContext } = useONoteAPI();
+
+  useEffect(() => {
+    const hasSession = session.state.phase === "authed";
+    setContext({ hasSession });
+  }, [session.state.phase, setContext]);
+
+  return null;
 }
