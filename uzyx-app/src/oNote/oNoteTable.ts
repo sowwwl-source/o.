@@ -7,10 +7,23 @@ type Ladder = {
   ladder: Array<{ min: OScore; micro: string; short: string; plain: string }>;
 };
 
+export const DELTA0: Record<OEvent, number> = {
+  auth_passkey_success: -4,
+  session_restored: -3,
+  land_created: -3,
+  completed_first_run: -2,
+
+  auth_passkey_cancelled: +1,
+  auth_passkey_failed: +2,
+  network_error: +2,
+  form_validation_error: +1,
+  repeated_error_threshold: +2,
+};
+
 export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   auth_passkey_success: {
     event: "auth_passkey_success",
-    delta: +2,
+    delta: DELTA0.auth_passkey_success,
     ladder: [
       { min: 0, micro: "ok", short: "passkey prise", plain: "Passkey prise. Ça tient." },
       { min: 6, micro: "ok", short: "prise", plain: "Ça prend." },
@@ -19,7 +32,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   session_restored: {
     event: "session_restored",
-    delta: +1,
+    delta: DELTA0.session_restored,
     ladder: [
       { min: 0, micro: "ok", short: "session", plain: "Session retrouvée." },
       { min: 8, micro: "ok", short: "revient", plain: "Ça revient." },
@@ -27,7 +40,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   land_created: {
     event: "land_created",
-    delta: +2,
+    delta: DELTA0.land_created,
     ladder: [
       { min: 0, micro: "ok", short: "lande créée", plain: "Lande créée." },
       { min: 7, micro: "ok", short: "la lande", plain: "La Lande prend." },
@@ -35,7 +48,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   completed_first_run: {
     event: "completed_first_run",
-    delta: +1,
+    delta: DELTA0.completed_first_run,
     ladder: [
       { min: 0, micro: "ok", short: "passage", plain: "Premier passage." },
       { min: 9, micro: "ok", short: "déjà", plain: "Déjà." },
@@ -44,7 +57,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
 
   auth_passkey_cancelled: {
     event: "auth_passkey_cancelled",
-    delta: -1,
+    delta: DELTA0.auth_passkey_cancelled,
     ladder: [
       { min: 0, micro: "—", short: "annulé", plain: "Annulé." },
       { min: 6, micro: "—", short: "pas là", plain: "Pas là." },
@@ -52,7 +65,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   auth_passkey_failed: {
     event: "auth_passkey_failed",
-    delta: -2,
+    delta: DELTA0.auth_passkey_failed,
     ladder: [
       { min: 0, micro: "err", short: "passkey", plain: "Passkey non disponible ici." },
       { min: 6, micro: "err", short: "pas pris", plain: "Ça n’a pas pris." },
@@ -60,7 +73,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   network_error: {
     event: "network_error",
-    delta: -2,
+    delta: DELTA0.network_error,
     ladder: [
       { min: 0, micro: "net", short: "réseau", plain: "Réseau fragile. Réessayer." },
       { min: 8, micro: "net", short: "fragile", plain: "Fragile." },
@@ -68,7 +81,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   form_validation_error: {
     event: "form_validation_error",
-    delta: -1,
+    delta: DELTA0.form_validation_error,
     ladder: [
       { min: 0, micro: "form", short: "forme", plain: "Forme incomplète. Vérifier." },
       { min: 7, micro: "form", short: "à reprendre", plain: "À reprendre." },
@@ -76,7 +89,7 @@ export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
   },
   repeated_error_threshold: {
     event: "repeated_error_threshold",
-    delta: -3,
+    delta: DELTA0.repeated_error_threshold,
     ladder: [
       { min: 0, micro: "…", short: "pause", plain: "Pause. Respirer." },
       { min: 8, micro: "…", short: "silence", plain: "Silence." },

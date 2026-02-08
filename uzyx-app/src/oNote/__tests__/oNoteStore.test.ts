@@ -20,7 +20,6 @@ describe("oNoteStore", () => {
     oNoteStore.emit("network_error", "short");
     const s = oNoteStore.get();
     expect(s.lastEvent).toBe("repeated_error_threshold");
-    expect(s.o).toBeLessThanOrEqual(before);
+    expect(s.o).toBeGreaterThanOrEqual(before);
   });
 });
-
