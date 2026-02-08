@@ -8,7 +8,7 @@
 
 ## Pipeline (densité → ASCII)
 
-1. Seed publique (handle / SSH key publique) → champ de densité génératif.
+1. Seed publique (handle / **principal_id** dérivé d’une clé publique SSH) → champ de densité génératif.
 2. (Option) Scan(s) → densité (canvas en mémoire, jamais affiché).
 3. Densité + fragments → grille ASCII fixe :
    - fond : rampe de densité (`charset.ramp`)
@@ -29,7 +29,9 @@ Fichiers :
 
 ## Seed publique (crypto-friendly)
 
-- `seedFromHandle(handle, timestamp)` : SHA-256 → seed courte.
-- `seedFromSshPublicKey(pubkey)` : SHA-256 → seed courte.
-- **Jamais** de clés privées (refus explicite).
-
+- `seedFromHandle(handle, timestamp)` : SHA-256 → seed courte (génératif).
+- Lien 0isO ↔ CLOUD (canon) :
+  - `principalIdFromSshPubkey(pub)` : `base32(sha256(normalize(pub)))` → `principal_id` (28 chars, public).
+  - `cloudNamespace(principal_id)` : `soul.cloud/u/<principal_id>`.
+  - `zeroisoSeed(principal_id,"v1")` : `0iso:<principal_id>:v1` (publique, **pas** un secret).
+- Garde-fou : `assertPublicOnlySeed(seed)` refuse tout ce qui ressemble à une clé privée.

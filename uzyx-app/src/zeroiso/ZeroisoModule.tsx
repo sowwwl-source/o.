@@ -7,7 +7,14 @@ import {
   parseFragmentsInput,
 } from "./zeroisoEngine";
 import { exportZeroisoGif } from "./zeroisoExportGif";
-import { normalizeHandle, seedFromHandle, seedFromSshPublicKey } from "./zeroisoSeed";
+import {
+  assertPublicOnlySeed,
+  cloudNamespace,
+  normalizeHandle,
+  principalIdFromSshPubkey,
+  seedFromHandle,
+  zeroisoSeed,
+} from "./zeroisoSeed";
 import type { DensityGrid, ZeroisoBuildResult, ZeroisoScanSlot } from "./types";
 
 function clamp(n: number, a: number, b: number) {
@@ -58,6 +65,9 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
   const [lockedSeed, setLockedSeed] = useState(false);
   const [seed, setSeed] = useState<string>(() => (props.initialSeed ? String(props.initialSeed) : ""));
   const [sshPub, setSshPub] = useState("");
+  const [principalId, setPrincipalId] = useState<string | null>(null);
+  const cloud = useMemo(() => (principalId ? cloudNamespace(principalId) : ""), [principalId]);
+  const [note, setNote] = useState<string | null>(null);
   const [showFragments, setShowFragments] = useState(false);
   const [fragmentsText, setFragmentsText] = useState(() => cfg.fragments.join("\n"));
   const fragments = useMemo(() => parseFragmentsInput(fragmentsText), [fragmentsText]);
@@ -201,17 +211,56 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
     setFrameIdx(0);
   };
 
-  const onSeedFromSsh = async () => {
-    if (lockedSeed) return;
+  const onLinkToCloud = async () => {
     setBuilding(true);
     try {
-      const s = await seedFromSshPublicKey(sshPub);
-      setSeed(s);
+      const pid = await principalIdFromSshPubkey(sshPub);
+      setPrincipalId(pid);
+      const s = zeroisoSeed(pid, "v1");
+      assertPublicOnlySeed(s);
+      if (!lockedSeed) setSeed(s);
     } catch (e: any) {
-      setGif({ state: "error", msg: String(e?.message || e || "seed error") });
+      setGif({ state: "error", msg: String(e?.message || e || "link error") });
     } finally {
       setBuilding(false);
     }
+  };
+
+  const copyText = async (text: string) => {
+    const t = String(text || "");
+    if (!t) return false;
+    try {
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = t;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return ok;
+      } catch {
+        return false;
+      }
+    }
+  };
+
+  const onCopyCloud = async () => {
+    if (!cloud) return;
+    const ok = await copyText(cloud);
+    setNote(ok ? "copied:cloud" : "copy:err");
+  };
+
+  const onCopyPrincipal = async () => {
+    if (!principalId) return;
+    const ok = await copyText(principalId);
+    setNote(ok ? "copied:principal" : "copy:err");
   };
 
   const onExportGif = async () => {
@@ -243,6 +292,12 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
       setGif({ state: "error", msg: String(e?.message || e || "export error") });
     }
   };
+
+  useEffect(() => {
+    if (!note) return;
+    const t = window.setTimeout(() => setNote(null), 1900);
+    return () => window.clearTimeout(t);
+  }, [note]);
 
   const Cmd = (p: { id: string; label: string; on: () => void; disabled?: boolean }) => (
     <a
@@ -316,7 +371,8 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
           autoCorrect="off"
           spellCheck={false}
         />
-        <Cmd id="ssh_to_seed" label="SSH→SEED" on={onSeedFromSsh} disabled={!sshPub || lockedSeed || building} />
+        <Cmd id="ssh_to_principal" label="SSH→PRINCIPAL" on={onLinkToCloud} disabled={!sshPub || building} />
+        <Cmd id="copy_cloud" label="COPY CLOUD" on={onCopyCloud} disabled={!cloud || building} />
       </div>
 
       <div className="zeroisoLine" aria-label="capture">
@@ -364,9 +420,13 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
 
       <div className="zeroisoStatus" aria-label="status">
         <span aria-hidden="true">{seed ? `seed:${seed}` : "seed:—"}</span>
+        <span aria-hidden="true">{principalId ? `principal_id:${principalId}` : "principal_id:—"}</span>
+        <span aria-hidden="true">{cloud ? `cloud:${cloud}` : "cloud:—"}</span>
         <span aria-hidden="true">{build ? `grid:${build.grid.w}x${build.grid.h}` : "grid:—"}</span>
         <span aria-hidden="true">{build ? `frames:${build.frames.length}` : "frames:—"}</span>
         <span aria-hidden="true">{build ? `fps:${build.fps}` : "fps:—"}</span>
+        {principalId ? <Cmd id="copy_principal" label="COPY PRINCIPAL" on={onCopyPrincipal} disabled={building} /> : null}
+        {note ? <span aria-hidden="true">{note}</span> : null}
         {gif.state === "working" ? <span aria-hidden="true">GIF…</span> : null}
         {gif.state === "ready" ? (
           <>
