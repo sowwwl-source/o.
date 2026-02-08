@@ -12,3 +12,4 @@ backups/
 # Node / bundlers
 **/node_modules/
 **/dist/
+**/*.tsbuildinfo

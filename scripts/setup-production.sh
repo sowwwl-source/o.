@@ -35,6 +35,11 @@ echo "→ Creating application directory..."
 mkdir -p /opt/sowwwl
 cd /opt/sowwwl
 
+# Signals directory (optional, used for server-side signal drops)
+echo "→ Creating signals directory..."
+mkdir -p /var/www/o/signals
+chown -R www-data:www-data /var/www/o/signals 2>/dev/null || true
+
 # Configure firewall
 echo "→ Configuring firewall..."
 if command -v ufw &> /dev/null; then

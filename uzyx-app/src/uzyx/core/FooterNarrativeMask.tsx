@@ -55,6 +55,7 @@ export type UzyxState = {
 export type FooterAPI = {
   setUzyxState: (partial: Partial<UzyxState>) => void;
   getUzyxState: () => UzyxState;
+  subscribe: (fn: (s: UzyxState) => void) => () => void;
   enableFailSafe: (enabled: boolean) => void;
 };
 
@@ -73,6 +74,11 @@ export const uzyxFooterAPI: FooterAPI = (() => {
   const listeners = new Set<(s: UzyxState) => void>();
 
   const emit = () => listeners.forEach((fn) => fn(current));
+  const subscribe = (fn: (s: UzyxState) => void) => {
+    listeners.add(fn);
+    fn(current);
+    return () => listeners.delete(fn);
+  };
 
   return {
     setUzyxState(partial) {
@@ -86,19 +92,14 @@ export const uzyxFooterAPI: FooterAPI = (() => {
       current = { ...current, failSafe: enabled };
       emit();
     },
-    // internal subscribe
-    __subscribe(fn: (s: UzyxState) => void) {
-      listeners.add(fn);
-      fn(current);
-      return () => listeners.delete(fn);
-    },
-  } as FooterAPI & { __subscribe: (fn: (s: UzyxState) => void) => () => void };
+    subscribe,
+  } as FooterAPI;
 })();
 
 function useUzyxFooterState(): [UzyxState, (p: Partial<UzyxState>) => void] {
   const [s, setS] = useState<UzyxState>(() => uzyxFooterAPI.getUzyxState());
   useEffect(() => {
-    const unsub = (uzyxFooterAPI as any).__subscribe((x: UzyxState) => setS(x));
+    const unsub = uzyxFooterAPI.subscribe((x: UzyxState) => setS(x));
     return unsub;
   }, []);
   const setPartial = (p: Partial<UzyxState>) => uzyxFooterAPI.setUzyxState(p);

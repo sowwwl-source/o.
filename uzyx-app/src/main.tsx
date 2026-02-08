@@ -6,6 +6,10 @@ import { BoardPage } from "./board/BoardPage";
 import { StreamPage } from "./stream/StreamPage";
 import { FerryPage } from "./ferry/FerryPage";
 import { ContactsPage } from "./contacts/ContactsPage";
+import { FooterNarrativeMask } from "@/uzyx";
+import { useUzyxSignals } from "./uzyx/useUzyxSignals";
+import { useUzyxFailSafeGuard } from "./uzyx/useUzyxFailSafeGuard";
+import { UzyxImplicitAssist } from "./uzyx/UzyxImplicitAssist";
 
 applyTokens(TOKENS);
 
@@ -23,11 +27,24 @@ function useHashRoute() {
 }
 
 function App() {
+  useUzyxSignals();
+  useUzyxFailSafeGuard();
+
   const route = useHashRoute();
-  if (route.startsWith("/stream")) return <StreamPage />;
-  if (route.startsWith("/ferry")) return <FerryPage />;
-  if (route.startsWith("/contacts")) return <ContactsPage />;
-  return <BoardPage />;
+  const page = (() => {
+    if (route.startsWith("/stream")) return <StreamPage />;
+    if (route.startsWith("/ferry")) return <FerryPage />;
+    if (route.startsWith("/contacts")) return <ContactsPage />;
+    return <BoardPage />;
+  })();
+
+  return (
+    <>
+      {page}
+      <UzyxImplicitAssist />
+      <FooterNarrativeMask />
+    </>
+  );
 }
 
 createRoot(app).render(

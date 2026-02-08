@@ -106,3 +106,29 @@ main {
     animation: none !important;
   }
 }
+
+/* Uzyx implicit assistance: one option, never insistent. */
+.uzyxAssist {
+  position: fixed;
+  left: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 10000;
+  pointer-events: auto;
+  min-width: 38px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--fg) 45%, transparent);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  opacity: 0.66;
+  cursor: pointer;
+}
+.uzyxAssist:hover,
+.uzyxAssist:focus-visible {
+  opacity: 0.95;
+  border-color: var(--fg);
+}

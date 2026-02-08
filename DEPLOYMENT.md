@@ -49,6 +49,12 @@ sudo mkdir -p /var/www/sowwwl-front
 sudo rsync -a --delete sowwwl-front/ /var/www/sowwwl-front/
 ```
 
+Optional (signals directory used by some server-side drops):
+```bash
+sudo mkdir -p /var/www/o/signals
+sudo chown -R www-data:www-data /var/www/o/signals
+```
+
 Then configure your reverse proxy so:
 - `sowwwl.com` serves `/var/www/sowwwl-front`
 - `/api/*` is proxied to the API and **strips** the `/api` prefix (so `/api/me` → `/me`)
