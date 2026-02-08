@@ -431,7 +431,11 @@ pre, code, textarea{font-family:var(--font-mono)}
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-html.is-inverted .o-c0ntr0l-btn{background:rgba(255,255,255,.22)}
+html.is-inverted .o-c0ntr0l-btn{
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,140,60,.14), transparent 70%),
+    rgba(255,255,255,.22);
+}
 
 .o-c0ntr0l-state{
   display:inline-flex;
@@ -496,7 +500,24 @@ html.is-inverted .o-c0ntr0l-btn{background:rgba(255,255,255,.22)}
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-html.is-inverted .o-petals-ring{background:rgba(255,255,255,.22)}
+html.is-inverted .o-petals-ring{
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,140,60,.14), transparent 70%),
+    rgba(255,255,255,.22);
+}
+
+/* Dock C0ntr0l into petals cluster when present (single module). */
+.o-petals .o-c0ntr0l{
+  position:static;
+  right:auto;
+  bottom:auto;
+  z-index:auto;
+  align-items:flex-start;
+}
+.o-petals .o-c0ntr0l-msg{
+  text-align:left;
+  max-width:min(260px, 72vw);
+}
 
 .o-petals-marks{
   position:absolute;

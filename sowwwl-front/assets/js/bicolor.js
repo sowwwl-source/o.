@@ -793,6 +793,56 @@
     nav.appendChild(ui);
     document.body.appendChild(nav);
 
+    // Dock movement control into the petals cluster when present (single module on mobile).
+    try {
+      const ctrl = document.querySelector(".o-c0ntr0l");
+      if (ctrl instanceof HTMLElement && !nav.contains(ctrl)) {
+        ui.appendChild(ctrl);
+      }
+    } catch {}
+
+    // Molette: trackpad/mouse wheel rotates petals (no classic menu).
+    let wheelAcc = 0;
+    let wheelLast = 0;
+    const WHEEL_THRESHOLD = 60;
+    nav.addEventListener(
+      "wheel",
+      (e) => {
+        if (e.defaultPrevented) return;
+        if (e.ctrlKey) return; // pinch-to-zoom / browser zoom gestures
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        // Only when interacting with the cluster.
+        if (!ui.contains(target)) return;
+
+        const now =
+          typeof e.timeStamp === "number" && e.timeStamp > 0
+            ? e.timeStamp
+            : typeof performance !== "undefined"
+              ? performance.now()
+              : Date.now();
+        if (now - wheelLast > 240) wheelAcc = 0;
+        wheelLast = now;
+
+        const dx = typeof e.deltaX === "number" ? e.deltaX : 0;
+        const dy = typeof e.deltaY === "number" ? e.deltaY : 0;
+        const d = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+        if (!Number.isFinite(d) || d === 0) return;
+
+        e.preventDefault();
+        wheelAcc += d;
+        while (wheelAcc >= WHEEL_THRESHOLD) {
+          rotate(1);
+          wheelAcc -= WHEEL_THRESHOLD;
+        }
+        while (wheelAcc <= -WHEEL_THRESHOLD) {
+          rotate(-1);
+          wheelAcc += WHEEL_THRESHOLD;
+        }
+      },
+      { passive: false },
+    );
+
     function applyCursor(nextId) {
       const id = findById(nextId) ? nextId : PETALS[0]?.id;
       if (!id) return;
