@@ -186,17 +186,58 @@
   cursor:default;
 }
 
+.oPointIcon{
+  width:160px;
+  height:auto;
+  pointer-events:none;
+  color:inherit;
+  --orbit-dur:calc(24000ms - (var(--score, .5) * 12000ms));
+  --breathe-dur:calc(8200ms - (var(--score, .5) * 2500ms));
+  --dot-color:color-mix(in srgb, var(--fg) calc(var(--score, .5) * 100%), var(--bg));
+}
+
+.helmOverlay[data-mode="failsafe-hard"] .oPointIcon{
+  --dot-color:currentColor;
+}
+
+.helmOverlay[data-mode="failsafe-hard"] .oPointText{
+  opacity:0;
+}
+
+.oPointText{
+  fill:currentColor;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:52px;
+  letter-spacing:.28em;
+}
+
+.oPointOrbit{
+  transform-box:fill-box;
+  transform-origin:0px 0px;
+  animation:o_orbit var(--orbit-dur, 18000ms) linear infinite;
+}
+
+.oPointAlive{
+  fill:var(--dot-color, currentColor);
+  animation:o_breathe var(--breathe-dur, 6500ms) ease-in-out infinite;
+  opacity:.92;
+  filter:drop-shadow(0 0 12px var(--helm-halo));
+}
+
+@keyframes o_orbit{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
+}
+
+@keyframes o_breathe{
+  0%, 100%{ opacity:.86; transform:scale(1); }
+  50%{ opacity:1; transform:scale(1.03); }
+}
+
 .helmCenter:focus-visible,
 .helmCenter:hover{
   opacity:1;
   text-shadow:0 0 18px var(--helm-halo);
-}
-
-.helmCenterDot{
-  width:10px;
-  height:10px;
-  background:currentColor;
-  box-shadow:0 0 28px var(--helm-halo);
 }
 
 .helmCenterId{
@@ -243,6 +284,8 @@
     -webkit-backdrop-filter:none;
   }
   .helmBirdField{ animation:none; }
+  .oPointOrbit,
+  .oPointAlive{ animation:none; }
   .helmOverlay.is-deploy .helmRing,
   .helmOverlay.is-deploy .helmWheel,
   .helmOverlay.is-deploy .helmPoint{ animation:none; }

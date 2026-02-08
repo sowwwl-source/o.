@@ -13,6 +13,10 @@ function hrefFor(id: string) {
   return `#/${id}`;
 }
 
+function clamp01(x: number) {
+  return Math.max(0, Math.min(1, x));
+}
+
 function isInteractiveTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
   return Boolean(t.closest("a,button,input,textarea,select,[role='link'],[contenteditable='true']"));
@@ -82,6 +86,15 @@ export function Molette(props: { current: NodeId }) {
   const centerRef = useRef<HTMLDivElement | null>(null);
   const commitRef = useRef<{ busy: boolean }>({ busy: false });
   const lastDragRef = useRef<number>(0);
+
+  const oScore = useMemo(() => {
+    if (uzyx.failSafe) return 0.02;
+    if (!uzyx.towardO) return uzyx.unstable ? 0.36 : 0.48; // M
+    if (uzyx.unstable) return 0.74; // P
+    return 0.92; // O
+  }, [uzyx.failSafe, uzyx.towardO, uzyx.unstable]);
+
+  const score = clamp01(oScore);
 
   useEffect(() => {
     if (!open) return;
@@ -459,7 +472,31 @@ export function Molette(props: { current: NodeId }) {
           onCommit();
         }}
       >
-        <span className="helmCenterDot" aria-hidden="true" />
+        <svg
+          className="oPointIcon"
+          viewBox="0 0 410 80"
+          aria-hidden="true"
+          focusable="false"
+          style={
+            {
+              ["--score" as any]: String(score),
+            } as React.CSSProperties
+          }
+        >
+          <text className="oPointText" x="160" y="40" textAnchor="middle" dominantBaseline="middle">
+            .
+          </text>
+          <text className="oPointText" x="205" y="40" textAnchor="middle" dominantBaseline="middle">
+            O
+          </text>
+          <text className="oPointText" x="250" y="40" textAnchor="middle" dominantBaseline="middle">
+            .
+          </text>
+          <g id="orbit" className="oPointOrbit">
+            <circle className="oPointPivot" cx="205" cy="40" r="0.01" opacity="0" />
+            <circle id="aliveDot" className="oPointAlive" cx="265" cy="44" r="4" />
+          </g>
+        </svg>
         <span className="helmCenterId" aria-hidden="true">
           {helm.activePageId ?? current}
         </span>
