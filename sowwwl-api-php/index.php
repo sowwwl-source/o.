@@ -14,6 +14,9 @@
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 // ====== Basic hardening ======
 header('X-Content-Type-Options: nosniff');

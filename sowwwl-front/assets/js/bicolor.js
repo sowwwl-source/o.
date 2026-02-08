@@ -1042,54 +1042,178 @@
           if (audio) audio.stop();
         }
 
-        document.addEventListener(
-          "pointerdown",
-          (e) => {
-            if (e.defaultPrevented) return;
-            if (!e.isPrimary) return;
-            if (e.button !== 0) return;
-            if (pid !== null) return;
-            if (blockedTarget(e.target)) return;
-            pid = e.pointerId;
-            live = true;
-            try {
-              if (audio) audio.arm().catch(() => {});
-            } catch {}
-            detector.start(pointFromEvent(e));
-          },
-          { capture: true, passive: true },
-        );
+        const hasPointer = (() => {
+          try {
+            return typeof window !== "undefined" && "PointerEvent" in window;
+          } catch {
+            return false;
+          }
+        })();
 
-        document.addEventListener(
-          "pointermove",
-          (e) => {
-            if (!live) return;
-            if (e.pointerId !== pid) return;
-            detector.update(pointFromEvent(e));
-          },
-          { capture: true, passive: true },
-        );
+        if (hasPointer) {
+          document.addEventListener(
+            "pointerdown",
+            (e) => {
+              if (e.defaultPrevented) return;
+              if (!e.isPrimary) return;
+              if (e.button !== 0) return;
+              if (pid !== null) return;
+              if (blockedTarget(e.target)) return;
+              pid = e.pointerId;
+              live = true;
+              try {
+                if (audio) audio.arm().catch(() => {});
+              } catch {}
+              detector.start(pointFromEvent(e));
+            },
+            { capture: true, passive: true },
+          );
 
-        document.addEventListener(
-          "pointerup",
-          (e) => {
-            if (!live) return;
-            if (e.pointerId !== pid) return;
-            detector.end();
-            clear();
-          },
-          { capture: true, passive: true },
-        );
-        document.addEventListener(
-          "pointercancel",
-          (e) => {
-            if (!live) return;
-            if (e.pointerId !== pid) return;
-            detector.end();
-            clear();
-          },
-          { capture: true, passive: true },
-        );
+          document.addEventListener(
+            "pointermove",
+            (e) => {
+              if (!live) return;
+              if (e.pointerId !== pid) return;
+              detector.update(pointFromEvent(e));
+            },
+            { capture: true, passive: true },
+          );
+
+          document.addEventListener(
+            "pointerup",
+            (e) => {
+              if (!live) return;
+              if (e.pointerId !== pid) return;
+              detector.end();
+              clear();
+            },
+            { capture: true, passive: true },
+          );
+          document.addEventListener(
+            "pointercancel",
+            (e) => {
+              if (!live) return;
+              if (e.pointerId !== pid) return;
+              detector.end();
+              clear();
+            },
+            { capture: true, passive: true },
+          );
+        } else {
+          function touchById(list, id) {
+            if (!list) return null;
+            for (let i = 0; i < list.length; i += 1) {
+              const t = list[i];
+              if (t && t.identifier === id) return t;
+            }
+            return null;
+          }
+
+          function pointFromTouch(t, ts) {
+            return { x: t.clientX, y: t.clientY, t: ts };
+          }
+
+          document.addEventListener(
+            "touchstart",
+            (e) => {
+              if (e.defaultPrevented) return;
+              if (blockedTarget(e.target)) return;
+
+              const touches = e.touches;
+              if (touches && touches.length > 1) {
+                if (live) {
+                  detector.end();
+                  clear();
+                }
+                return;
+              }
+              if (pid !== null) return;
+              const t = e.changedTouches && e.changedTouches[0];
+              if (!t) return;
+              pid = t.identifier;
+              live = true;
+              try {
+                if (audio) audio.arm().catch(() => {});
+              } catch {}
+              detector.start(pointFromTouch(t, tOf(e)));
+            },
+            { capture: true, passive: true },
+          );
+
+          document.addEventListener(
+            "touchmove",
+            (e) => {
+              if (!live) return;
+              const touches = e.touches;
+              if (touches && touches.length > 1) {
+                detector.end();
+                clear();
+                return;
+              }
+              const t = touchById(e.touches, pid);
+              if (!t) return;
+              detector.update(pointFromTouch(t, tOf(e)));
+            },
+            { capture: true, passive: true },
+          );
+
+          document.addEventListener(
+            "touchend",
+            (e) => {
+              if (!live) return;
+              if (!touchById(e.changedTouches, pid)) return;
+              detector.end();
+              clear();
+            },
+            { capture: true, passive: true },
+          );
+          document.addEventListener(
+            "touchcancel",
+            (e) => {
+              if (!live) return;
+              if (!touchById(e.changedTouches, pid)) return;
+              detector.end();
+              clear();
+            },
+            { capture: true, passive: true },
+          );
+
+          document.addEventListener(
+            "mousedown",
+            (e) => {
+              if (e.defaultPrevented) return;
+              if (e.button !== 0) return;
+              if (pid !== null) return;
+              if (blockedTarget(e.target)) return;
+              pid = "mouse";
+              live = true;
+              try {
+                if (audio) audio.arm().catch(() => {});
+              } catch {}
+              detector.start(pointFromEvent(e));
+            },
+            { capture: true, passive: true },
+          );
+          document.addEventListener(
+            "mousemove",
+            (e) => {
+              if (!live) return;
+              if (pid !== "mouse") return;
+              detector.update(pointFromEvent(e));
+            },
+            { capture: true, passive: true },
+          );
+          document.addEventListener(
+            "mouseup",
+            (e) => {
+              if (!live) return;
+              if (pid !== "mouse") return;
+              detector.end();
+              clear();
+            },
+            { capture: true, passive: true },
+          );
+        }
 
         window.addEventListener("blur", () => {
           if (!live) return;

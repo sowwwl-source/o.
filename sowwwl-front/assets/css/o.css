@@ -246,16 +246,18 @@ a:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:
 #o{
   max-width:var(--max);
   margin:0 auto;
+  min-height:100vh;
   min-height:100svh;
   display:flex;
   flex-direction:column;
   justify-content:flex-end;
   gap:18px;
+  padding:var(--pad);
   padding:
-    calc(var(--pad) + env(safe-area-inset-top))
-    calc(var(--pad) + env(safe-area-inset-right))
-    calc(var(--pad) + env(safe-area-inset-bottom))
-    calc(var(--pad) + env(safe-area-inset-left));
+    calc(var(--pad) + env(safe-area-inset-top, 0px))
+    calc(var(--pad) + env(safe-area-inset-right, 0px))
+    calc(var(--pad) + env(safe-area-inset-bottom, 0px))
+    calc(var(--pad) + env(safe-area-inset-left, 0px));
 }
 
 .muted{opacity:.66}
@@ -407,7 +409,9 @@ pre, code, textarea{font-family:var(--font-mono)}
 .o-c0ntr0l{
   position:fixed;
   right:12px;
-  bottom:calc(12px + env(safe-area-inset-bottom));
+  right:calc(12px + env(safe-area-inset-right, 0px));
+  bottom:12px;
+  bottom:calc(12px + env(safe-area-inset-bottom, 0px));
   z-index:9998;
   display:flex;
   flex-direction:column;
@@ -469,7 +473,9 @@ html.is-inverted .o-c0ntr0l-btn{background:rgba(255,255,255,.22)}
 .o-petals{
   position:fixed;
   left:12px;
-  bottom:calc(12px + env(safe-area-inset-bottom));
+  left:calc(12px + env(safe-area-inset-left, 0px));
+  bottom:12px;
+  bottom:calc(12px + env(safe-area-inset-bottom, 0px));
   z-index:9997;
   pointer-events:none;
 }
@@ -525,6 +531,7 @@ html.is-inverted .o-petals-ring{background:rgba(255,255,255,.22)}
   transform:
     rotate(calc((var(--i) * 45deg) - 90deg))
     translate(30px);
+  touch-action:manipulation;
 }
 .o-petal:hover{opacity:1}
 .o-petal.is-cursor{opacity:1;border-color:var(--accent-green)}
@@ -546,6 +553,7 @@ html.is-inverted .o-petals-ring{background:rgba(255,255,255,.22)}
   font-size:12px;
   letter-spacing:.06em;
   opacity:.86;
+  touch-action:manipulation;
 }
 .o-petal-core:hover{opacity:1}
 .o-petal-core.is-active{border-color:var(--ok-line)}
@@ -569,12 +577,28 @@ html.is-inverted .o-petals-ring{background:rgba(255,255,255,.22)}
   border-radius:999px;
   border:1px solid var(--line);
   background:transparent;
+  touch-action:manipulation;
 }
 
 .o-petals-label{
   font-size:12px;
   letter-spacing:.18em;
   text-transform:uppercase;
+}
+
+@media (pointer: coarse){
+  .o-petals-ring{width:92px;height:92px}
+  .o-petal{
+    width:22px;
+    height:22px;
+    margin-left:-11px;
+    margin-top:-11px;
+    transform:
+      rotate(calc((var(--i) * 45deg) - 90deg))
+      translate(36px);
+  }
+  .o-petal-core{width:40px;height:40px}
+  .o-petals-btn{width:40px;height:40px}
 }
 
 /* ===== Toroidal wrap surface (FL0W/dev) ===== */
@@ -593,12 +617,12 @@ html[data-torus-page="1"] body{
 }
 .o-torus-plane{
   display:grid;
-  grid-template-columns:repeat(3, 100vw);
-  grid-template-rows:repeat(3, 100vh);
+  grid-template-columns:repeat(3, var(--torus-w, 100vw));
+  grid-template-rows:repeat(3, var(--torus-h, 100vh));
 }
 .o-torus-tile{
-  width:100vw;
-  height:100vh;
+  width:var(--torus-w, 100vw);
+  height:var(--torus-h, 100vh);
   background:
     radial-gradient(circle at 50% 50%, rgba(255,255,255,.06), transparent 55%),
     repeating-linear-gradient(0deg, transparent 0 18px, rgba(255,255,255,.03) 18px 19px),

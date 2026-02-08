@@ -40,6 +40,11 @@
     function updateTileSize() {
       tileW = Math.max(1, scroller.clientWidth);
       tileH = Math.max(1, scroller.clientHeight);
+      // Keep CSS sizes aligned with measured pixels (mobile URL bars / dynamic viewport).
+      try {
+        scroller.style.setProperty("--torus-w", `${tileW}px`);
+        scroller.style.setProperty("--torus-h", `${tileH}px`);
+      } catch {}
     }
 
     function worldX() {
@@ -124,18 +129,23 @@
     scroller.addEventListener("scroll", onScroll, { passive: true });
 
     // Keep stable on resize.
+    const onResize = () => {
+      const dx = scroller.scrollLeft - tileW;
+      const dy = scroller.scrollTop - tileH;
+      updateTileSize();
+      scroller.scrollLeft = tileW + dx;
+      scroller.scrollTop = tileH + dy;
+      wrapAxis();
+    };
     const ro =
       typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => {
-            const dx = scroller.scrollLeft - tileW;
-            const dy = scroller.scrollTop - tileH;
-            updateTileSize();
-            scroller.scrollLeft = tileW + dx;
-            scroller.scrollTop = tileH + dy;
-            wrapAxis();
-          })
+        ? new ResizeObserver(onResize)
         : null;
     if (ro) ro.observe(scroller);
+    try {
+      window.addEventListener("resize", onResize, { passive: true });
+      window.visualViewport?.addEventListener("resize", onResize, { passive: true });
+    } catch {}
 
     // Optional: keyboard navigation (arrows / WASD).
     const keys = Boolean(opts.keys);
@@ -182,6 +192,10 @@
         scroller.removeEventListener("scroll", onScroll);
         document.removeEventListener("keydown", onKeyDown, true);
         if (ro) ro.disconnect();
+        try {
+          window.removeEventListener("resize", onResize);
+          window.visualViewport?.removeEventListener("resize", onResize);
+        } catch {}
       },
     };
   }

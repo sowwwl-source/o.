@@ -1,5 +1,6 @@
 .contacts {
   min-height: 100vh;
+  min-height: 100svh;
   padding: var(--space-xl);
   display: grid;
   gap: var(--space-lg);
