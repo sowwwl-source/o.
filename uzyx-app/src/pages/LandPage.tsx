@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import "./land.css";
 import { HautPoint } from "@/components/HautPoint";
 import { usePerceptionStore } from "@/perception/PerceptionProvider";
+import { isInverted, setInvert } from "@/theme/invert";
 
 export function LandPage() {
   const store = usePerceptionStore();
@@ -10,6 +11,13 @@ export function LandPage() {
   useEffect(() => {
     store.setBaseProfile("land");
   }, [store]);
+
+  // Entering LAND is an interior flip (inversion is functional, not cosmetic).
+  useEffect(() => {
+    const prev = isInverted();
+    setInvert(true);
+    return () => setInvert(prev);
+  }, []);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -42,4 +50,3 @@ export function LandPage() {
     </main>
   );
 }
-
