@@ -1,0 +1,71 @@
+.profileRoot{
+  min-height:100vh;
+  min-height:100svh;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  display:grid;
+  gap:var(--space-lg);
+}
+
+.profileTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:var(--space-md);
+  flex-wrap:wrap;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.12em;
+}
+
+.profileHandle{
+  text-transform:uppercase;
+  letter-spacing:.22em;
+  font-size:12px;
+  opacity:.9;
+}
+
+.profileMeta{
+  font-size:11px;
+  opacity:.68;
+}
+
+.profileGrid{
+  display:grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+  gap:var(--space-xl);
+  align-items:start;
+}
+
+.profileAside{
+  display:grid;
+  gap:var(--space-md);
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:11px;
+  letter-spacing:.14em;
+  opacity:.78;
+}
+
+.profileAsideLine{
+  display:flex;
+  gap:10px;
+  align-items:baseline;
+  flex-wrap:wrap;
+}
+
+.profileKey{
+  text-transform:uppercase;
+  letter-spacing:.22em;
+  opacity:.62;
+}
+
+.profileVal{
+  opacity:.86;
+}
+
+@media (max-width: 900px){
+  .profileGrid{ grid-template-columns:1fr; }
+}
+

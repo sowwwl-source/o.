@@ -17,12 +17,17 @@ npm run dev
 - `#/FERRY`
 - `#/STR3M`
 - `#/CONTACT`
+- `#/u/:handle` (profil + module `0isO`)
 
 ## Controls
 
 - `m`: molette (wheel/drag rotates, hold traverses, `Esc` closes)
 - `i`: inversion (swap `--bg` / `--fg`)
 - Hold `HAUT` (still) to toggle ΔZ′; exit via disorientation or returning near center
+
+## Guardrails
+
+- `npm run assert:ui` fails the build on forbidden UI gadgets (`<img>`, `<button>`, non-zero `border-radius`, `url(data:image/*)`).
 
 ## Tokens
 

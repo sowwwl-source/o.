@@ -50,6 +50,8 @@ function withGlobal(re) {
 
 const SIMPLE_RULES = [
   { id: "img", re: /<\s*img\b/gi, msg: "<img> interdit (images=false)" },
+  { id: "picture", re: /<\s*picture\b/gi, msg: "<picture> interdit (images=false)" },
+  { id: "source", re: /<\s*source\b/gi, msg: "<source> interdit (images=false)" },
   { id: "button", re: /<\s*button\b/gi, msg: "<button> interdit (buttons=false)" },
   { id: "role-button", re: /role\s*=\s*["']button["']/gi, msg: 'role="button" interdit (buttons=false)' },
   { id: "borderRadius", re: /\bborderRadius\b/gi, msg: "borderRadius interdit (radius=false)" },
@@ -57,6 +59,11 @@ const SIMPLE_RULES = [
     id: "url-image",
     re: /url\(\s*["']?[^"')]+?\.(png|jpe?g|gif|webp|svg)\b[^"')]*\)/gi,
     msg: "url(image.*) interdit (images=false)",
+  },
+  {
+    id: "url-data-image",
+    re: /url\(\s*["']?data:image\//gi,
+    msg: "url(data:image/*) interdit (images=false)",
   },
 ];
 
@@ -128,4 +135,3 @@ async function main() {
 }
 
 main();
-

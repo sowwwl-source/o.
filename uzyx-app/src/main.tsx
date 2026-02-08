@@ -5,6 +5,7 @@ import { BoardPage } from "./pages/BoardPage";
 import { ContactsPage } from "./pages/ContactsPage";
 import { FerryPage } from "./pages/FerryPage";
 import { LandPage } from "./pages/LandPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { StreamPage } from "./pages/StreamPage";
 import type { NodeId } from "@/graph/graph";
 import { PerceptionProvider } from "@/perception/PerceptionProvider";
@@ -12,47 +13,71 @@ import { Molette } from "@/components/Molette";
 import { useUzyxSignals } from "@/uzyx/useUzyxSignals";
 import { useUzyxFailSafeGuard } from "@/uzyx/useUzyxFailSafeGuard";
 import { UzyxImplicitAssist } from "@/uzyx/UzyxImplicitAssist";
+import { assertBicolorVars, assertNoImagesInDOM } from "@/guardrails/oRules";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Missing #app");
 
-function parseNodeFromHash(hash: string): NodeId {
+type Route =
+  | { kind: "node"; id: NodeId }
+  | { kind: "profile"; handle: string };
+
+function parseRouteFromHash(hash: string): Route {
   const raw = String(hash || "").replace(/^#\/?/, "").replace(/^\/+/, "");
+  const parts = raw.split("/").filter(Boolean);
+  const head = (parts[0] ?? "").toLowerCase();
+  if (head === "u" && parts[1]) {
+    const handle = decodeURIComponent(parts[1]).replace(/^@+/, "");
+    return { kind: "profile", handle };
+  }
+
   const key = raw.trim().toUpperCase();
-  if (key === "" || key === "HAUT" || key === "B0ARD" || key === "BOARD") return "HAUT";
-  if (key === "LAND") return "LAND";
-  if (key === "FERRY") return "FERRY";
-  if (key === "STR3M" || key === "STR3AM" || key === "STREAM") return "STR3M";
-  if (key === "CONTACT" || key === "CONTACTS") return "CONTACT";
-  return "HAUT";
+  if (key === "" || key === "HAUT" || key === "B0ARD" || key === "BOARD") return { kind: "node", id: "HAUT" };
+  if (key === "LAND") return { kind: "node", id: "LAND" };
+  if (key === "FERRY") return { kind: "node", id: "FERRY" };
+  if (key === "STR3M" || key === "STR3AM" || key === "STREAM") return { kind: "node", id: "STR3M" };
+  if (key === "CONTACT" || key === "CONTACTS") return { kind: "node", id: "CONTACT" };
+  return { kind: "node", id: "HAUT" };
 }
 
 function App() {
-  const [active, setActive] = useState<NodeId>(() => parseNodeFromHash(window.location.hash));
+  const [route, setRoute] = useState<Route>(() => parseRouteFromHash(window.location.hash));
 
   useUzyxSignals();
   useUzyxFailSafeGuard();
 
   useEffect(() => {
-    const onHash = () => setActive(parseNodeFromHash(window.location.hash));
+    const onHash = () => setRoute(parseRouteFromHash(window.location.hash));
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    queueMicrotask(() => {
+      assertBicolorVars();
+      assertNoImagesInDOM(document);
+    });
+  }, []);
+
+  const nodeForMolette: NodeId = route.kind === "node" ? route.id : "HAUT";
+
   return (
     <PerceptionProvider>
-      {active === "HAUT" ? (
+      {route.kind === "profile" ? (
+        <ProfilePage handle={route.handle} />
+      ) : route.id === "HAUT" ? (
         <BoardPage active="HAUT" />
-      ) : active === "STR3M" ? (
+      ) : route.id === "STR3M" ? (
         <StreamPage />
-      ) : active === "FERRY" ? (
+      ) : route.id === "FERRY" ? (
         <FerryPage />
-      ) : active === "CONTACT" ? (
+      ) : route.id === "CONTACT" ? (
         <ContactsPage />
       ) : (
         <LandPage />
       )}
-      <Molette current={active} />
+      <Molette current={nodeForMolette} />
       <UzyxImplicitAssist />
     </PerceptionProvider>
   );
