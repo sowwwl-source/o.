@@ -32,6 +32,7 @@ services:
       DB_USER: ${DB_USER:-sowwwl}
       DB_PASS: ${DB_PASS:-sowwwlpass}
       SEED_ROOT: /data
+      O_NETWORK_ADMINS: ${O_NETWORK_ADMINS:-}
     depends_on:
       db:
         condition: service_healthy

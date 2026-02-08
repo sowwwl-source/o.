@@ -37,6 +37,9 @@ MYSQL_ROOT_PASSWORD=<strong-root-password>
 
 # Optional (defaults to ghcr.io/sowwwl-source/o-api:latest)
 API_IMAGE=ghcr.io/sowwwl-source/o-api:latest
+
+# Optional: comma/space-separated list of network-admin emails (e.g. to allow POST /qu3st)
+O_NETWORK_ADMINS=you@example.com
 ```
 
 ### 2. Frontend Setup (Static)

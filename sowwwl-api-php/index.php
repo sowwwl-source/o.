@@ -115,6 +115,58 @@ function env(string $key, ?string $default = null): ?string {
     return (string)$v;
 }
 
+// ====== Roles (network admin) ======
+function normalize_email(string $email): string {
+    $e = trim(mb_strtolower($email));
+    // Keep it simple; we only use it for equality checks against config.
+    return $e;
+}
+
+function parse_csv_emails(?string $raw): array {
+    $s = is_string($raw) ? trim($raw) : '';
+    if ($s === '') return [];
+
+    // Accept commas, spaces, newlines.
+    $parts = preg_split('/[,\s]+/u', $s, -1, PREG_SPLIT_NO_EMPTY);
+    if (!is_array($parts)) return [];
+
+    $out = [];
+    foreach ($parts as $p) {
+        $e = normalize_email((string)$p);
+        if ($e === '') continue;
+        $out[$e] = true;
+    }
+    return array_keys($out);
+}
+
+function network_admin_emails(): array {
+    static $cache = null;
+    if (is_array($cache)) return $cache;
+    $cache = parse_csv_emails(env('O_NETWORK_ADMINS', ''));
+    return $cache;
+}
+
+function is_network_admin_email(string $email): bool {
+    $e = normalize_email($email);
+    if ($e === '') return false;
+    $admins = network_admin_emails();
+    if (empty($admins)) return false;
+    return in_array($e, $admins, true);
+}
+
+function require_network_admin(PDO $pdo, int $uid): void {
+    try {
+        $stmt = $pdo->prepare("SELECT email FROM users WHERE id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $email = $row ? (string)($row['email'] ?? '') : '';
+    } catch (Throwable) {
+        $email = '';
+    }
+
+    if (!is_network_admin_email($email)) out(403, ['error' => 'network_admin_required']);
+}
+
 // ====== DB ======
 function db(): PDO {
     static $pdo = null;
@@ -632,6 +684,8 @@ if ($path === '/me') {
     $row = $stmt->fetch();
 
     if (!$row) out(401, ['guest' => true]);
+
+    $row['network_admin'] = is_network_admin_email((string)($row['email'] ?? ''));
 
     // Attach door (identity-less) + ensure cour/land exists.
     try {
@@ -1591,7 +1645,7 @@ TXT;
         if (mb_strlen($content) > 200_000) out(413, ['error' => 'content_too_large']);
 
         $pdo = db();
-        // NOTE: currently any authenticated user can edit qu3st. We can restrict later if needed.
+        require_network_admin($pdo, $uid);
         $stmt = $pdo->prepare("
             INSERT INTO qu3st (id, content) VALUES (1, :c)
             ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = CURRENT_TIMESTAMP
