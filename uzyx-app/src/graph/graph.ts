@@ -59,8 +59,8 @@ export function computeConstellation(seed = 7): Record<NodeId, NodePos> {
   const base = {
     LAND: { deg: 224, r: 46 },
     FERRY: { deg: 332, r: 44 },
-    STR3M: { deg: 128, r: 45 },
-    CONTACT: { deg: 46, r: 43 },
+    CONTACT: { deg: 128, r: 45 },
+    STR3M: { deg: 46, r: 43 },
   } as const satisfies Record<Exclude<NodeId, "HAUT">, { deg: number; r: number }>;
 
   const polar = (deg: number, r: number): NodePos => {
@@ -85,4 +85,3 @@ export function computeConstellation(seed = 7): Record<NodeId, NodePos> {
 export function neighbors(id: NodeId): readonly NodeId[] {
   return graph[id];
 }
-

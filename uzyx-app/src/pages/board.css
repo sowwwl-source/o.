@@ -5,6 +5,9 @@
   background:var(--bg);
   color:var(--fg);
   overflow:hidden;
+  --state-blend:0;
+  --bg-warp-x:0px;
+  --bg-warp-y:0px;
   padding:
     calc(var(--space-xl) + env(safe-area-inset-top, 0px))
     calc(var(--space-xl) + env(safe-area-inset-right, 0px))
@@ -26,6 +29,7 @@
       color-mix(in srgb, var(--fg) 22%, transparent) 16px 17px
     );
   mix-blend-mode:overlay;
+  transform:translate(var(--bg-warp-x), var(--bg-warp-y)) scale(1.03);
 }
 [data-invert="true"] .oBoard::before{mix-blend-mode:multiply}
 
@@ -36,6 +40,7 @@
   height:100%;
   pointer-events:none;
   opacity:.46;
+  z-index:1;
 }
 .oEdge{
   stroke:var(--fg);
@@ -54,10 +59,10 @@
 
 .oNode{
   position:absolute;
-  transform:translate(-50%,-50%);
-  display:inline-flex;
-  align-items:baseline;
-  gap:10px;
+  transform:
+    translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
+    translate(var(--warp-x, 0px), var(--warp-y, 0px));
+  display:inline-block;
   padding:0;
   border:0;
   background:transparent;
@@ -65,16 +70,41 @@
   text-decoration:none;
   font:inherit;
   font-size:12px;
-  letter-spacing:.26em;
-  text-transform:uppercase;
-  line-height:1;
+  letter-spacing:.14em;
+  line-height:1.15;
+  max-width:min(46vw, 340px);
   cursor:pointer;
   user-select:none;
   opacity:.72;
+  z-index:2;
   transition:
     opacity var(--motion-fast) ease,
     transform var(--motion-fast) ease,
-    color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+.oNodeMatter{
+  display:grid;
+  gap:8px;
+  --scale-x:1;
+  --scale-y:1;
+  --skew:0deg;
+  --blur-orient:0px;
+  --blur-depth:0px;
+  --blur-threshold:0px;
+  --blur-ox:0px;
+  --blur-oy:0px;
+  --hover-halo:0px;
+  --hover-glow:transparent;
+  transform:skewX(var(--skew)) scaleX(var(--scale-x)) scaleY(var(--scale-y));
+  filter:blur(var(--blur-depth));
+  text-shadow:
+    var(--blur-ox) var(--blur-oy) var(--blur-orient) color-mix(in srgb, currentColor 66%, transparent),
+    0 0 var(--blur-threshold) var(--halo),
+    0 0 var(--hover-halo) var(--hover-glow);
+  transition:
+    transform var(--motion-fast) ease,
+    filter var(--motion-fast) ease,
     text-shadow var(--motion-fast) ease;
 }
 
@@ -82,26 +112,56 @@
   opacity:.9;
 }
 
-.oNodeDot{
-  opacity:.66;
+.oBlocTitle{
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  opacity:.9;
 }
-
-.oNodeDeg{
-  opacity:.42;
-  letter-spacing:.16em;
+.oBlocRow{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  flex-wrap:wrap;
+  row-gap:6px;
 }
+.oBlocKey{
+  font-size:10px;
+  letter-spacing:.26em;
+  text-transform:uppercase;
+  opacity:.56;
+}
+.oBlocKey::after{
+  content:":";
+  opacity:.8;
+}
+.oBlocVal{
+  letter-spacing:.14em;
+  opacity:.86;
+}
+.oNode[data-align="right"]{ text-align:right; }
+.oNode[data-align="right"] .oBlocRow{ justify-content:flex-end; }
 
 .oNode:hover,
 .oNode:focus-visible{
   opacity:1;
-  transform:translate(-50%,-50%) translateY(-1px);
-  text-shadow: 0 0 24px var(--halo);
+  transform:
+    translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
+    translate(var(--warp-x, 0px), var(--warp-y, 0px))
+    translateY(-1px);
+}
+.oNode:hover .oNodeMatter,
+.oNode:focus-visible .oNodeMatter{
+  --hover-halo:24px;
+  --hover-glow:var(--halo);
 }
 
 .oNode.is-active{
   opacity:1;
   color:var(--accent);
-  text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.oNode.is-active .oNodeMatter{
+  --hover-halo:26px;
+  --hover-glow:color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference){
@@ -112,7 +172,26 @@
 }
 
 @keyframes oNodeBreathe{
-  0%{ transform:translate(-50%,-50%) translateY(-1px); }
-  50%{ transform:translate(-50%,-50%) translateY(-2px); }
-  100%{ transform:translate(-50%,-50%) translateY(-1px); }
+  0%{
+    transform:
+      translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
+      translate(var(--warp-x, 0px), var(--warp-y, 0px))
+      translateY(-1px);
+  }
+  50%{
+    transform:
+      translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
+      translate(var(--warp-x, 0px), var(--warp-y, 0px))
+      translateY(-2px);
+  }
+  100%{
+    transform:
+      translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
+      translate(var(--warp-x, 0px), var(--warp-y, 0px))
+      translateY(-1px);
+  }
+}
+
+.oBoard[data-perception="land"] .oNode{
+  opacity:.86;
 }

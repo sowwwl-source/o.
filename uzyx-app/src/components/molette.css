@@ -1,0 +1,106 @@
+.moletteOverlay{
+  position:fixed;
+  inset:0;
+  z-index:30;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  touch-action:none;
+  user-select:none;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0 36%,
+      color-mix(in srgb, var(--bg) 88%, transparent) 62%,
+      color-mix(in srgb, var(--bg) 94%, transparent) 100%
+    );
+}
+
+.moletteWheel{
+  position:relative;
+  width:min(78vmin, 560px);
+  height:min(78vmin, 560px);
+  pointer-events:auto;
+  filter:blur(var(--dz-soft-blur, 0px));
+}
+
+.moletteRing{
+  position:absolute;
+  inset:0;
+  opacity:.52;
+  pointer-events:none;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      transparent 0 9deg,
+      color-mix(in srgb, var(--fg) 20%, transparent) 9deg 9.3deg
+    );
+  mask:
+    radial-gradient(circle at 50% 50%, transparent 0 54%, #000 56% 70%, transparent 72% 100%);
+  transform:rotate(var(--theta, 0rad));
+}
+
+.moletteSlot{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:
+    rotate(calc(var(--a, 0deg) + var(--theta, 0rad)))
+    translateX(42%)
+    rotate(calc(-1 * (var(--a, 0deg) + var(--theta, 0rad))));
+  transform-origin:0 0;
+  display:inline-flex;
+  align-items:baseline;
+  gap:10px;
+  font-size:12px;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--fg);
+  opacity:.72;
+  transition:
+    opacity var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.moletteSlot.is-selected{
+  opacity:1;
+  color:var(--accent);
+}
+
+.moletteDot{
+  width:6px;
+  height:6px;
+  background:currentColor;
+}
+
+.moletteLabel{
+  display:inline-block;
+  transform:skewX(var(--skew, 0deg)) scaleX(var(--scale-x, 1)) scaleY(var(--scale-y, 1));
+  filter:blur(var(--blur-depth, 0px));
+  text-shadow:
+    var(--blur-ox, 0px) var(--blur-oy, 0px) var(--blur-orient, 0px) color-mix(in srgb, currentColor 66%, transparent),
+    0 0 var(--blur-threshold, 0px) var(--halo);
+  transition:
+    transform var(--motion-fast) ease,
+    filter var(--motion-fast) ease,
+    text-shadow var(--motion-fast) ease;
+}
+
+.moletteOverlay.is-arming .moletteWheel{
+  filter:blur(var(--dz-blur, 0px));
+}
+
+.moletteOverlay.is-traversing{
+  animation:moletteTraverse 180ms ease-out forwards;
+}
+
+@keyframes moletteTraverse{
+  0%{ opacity:1; }
+  100%{ opacity:0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .moletteOverlay{ background:transparent; }
+  .moletteOverlay.is-traversing{ animation:none; }
+}

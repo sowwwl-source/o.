@@ -1,0 +1,29 @@
+.uzyxAssist{
+  position:fixed;
+  right:calc(var(--space-lg) + env(safe-area-inset-right, 0px));
+  bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  z-index:20;
+  border:0;
+  padding:0;
+  background:transparent;
+  color:var(--fg);
+  font:inherit;
+  letter-spacing:.28em;
+  line-height:1;
+  cursor:pointer;
+  opacity:.6;
+  user-select:none;
+}
+
+.uzyxAssist:hover,
+.uzyxAssist:focus-visible{
+  opacity:1;
+  text-shadow:0 0 28px var(--halo);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .uzyxAssist:hover,
+  .uzyxAssist:focus-visible{
+    text-shadow:none;
+  }
+}

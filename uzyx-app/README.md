@@ -1,6 +1,6 @@
-# O. / Uzyx minimal webapp
+# O. / Uzyx webapp
 
-Minimal TypeScript + Vite app with a bicolour design system.
+Minimal Vite + React + TypeScript app (no images) with bicolour tokens, graph navigation, and a perception layer (ΔZ′).
 
 ## Run
 
@@ -10,16 +10,27 @@ npm install
 npm run dev
 ```
 
-## Tokens and inversion
+## Routes (hash)
 
-- Tokens live in `src/tokens.ts`.
-- `applyTokens()` maps tokens to CSS variables.
-- `toggleInvert()` toggles `.is-inverted` on `html`, which swaps `--bg` and `--fg` (and related variables).
-- Inversion is triggered by click on `[data-invert]` and key `i`.
+- `#/HAUT` (b0ard)
+- `#/LAND`
+- `#/FERRY`
+- `#/STR3M`
+- `#/CONTACT`
 
-## Styles
+## Controls
 
-Global styles and reset are in `src/styles.css`:
-- accessible focus states
-- generous spacing
-- prefers-reduced-motion support
+- `m`: molette (wheel/drag rotates, hold traverses, `Esc` closes)
+- `i`: inversion (swap `--bg` / `--fg`)
+- Hold `HAUT` (still) to toggle ΔZ′; exit via disorientation or returning near center
+
+## Tokens
+
+- `src/theme/tokens.css` (CSS variables)
+- `src/theme/invert.ts` (toggles `html[data-invert="true"]`)
+
+## Signals (optional)
+
+Installed globally via `src/uzyx/useUzyxSignals.ts`:
+- dispatch `uzyx:create:port` or `uzyx:edit:first_b0te` on `window`
+- shows a single, non-insistent `…` offer once per user (`localStorage`)

@@ -1,0 +1,23 @@
+.landRoot{
+  min-height:100vh;
+  min-height:100svh;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  position:relative;
+  overflow:hidden;
+}
+
+.landHint{
+  position:absolute;
+  left:var(--space-lg);
+  bottom:var(--space-lg);
+  bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  font-size:12px;
+  letter-spacing:.2em;
+  opacity:.6;
+  text-transform:uppercase;
+}
+

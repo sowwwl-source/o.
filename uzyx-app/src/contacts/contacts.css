@@ -1,75 +1,134 @@
-.contacts {
-  min-height: 100vh;
-  min-height: 100svh;
-  padding: var(--space-xl);
-  display: grid;
-  gap: var(--space-lg);
+.contactsRoot{
+  min-height:100vh;
+  min-height:100svh;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  display:grid;
+  gap:var(--space-lg);
 }
 
-.contactsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+.contactsTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
 }
 
-.contactsTitle {
-  font-size: 20px;
-  letter-spacing: 0.25em;
+.contactsTitle{
+  font-size:20px;
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  opacity:.9;
 }
 
-.contactsMeta {
-  opacity: 0.7;
-  font-size: 12px;
-  letter-spacing: 0.12em;
+.contactsTitleMatter{
+  display:inline-block;
+  transform:skewX(var(--skew, 0deg)) scaleX(var(--scale-x, 1)) scaleY(var(--scale-y, 1));
+  filter:blur(var(--blur-depth, 0px));
+  text-shadow:
+    var(--blur-ox, 0px) var(--blur-oy, 0px) var(--blur-orient, 0px) color-mix(in srgb, currentColor 66%, transparent),
+    0 0 var(--blur-threshold, 0px) var(--halo);
 }
 
-.contactsPanel {
-  padding: var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
-  background: color-mix(in srgb, var(--bg) 90%, var(--fg) 10%);
+.contactsMeta{
+  opacity:.66;
+  font-size:12px;
+  letter-spacing:.12em;
 }
 
-.contactsProfile {
-  display: grid;
-  gap: var(--space-sm);
+.contactsLine{
+  display:flex;
+  align-items:baseline;
+  gap:var(--space-sm);
+  flex-wrap:wrap;
+  font-size:12px;
+  letter-spacing:.14em;
 }
 
-.contactsLabel {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  opacity: 0.7;
+.contactsKey{
+  text-transform:uppercase;
+  letter-spacing:.26em;
+  opacity:.62;
 }
 
-.contactsInput {
-  background: transparent;
-  border: 1px solid var(--fg);
-  color: var(--fg);
-  padding: 6px 10px;
-  font: inherit;
-  min-width: 160px;
+.contactsInput{
+  background:transparent;
+  border:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
+  color:var(--fg);
+  padding:6px 10px;
+  font:inherit;
+  min-width:160px;
 }
 
-.contactsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-md);
+.contactsAction{
+  border:0;
+  background:transparent;
+  color:inherit;
+  padding:0;
+  font:inherit;
+  text-transform:uppercase;
+  letter-spacing:.26em;
+  cursor:pointer;
+  opacity:.82;
 }
 
-.contactCard {
-  padding: var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
-  background: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
-  display: grid;
-  gap: 8px;
+.contactsAction:hover,
+.contactsAction:focus-visible{
+  opacity:1;
+  text-shadow:0 0 24px var(--halo);
 }
 
-.contactHandle {
-  font-size: 14px;
-  letter-spacing: 0.12em;
+.contactsList{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:8px;
+  font-size:12px;
+  opacity:.86;
 }
 
-.contactNote {
-  font-size: 12px;
-  opacity: 0.7;
+.contactRow{
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+  letter-spacing:.12em;
 }
+
+.contactId{
+  text-transform:uppercase;
+  letter-spacing:.26em;
+}
+
+.contactNote{
+  opacity:.7;
+  letter-spacing:.12em;
+}
+
+.contactRowBtn{
+  border:0;
+  background:transparent;
+  color:inherit;
+  padding:0;
+  font:inherit;
+  cursor:pointer;
+  opacity:.72;
+}
+
+.contactRowBtn:hover,
+.contactRowBtn:focus-visible{
+  opacity:1;
+  text-shadow:0 0 24px var(--halo);
+}
+
+.contactPrimed{
+  opacity:1;
+  text-shadow:0 0 28px var(--halo);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .contactPrimed{ text-shadow:none; }
+}
+

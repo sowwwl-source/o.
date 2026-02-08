@@ -49,7 +49,6 @@
 .hautPointDot {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
   background: var(--bg);
   display: inline-block;
 }

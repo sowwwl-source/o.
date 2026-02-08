@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./uzyxAssist.css";
 import { useUzyxState } from "./useUzyxState";
 
 type Offer = { id: "reshape"; label: string };

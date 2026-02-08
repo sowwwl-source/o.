@@ -1,11 +1,7 @@
-export type Contact = {
-  id: string;
-  handle: string;
-  note?: string;
-  createdAt: number;
-};
+// contacts store
+export type Contact = { id: string; note?: string; createdAt: number };
 
-const LS_KEY = "uzyx_contacts_v1";
+const LS_KEY = "o_contacts_v1";
 
 function load(): Contact[] {
   try {
@@ -13,7 +9,13 @@ function load(): Contact[] {
     if (!raw) return [];
     const data = JSON.parse(raw);
     if (!Array.isArray(data)) return [];
-    return data.filter((c) => c && typeof c.handle === "string");
+    return data
+      .filter((c) => c && typeof c.id === "string")
+      .map((c) => ({
+        id: String(c.id),
+        note: typeof c.note === "string" ? c.note : undefined,
+        createdAt: typeof c.createdAt === "number" ? c.createdAt : Date.now(),
+      }));
   } catch {
     return [];
   }
@@ -27,28 +29,32 @@ function save(list: Contact[]) {
 
 let cache: Contact[] | null = null;
 
-export function listContacts(): Contact[] {
+function ensure() {
   if (!cache) cache = load();
-  return [...cache];
+  return cache;
 }
 
-export function addContact(handle: string, note?: string): Contact {
-  if (!cache) cache = load();
-  const id = `${handle}-${Date.now()}`;
-  const c: Contact = { id, handle, note, createdAt: Date.now() };
-  cache = [c, ...cache];
-  save(cache);
-  return c;
-}
+export const contactsStore = {
+  add(c: Contact) {
+    const list = ensure();
+    const next: Contact = { id: c.id, note: c.note, createdAt: c.createdAt || Date.now() };
+    cache = [next, ...list.filter((x) => x.id !== next.id)];
+    save(cache);
+    return next;
+  },
+  remove(id: string) {
+    const list = ensure();
+    cache = list.filter((c) => c.id !== id);
+    save(cache);
+  },
+  list() {
+    const list = ensure();
+    return [...list];
+  },
+  update(id: string, patch: Partial<Contact>) {
+    const list = ensure();
+    cache = list.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    save(cache);
+  },
+};
 
-export function removeContact(id: string) {
-  if (!cache) cache = load();
-  cache = cache.filter((c) => c.id !== id);
-  save(cache);
-}
-
-export function updateContact(id: string, patch: Partial<Contact>) {
-  if (!cache) cache = load();
-  cache = cache.map((c) => (c.id === id ? { ...c, ...patch } : c));
-  save(cache);
-}

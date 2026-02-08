@@ -1,94 +1,153 @@
-.ferry {
-  min-height: 100vh;
-  min-height: 100svh;
-  padding: var(--space-xl);
-  display: grid;
-  gap: var(--space-lg);
+.ferryRoot{
+  min-height:100vh;
+  min-height:100svh;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  display:grid;
+  gap:var(--space-lg);
+  position:relative;
 }
 
-.ferryHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+.ferryTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
 }
 
-.ferryTitle {
-  font-size: 20px;
-  letter-spacing: 0.3em;
+.ferryTitle{
+  font-size:20px;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  opacity:.88;
 }
 
-.ferryMeta {
-  opacity: 0.7;
-  font-size: 12px;
-  letter-spacing: 0.12em;
+.ferryTitleMatter{
+  display:inline-block;
+  transform:skewX(var(--skew, 0deg)) scaleX(var(--scale-x, 1)) scaleY(var(--scale-y, 1));
+  filter:blur(var(--blur-depth, 0px));
+  text-shadow:
+    var(--blur-ox, 0px) var(--blur-oy, 0px) var(--blur-orient, 0px) color-mix(in srgb, currentColor 66%, transparent),
+    0 0 var(--blur-threshold, 0px) var(--halo);
 }
 
-.ferryPanel {
-  padding: var(--space-md);
-  border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
-  background: color-mix(in srgb, var(--bg) 90%, var(--fg) 10%);
+.ferryMeta{
+  opacity:.66;
+  font-size:12px;
+  letter-spacing:.12em;
 }
 
-.ferryInput {
-  background: transparent;
-  border: 1px solid var(--fg);
-  color: var(--fg);
-  padding: 6px 10px;
-  font: inherit;
-  min-width: 140px;
+.ferrySmall{
+  font-size:11px;
+  letter-spacing:.14em;
 }
 
-.ferryPresence {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.ferryLines{
+  display:grid;
+  gap:var(--space-sm);
 }
 
-.pulse {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--fg);
-  opacity: 0.6;
-  animation: pulse 1.8s ease-in-out infinite;
+.ferryLine{
+  display:flex;
+  align-items:baseline;
+  gap:var(--space-sm);
+  flex-wrap:wrap;
+  font-size:12px;
+  letter-spacing:.14em;
 }
 
-.pulse:nth-child(2) { animation-delay: 0.2s; }
-.pulse:nth-child(3) { animation-delay: 0.4s; }
-.pulse:nth-child(4) { animation-delay: 0.6s; }
-.pulse:nth-child(5) { animation-delay: 0.8s; }
-.pulse:nth-child(6) { animation-delay: 1s; }
-
-.ferryCount {
-  margin-left: 6px;
-  font-size: 12px;
-  opacity: 0.7;
+.ferryKey{
+  text-transform:uppercase;
+  letter-spacing:.26em;
+  opacity:.62;
 }
 
-.ferryList {
-  margin-top: var(--space-sm);
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  opacity: 0.8;
+.ferryInput{
+  background:transparent;
+  border:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
+  color:var(--fg);
+  padding:6px 10px;
+  font:inherit;
+  min-width:140px;
 }
 
-.ferryUser {
-  letter-spacing: 0.08em;
+.ferryAction{
+  border:0;
+  background:transparent;
+  color:inherit;
+  padding:0;
+  font:inherit;
+  text-transform:uppercase;
+  letter-spacing:.26em;
+  cursor:pointer;
+  opacity:.8;
 }
 
-.ferry.is-boarding {
-  filter: saturate(0.9);
+.ferryAction:hover,
+.ferryAction:focus-visible{
+  opacity:1;
+  text-shadow:0 0 24px var(--halo);
 }
 
-.ferryInvite {
-  display: flex;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
+.ferryPresence{
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 
-@keyframes pulse {
-  0% { transform: scale(0.9); opacity: 0.35; }
-  50% { transform: scale(1.2); opacity: 0.85; }
-  100% { transform: scale(0.9); opacity: 0.35; }
+.pulse{
+  width:8px;
+  height:8px;
+  background:var(--fg);
+  opacity:0.5;
+  animation:pulse 1.8s ease-in-out infinite;
 }
+
+.pulse:nth-child(2){animation-delay:.2s}
+.pulse:nth-child(3){animation-delay:.4s}
+.pulse:nth-child(4){animation-delay:.6s}
+.pulse:nth-child(5){animation-delay:.8s}
+.pulse:nth-child(6){animation-delay:1s}
+
+.ferryCount{
+  margin-left:6px;
+  font-size:12px;
+  opacity:.7;
+}
+
+.ferryList{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:6px;
+  font-size:12px;
+  opacity:.82;
+}
+
+.ferryUser{
+  letter-spacing:.12em;
+}
+
+.ferryTitleHold{
+  position:fixed;
+  left:calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  top:calc(var(--space-xl) + env(safe-area-inset-top, 0px));
+  width:220px;
+  height:46px;
+  pointer-events:auto;
+  background:transparent;
+}
+
+@keyframes pulse{
+  0%{ transform:scale(.9); opacity:.35; }
+  50%{ transform:scale(1.2); opacity:.85; }
+  100%{ transform:scale(.9); opacity:.35; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .pulse{ animation:none; }
+}
+
