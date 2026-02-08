@@ -5,12 +5,14 @@ import { isInverted } from "@/theme/invert";
 type Props = {
   href?: string;
   label?: string;
+  text?: string;
   onHoldStill?: () => void;
 };
 
 export function HautPoint(props: Props) {
   const href = props.href ?? "#/HAUT";
   const label = props.label ?? "Haut Point";
+  const text = props.text ?? "HAUT";
 
   const [inverted, setInverted] = useState<boolean>(() => isInverted());
   const [glitching, setGlitching] = useState(false);
@@ -177,7 +179,7 @@ export function HautPoint(props: Props) {
       onClick={onClick}
     >
       <span className="hautPointLabel" aria-hidden="true">
-        HAUT
+        {text}
       </span>
       <span className="hautPointDot" aria-hidden="true" />
     </a>

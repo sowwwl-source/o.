@@ -15,6 +15,7 @@ import {
   seedFromHandle,
   zeroisoSeed,
 } from "./zeroisoSeed";
+import { loadPrincipalId, savePrincipalId } from "./zeroisoPrincipal";
 import type { DensityGrid, ZeroisoBuildResult, ZeroisoScanSlot } from "./types";
 
 function clamp(n: number, a: number, b: number) {
@@ -65,7 +66,7 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
   const [lockedSeed, setLockedSeed] = useState(false);
   const [seed, setSeed] = useState<string>(() => (props.initialSeed ? String(props.initialSeed) : ""));
   const [sshPub, setSshPub] = useState("");
-  const [principalId, setPrincipalId] = useState<string | null>(null);
+  const [principalId, setPrincipalId] = useState<string | null>(() => loadPrincipalId());
   const cloud = useMemo(() => (principalId ? cloudNamespace(principalId) : ""), [principalId]);
   const [note, setNote] = useState<string | null>(null);
   const [showFragments, setShowFragments] = useState(false);
@@ -97,6 +98,14 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
   useEffect(() => {
     let alive = true;
     if (seed || lockedSeed) return;
+    if (principalId) {
+      try {
+        const s = zeroisoSeed(principalId, "v1");
+        assertPublicOnlySeed(s);
+        if (!lockedSeed) setSeed(s);
+      } catch {}
+      return;
+    }
     seedFromHandle(handle)
       .then((s) => {
         if (!alive) return;
@@ -216,6 +225,7 @@ export function ZeroisoModule(props: { handle: string; initialSeed?: string }) {
     try {
       const pid = await principalIdFromSshPubkey(sshPub);
       setPrincipalId(pid);
+      savePrincipalId(pid);
       const s = zeroisoSeed(pid, "v1");
       assertPublicOnlySeed(s);
       if (!lockedSeed) setSeed(s);

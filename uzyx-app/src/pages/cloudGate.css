@@ -1,0 +1,154 @@
+.cloudGateRoot{
+  min-height:100vh;
+  min-height:100svh;
+  background:var(--bg);
+  color:var(--fg);
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  display:grid;
+  gap:28px;
+}
+
+.cloudGateTop{
+  display:grid;
+  gap:8px;
+  max-width:880px;
+}
+
+.cloudGateTitle{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  font-size:16px;
+}
+
+.cloudGateMeta{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.18em;
+  opacity:.68;
+  font-size:12px;
+  text-transform:uppercase;
+}
+
+.cloudGateBlock{
+  max-width:880px;
+  display:grid;
+  gap:12px;
+}
+
+.cloudGateLine{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.82;
+}
+
+.cloudGateTextarea{
+  width:100%;
+  min-height:96px;
+  resize:vertical;
+  padding:12px;
+  border:1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+  background:transparent;
+  color:inherit;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.06em;
+  line-height:1.45;
+}
+
+.cloudGateCmds{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  row-gap:10px;
+}
+
+.cloudGateCmd{
+  display:inline-block;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.78;
+}
+
+.cloudGateCmd:hover,
+.cloudGateCmd:focus-visible{
+  opacity:1;
+  text-shadow:0 0 18px var(--halo);
+}
+
+.cloudGateCmd[data-disabled="1"]{
+  opacity:.28;
+  pointer-events:none;
+}
+
+.cloudGateGrid{
+  display:grid;
+  gap:10px;
+}
+
+.cloudGateRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  row-gap:6px;
+}
+
+.cloudGateKey{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:10px;
+  letter-spacing:.26em;
+  text-transform:uppercase;
+  opacity:.58;
+}
+.cloudGateKey::after{ content:":"; opacity:.8; }
+
+.cloudGateVal{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.08em;
+  opacity:.9;
+  overflow-wrap:anywhere;
+}
+
+.cloudGatePre{
+  margin:0;
+  padding:12px;
+  border:1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  background:transparent;
+  color:inherit;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.06em;
+  line-height:1.5;
+  white-space:pre-wrap;
+}
+
+.cloudGateHint{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.56;
+}
+
+.cloudGateNote{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:10px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.62;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .cloudGateCmd:hover,
+  .cloudGateCmd:focus-visible{
+    text-shadow:none;
+  }
+}
+

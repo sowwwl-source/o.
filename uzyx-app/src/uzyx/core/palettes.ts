@@ -8,11 +8,11 @@ export type Palette = {
 };
 
 export const PALETTES: Palette[] = [
-  { bg: "#000000", fg: "#F2F2F2", accent: "#7A7A7A" },
-  { bg: "#0B0B12", fg: "#EAE6DF", accent: "#6D7A8A" },
-  { bg: "#F6F2EA", fg: "#141414", accent: "#8A6D5A" },
-  { bg: "#0F1411", fg: "#EAF2EC", accent: "#6E8A7A" },
-  { bg: "#101010", fg: "#D7D7D7", accent: "#B0B0B0" },
+  // Keep palettes strictly bicolour (no 3rd hue). Accent stays monochrome.
+  { bg: "#0b0d0f", fg: "#e7e7e7", accent: "#e7e7e7" },
+  { bg: "#000000", fg: "#1a1a1a", accent: "#1a1a1a" },
+  { bg: "#111111", fg: "#d7d7d7", accent: "#d7d7d7" },
+  { bg: "#e7e7e7", fg: "#0b0d0f", accent: "#0b0d0f" },
 ];
 
 export function randomPalette(seed: number): Palette {

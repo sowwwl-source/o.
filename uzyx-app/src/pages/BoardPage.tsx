@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./board.css";
 import { computeConstellation, edges, neighbors, type NodeId } from "@/graph/graph";
 import { toggleInvert } from "@/theme/invert";
-import { HautPoint } from "@/components/HautPoint";
+import { ODot } from "@/components/ODot";
 import { usePerceptionFrame, usePerceptionStore } from "@/perception/PerceptionProvider";
+import { usePreviewNav } from "@/engines/previewNav";
 
 const NODES: readonly Exclude<NodeId, "HAUT">[] = ["LAND", "FERRY", "STR3M", "CONTACT"];
 
@@ -34,6 +35,14 @@ export function BoardPage(props: { active?: NodeId }) {
 
   const store = usePerceptionStore();
   const frame = usePerceptionFrame();
+
+  const preview = usePreviewNav({
+    durationMs: 820,
+    getReducedMotion: () => store.getReducedMotion(),
+    navigate: (href) => {
+      window.location.hash = href;
+    },
+  });
 
   useEffect(() => {
     store.setBaseProfile("board");
@@ -117,6 +126,8 @@ export function BoardPage(props: { active?: NodeId }) {
       data-active={active}
       data-perception={perception}
       data-dz={blend > 0.04 ? "1" : "0"}
+      data-previewing={preview.state.phase === "preview" ? "1" : "0"}
+      data-preview-target={preview.state.targetId ?? ""}
       style={
         {
           ["--state-blend" as any]: String(blend.toFixed(3)),
@@ -152,7 +163,7 @@ export function BoardPage(props: { active?: NodeId }) {
         })}
       </svg>
 
-      <HautPoint href={hrefFor("HAUT")} label="Haut Point" onHoldStill={onHautHoldStill} />
+      <ODot href="#/cloud" onHoldStill={onHautHoldStill} />
 
       {NODES.map((id) => {
         const p = positions[id];
@@ -187,6 +198,16 @@ export function BoardPage(props: { active?: NodeId }) {
             data-node={id}
             data-bloc={meta.bloc}
             data-align={meta.align}
+            onClick={(e) => {
+              if (e.defaultPrevented) return;
+              if (preview.busy) {
+                e.preventDefault();
+                return;
+              }
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              preview.begin(id, hrefFor(id));
+            }}
           >
             <span className="oNodeMatter">
               <span className="oBlocTitle" aria-hidden="true">

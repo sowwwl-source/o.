@@ -45,7 +45,7 @@ export class PerceptionStore {
   private dpr = 1;
 
   private fg = "#e7e7e7";
-  private halo = "rgba(255,180,90,.35)";
+  private halo = "transparent";
   private invertObs: MutationObserver | null = null;
   private cleanup: (() => void) | null = null;
 

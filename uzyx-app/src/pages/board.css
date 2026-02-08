@@ -61,7 +61,8 @@
   position:absolute;
   transform:
     translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
-    translate(var(--warp-x, 0px), var(--warp-y, 0px));
+    translate(var(--warp-x, 0px), var(--warp-y, 0px))
+    scale(var(--preview-scale, 1));
   display:inline-block;
   padding:0;
   border:0;
@@ -147,6 +148,7 @@
   transform:
     translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
     translate(var(--warp-x, 0px), var(--warp-y, 0px))
+    scale(var(--preview-scale, 1))
     translateY(-1px);
 }
 .oNode:hover .oNodeMatter,
@@ -176,22 +178,69 @@
     transform:
       translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
       translate(var(--warp-x, 0px), var(--warp-y, 0px))
+      scale(var(--preview-scale, 1))
       translateY(-1px);
   }
   50%{
     transform:
       translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
       translate(var(--warp-x, 0px), var(--warp-y, 0px))
+      scale(var(--preview-scale, 1))
       translateY(-2px);
   }
   100%{
     transform:
       translate(var(--anchor-x, -50%), var(--anchor-y, -50%))
       translate(var(--warp-x, 0px), var(--warp-y, 0px))
+      scale(var(--preview-scale, 1))
       translateY(-1px);
   }
 }
 
 .oBoard[data-perception="land"] .oNode{
   opacity:.86;
+}
+
+/* Preview navigation: grow one block, dissolve the rest (no HUD). */
+.oBoard[data-previewing="1"] .oEdges{
+  opacity:.12;
+  filter:blur(.8px);
+}
+.oBoard[data-previewing="1"] .oNode{
+  opacity:.10;
+  filter:blur(.9px);
+  pointer-events:none;
+  --preview-scale:.96;
+  transition:
+    opacity var(--motion-slow) ease,
+    transform var(--motion-slow) ease,
+    color var(--motion-slow) ease,
+    filter var(--motion-slow) ease;
+}
+
+.oBoard[data-previewing="1"][data-preview-target="LAND"] .oNode[data-node="LAND"],
+.oBoard[data-previewing="1"][data-preview-target="FERRY"] .oNode[data-node="FERRY"],
+.oBoard[data-previewing="1"][data-preview-target="CONTACT"] .oNode[data-node="CONTACT"],
+.oBoard[data-previewing="1"][data-preview-target="STR3M"] .oNode[data-node="STR3M"]{
+  opacity:1;
+  filter:none;
+  pointer-events:auto;
+  --preview-scale:2.25;
+  color:var(--fg);
+}
+
+.oBoard[data-previewing="1"][data-preview-target="LAND"] .oNode[data-node="LAND"] .oNodeMatter,
+.oBoard[data-previewing="1"][data-preview-target="FERRY"] .oNode[data-node="FERRY"] .oNodeMatter,
+.oBoard[data-previewing="1"][data-preview-target="CONTACT"] .oNode[data-node="CONTACT"] .oNodeMatter,
+.oBoard[data-previewing="1"][data-preview-target="STR3M"] .oNode[data-node="STR3M"] .oNodeMatter{
+  --hover-halo:34px;
+  --hover-glow:var(--halo);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .oBoard[data-previewing="1"] .oNode{
+    filter:none;
+    --preview-scale:1;
+  }
+  .oBoard[data-previewing="1"] .oEdges{ filter:none; }
 }

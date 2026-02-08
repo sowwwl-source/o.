@@ -1,0 +1,43 @@
+:root{
+  /* Bicolor tokens (O. socle) */
+  --bg:#0b0d0f;
+  --fg:#e7e7e7;
+  /* Optional accents MUST remain derived from bg/fg (no 3rd hue). */
+  --accent:var(--fg);
+  --halo:transparent;
+
+  /* Motion + spacing (kept minimal) */
+  --space-xs:8px;
+  --space-sm:14px;
+  --space-md:22px;
+  --space-lg:36px;
+  --space-xl:56px;
+  --motion-fast:180ms;
+  --motion-slow:420ms;
+}
+
+[data-invert="false"]{
+  /* explicit default for mutation-observed UIs */
+  --bg:#0b0d0f;
+  --fg:#e7e7e7;
+}
+
+@supports (color: color-mix(in srgb, #000 50%, #fff)){
+  :root{
+    --accent:color-mix(in srgb, var(--fg) 86%, var(--bg));
+    --halo:color-mix(in srgb, var(--fg) 28%, transparent);
+  }
+}
+
+[data-invert="true"]{
+  --bg:#e7e7e7;
+  --fg:#0b0d0f;
+}
+
+[data-failsafe="true"]{
+  --bg:#000000;
+  --fg:#060606;
+  --accent:var(--fg);
+  --halo:transparent;
+}
+
