@@ -1,30 +1,75 @@
-.moletteOverlay{
+.helmOverlay{
   position:fixed;
   inset:0;
-  z-index:30;
+  z-index:40;
   display:flex;
   align-items:center;
   justify-content:center;
   touch-action:none;
   user-select:none;
+  color:var(--fg);
   background:
     radial-gradient(
       circle at 50% 50%,
-      transparent 0 36%,
-      color-mix(in srgb, var(--bg) 88%, transparent) 62%,
-      color-mix(in srgb, var(--bg) 94%, transparent) 100%
+      transparent 0 34%,
+      color-mix(in srgb, var(--bg) 84%, transparent) 62%,
+      color-mix(in srgb, var(--bg) 92%, transparent) 100%
     );
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+  --helm-halo:var(--halo);
 }
 
-.moletteWheel{
+.helmOverlay[data-mode="failsafe-hard"]{
+  background:var(--bg);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+  color:rgba(255,255,255,.06);
+  --helm-halo:rgba(255,180,90,.22);
+}
+
+.helmWheel{
+  --helm-size:min(78vmin, 560px);
+  --helm-ring-r:calc(var(--helm-size) * 0.315);
+  --helm-label-r:calc(var(--helm-size) * 0.36);
+  --helm-bird-r:calc(var(--helm-size) * 0.48);
   position:relative;
-  width:min(78vmin, 560px);
-  height:min(78vmin, 560px);
+  width:var(--helm-size);
+  height:var(--helm-size);
   pointer-events:auto;
   filter:blur(var(--dz-soft-blur, 0px));
 }
 
-.moletteRing{
+.helmOverlay.is-deploy .helmWheel{
+  animation:helmBirth 240ms ease-out both;
+}
+
+.helmOverlay.is-deploy .helmRing{
+  animation:helmWobble 450ms ease-out both;
+}
+
+.helmOverlay.is-deploy .helmPoint{
+  animation:helmPointIn 260ms ease-out both;
+  animation-delay:80ms;
+}
+
+@keyframes helmBirth{
+  0%{ opacity:0; transform:scale(.965); }
+  100%{ opacity:1; transform:scale(1); }
+}
+
+@keyframes helmWobble{
+  0%{ transform:rotate(-1.3deg); opacity:.36; }
+  40%{ transform:rotate(.9deg); opacity:.58; }
+  100%{ transform:rotate(0deg); opacity:.52; }
+}
+
+@keyframes helmPointIn{
+  0%{ opacity:0; transform:translate(-50%,-50%) rotate(var(--theta,0rad)) translateX(var(--helm-ring-r)) scale(.92); }
+  100%{ opacity:.9; transform:translate(-50%,-50%) rotate(var(--theta,0rad)) translateX(var(--helm-ring-r)) scale(1); }
+}
+
+.helmRing{
   position:absolute;
   inset:0;
   opacity:.52;
@@ -33,48 +78,86 @@
     repeating-conic-gradient(
       from 0deg,
       transparent 0 9deg,
-      color-mix(in srgb, var(--fg) 20%, transparent) 9deg 9.3deg
+      color-mix(in srgb, currentColor 42%, transparent) 9deg 9.3deg
     );
   mask:
     radial-gradient(circle at 50% 50%, transparent 0 54%, #000 56% 70%, transparent 72% 100%);
-  transform:rotate(var(--theta, 0rad));
 }
 
-.moletteSlot{
+.helmPoint{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:8px;
+  height:8px;
+  background:currentColor;
+  opacity:.9;
+  transform:translate(-50%,-50%) rotate(var(--theta,0rad)) translateX(var(--helm-ring-r));
+  box-shadow:0 0 26px var(--helm-halo);
+}
+
+.helmBirdField{
+  position:absolute;
+  inset:-6%;
+  pointer-events:none;
+  opacity:.68;
+  animation:helmOrbit var(--birds-dur, 32s) linear infinite;
+}
+
+.helmOverlay[data-mode="failsafe-hard"] .helmBirdField{
+  opacity:.22;
+}
+
+@keyframes helmOrbit{
+  0%{ transform:rotate(0deg); }
+  100%{ transform:rotate(360deg); }
+}
+
+.helmBird{
   position:absolute;
   left:50%;
   top:50%;
   transform:
-    rotate(calc(var(--a, 0deg) + var(--theta, 0rad)))
-    translateX(42%)
-    rotate(calc(-1 * (var(--a, 0deg) + var(--theta, 0rad))));
-  transform-origin:0 0;
+    translate(-50%,-50%)
+    rotate(var(--ba, 0rad))
+    translateX(calc(var(--helm-bird-r) * var(--br, .75)))
+    rotate(calc(-1 * var(--ba, 0rad)));
+  opacity:var(--bo, .12);
+  font-size:11px;
+  letter-spacing:.04em;
+}
+
+.helmSlot{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:
+    translate(-50%,-50%)
+    rotate(var(--a, 0deg))
+    translateX(var(--helm-label-r))
+    rotate(calc(-1 * var(--a, 0deg)));
   display:inline-flex;
   align-items:baseline;
-  gap:10px;
   font-size:12px;
   letter-spacing:.28em;
   text-transform:uppercase;
-  color:var(--fg);
-  opacity:.72;
+  opacity:.66;
   transition:
     opacity var(--motion-fast) ease,
     color var(--motion-fast) ease,
     transform var(--motion-fast) ease;
 }
 
-.moletteSlot.is-selected{
+.helmSlot.is-selected{
   opacity:1;
   color:var(--accent);
 }
 
-.moletteDot{
-  width:6px;
-  height:6px;
-  background:currentColor;
+.helmOverlay[data-mode="failsafe-hard"] .helmSlot{
+  opacity:0;
 }
 
-.moletteLabel{
+.helmLabel{
   display:inline-block;
   transform:skewX(var(--skew, 0deg)) scaleX(var(--scale-x, 1)) scaleY(var(--scale-y, 1));
   filter:blur(var(--blur-depth, 0px));
@@ -87,20 +170,82 @@
     text-shadow var(--motion-fast) ease;
 }
 
-.moletteOverlay.is-arming .moletteWheel{
-  filter:blur(var(--dz-blur, 0px));
+.helmCenter{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  display:inline-flex;
+  align-items:baseline;
+  gap:12px;
+  padding:10px 12px;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  opacity:.72;
+  cursor:default;
 }
 
-.moletteOverlay.is-traversing{
-  animation:moletteTraverse 180ms ease-out forwards;
+.helmCenter:focus-visible,
+.helmCenter:hover{
+  opacity:1;
+  text-shadow:0 0 18px var(--helm-halo);
 }
 
-@keyframes moletteTraverse{
+.helmCenterDot{
+  width:10px;
+  height:10px;
+  background:currentColor;
+  box-shadow:0 0 28px var(--helm-halo);
+}
+
+.helmCenterId{
+  font-size:12px;
+}
+
+.helmOverlay[data-mode="failsafe-hard"] .helmCenterId{
+  opacity:0;
+}
+
+.helmGhost{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:14px;
+  bottom:calc(14px + env(safe-area-inset-bottom, 0px));
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.28;
+  filter:blur(calc(var(--dz-soft-blur, 0px) * .55));
+}
+
+.helmGhostLine{
+  padding:6px 10px;
+  text-shadow:0 0 18px var(--halo);
+}
+
+.helmOverlay.is-traversing{
+  animation:helmTraverse 180ms ease-out forwards;
+}
+
+@keyframes helmTraverse{
   0%{ opacity:1; }
   100%{ opacity:0; }
 }
 
 @media (prefers-reduced-motion: reduce){
-  .moletteOverlay{ background:transparent; }
-  .moletteOverlay.is-traversing{ animation:none; }
+  .helmOverlay{
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+  }
+  .helmBirdField{ animation:none; }
+  .helmOverlay.is-deploy .helmRing,
+  .helmOverlay.is-deploy .helmWheel,
+  .helmOverlay.is-deploy .helmPoint{ animation:none; }
+  .helmOverlay.is-traversing{ animation:none; }
+  .helmGhost{ filter:none; }
 }

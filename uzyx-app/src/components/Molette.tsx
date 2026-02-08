@@ -3,6 +3,11 @@ import "./molette.css";
 import type { NodeId } from "@/graph/graph";
 import { angleToIndex, getAdjacent, normalizeAngle } from "@/molette/moletteLogic";
 import { usePerceptionStore } from "@/perception/PerceptionProvider";
+import { helmAPI } from "@/helm/helmState";
+import { useUzyxState } from "@/uzyx/useUzyxState";
+import { contactsStore } from "@/contacts/contactsStore";
+import { getLastFerryCode } from "@/ferry/ferrySession";
+import { getPresences } from "@/stream/streamEngine";
 
 function hrefFor(id: string) {
   return `#/${id}`;
@@ -10,7 +15,7 @@ function hrefFor(id: string) {
 
 function isInteractiveTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
-  return Boolean(t.closest("a,button,input,textarea,select"));
+  return Boolean(t.closest("a,button,input,textarea,select,[role='link'],[contenteditable='true']"));
 }
 
 function phiAngleFromFrame(frame: { focus: { fx: number; fy: number; weight: number }; pointer: { x: number; y: number } }) {
@@ -23,18 +28,45 @@ function phiAngleFromFrame(frame: { focus: { fx: number; fy: number; weight: num
   return -Math.PI / 2;
 }
 
+function useHelmState() {
+  const [s, setS] = useState(() => helmAPI.getState());
+  useEffect(() => helmAPI.subscribe(setS), []);
+  return s;
+}
+
+function minAngleDist(a: number, b: number) {
+  const tau = Math.PI * 2;
+  let d = (a - b) % tau;
+  if (d < -Math.PI) d += tau;
+  if (d > Math.PI) d -= tau;
+  return Math.abs(d);
+}
+
+function ghostFor(id: string | null) {
+  if (!id) return "—";
+  if (id === "LAND") return "1nv3rs10n";
+  if (id === "FERRY") return "+prs3nc3";
+  if (id === "CONTACT") return "r3p3rt01r3";
+  if (id === "STR3M") return "p01nts + d3grés";
+  if (id === "HAUT") return "haut";
+  return "—";
+}
+
 export function Molette(props: { current: NodeId }) {
   const store = usePerceptionStore();
   const current = props.current;
 
   const adjacent = useMemo(() => getAdjacent(current) as NodeId[], [current]);
 
-  const [open, setOpen] = useState(false);
+  const uzyx = useUzyxState();
+  const helm = useHelmState();
+
+  const open = helm.open;
   const [theta, setTheta] = useState(0);
-  const [phase, setPhase] = useState<"idle" | "arming" | "traverse">("idle");
+  const [phase, setPhase] = useState<"idle" | "deploy" | "traverse">("idle");
   const sel = useMemo(() => {
     if (adjacent.length === 0) return null;
-    const idx = angleToIndex(theta, adjacent.length);
+    const idx = angleToIndex(theta + Math.PI / 2, adjacent.length);
     return { idx, id: adjacent[idx] };
   }, [adjacent, theta]);
 
@@ -47,49 +79,76 @@ export function Molette(props: { current: NodeId }) {
     y: 0,
   });
 
-  const holdRef = useRef<{ t: number | null; fired: boolean }>({ t: null, fired: false });
+  const centerRef = useRef<HTMLDivElement | null>(null);
+  const commitRef = useRef<{ busy: boolean }>({ busy: false });
+  const lastDragRef = useRef<number>(0);
 
-  const stopHold = (opts?: { resetFired?: boolean }) => {
-    if (holdRef.current.t !== null) window.clearTimeout(holdRef.current.t);
-    holdRef.current.t = null;
-    if (opts?.resetFired) holdRef.current.fired = false;
-    setPhase("idle");
-  };
+  useEffect(() => {
+    if (!open) return;
+    if (helm.mode !== "normal") return;
+    if (helm.previewLevel < 2) return;
+    const id = sel?.id;
+    if (!id) return;
 
-  const startHold = () => {
-    if (!sel?.id) return;
-    if (holdRef.current.t !== null) window.clearTimeout(holdRef.current.t);
-    holdRef.current.fired = false;
-    setPhase("arming");
-    const ms = store.getReducedMotion() ? 0 : 520;
-    holdRef.current.t = window.setTimeout(() => {
-      holdRef.current.t = null;
-      holdRef.current.fired = true;
-      setPhase("traverse");
-      const jump = () => {
-        window.location.hash = hrefFor(sel.id);
-        setOpen(false);
-        stopHold({ resetFired: true });
-      };
-      if (store.getReducedMotion()) jump();
-      else window.setTimeout(jump, 170);
-    }, ms);
-  };
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      if (id === "CONTACT") {
+        try {
+          contactsStore.list();
+        } catch {}
+      }
+      if (id === "FERRY") {
+        try {
+          getLastFerryCode();
+        } catch {}
+      }
+      if (id === "STR3M") {
+        try {
+          getPresences(12);
+        } catch {}
+      }
+    };
+
+    const w = window as any;
+    const handle =
+      typeof w.requestIdleCallback === "function"
+        ? w.requestIdleCallback(run, { timeout: 680 })
+        : window.setTimeout(run, 140);
+
+    return () => {
+      cancelled = true;
+      if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+    };
+  }, [open, helm.mode, helm.previewLevel, sel?.id]);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 1) return;
+      const s = helmAPI.getState();
+      if (!s.open && isInteractiveTarget(e.target)) return;
+      e.preventDefault();
+      helmAPI.toggle();
+    };
+    window.addEventListener("mousedown", onMouseDown, { capture: true });
+    return () => window.removeEventListener("mousedown", onMouseDown, true);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
       const k = String(e.key || "").toLowerCase();
-      if (k === "m") {
-        if (isInteractiveTarget(e.target)) return;
+      if (e.altKey && k === "h") {
+        if (!open && isInteractiveTarget(e.target)) return;
         e.preventDefault();
-        setOpen((v) => !v);
+        helmAPI.toggle();
         return;
       }
       if (!open) return;
       if (k === "escape") {
         e.preventDefault();
-        setOpen(false);
+        helmAPI.toggle(false);
         return;
       }
       if (k === "arrowleft") {
@@ -100,23 +159,66 @@ export function Molette(props: { current: NodeId }) {
         e.preventDefault();
         setTheta((t) => normalizeAngle(t + (Math.PI * 2) / Math.max(1, adjacent.length)));
       }
-      if (k === "enter" || k === " ") {
+      if (k === "enter") {
         e.preventDefault();
-        startHold();
+        commitRef.current.busy = true;
+        setPhase("traverse");
+        const jump = () => {
+          const id = helmAPI.commit() ?? sel?.id;
+          if (id) window.location.hash = hrefFor(id);
+          helmAPI.toggle(false);
+          setPhase("idle");
+          commitRef.current.busy = false;
+        };
+        if (store.getReducedMotion()) jump();
+        else window.setTimeout(jump, 220);
       }
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, adjacent.length, sel?.id]);
+  }, [open, adjacent.length, store, sel?.id]);
 
   useEffect(() => {
     if (!open) return;
     // Seed theta from Φ when opening (molette anchors on focus without reticle).
     const frame = store.getFrame();
     setTheta(phiAngleFromFrame(frame));
-    setPhase("idle");
-    holdRef.current.fired = false;
+    setPhase("deploy");
+    const t = window.setTimeout(() => setPhase("idle"), store.getReducedMotion() ? 0 : 460);
+    window.setTimeout(() => {
+      try {
+        centerRef.current?.focus?.({ preventScroll: true } as any);
+      } catch {}
+    }, store.getReducedMotion() ? 0 : 90);
+    return () => window.clearTimeout(t);
   }, [open, store]);
+
+  useEffect(() => {
+    helmAPI.setActive(current);
+  }, [current]);
+
+  useEffect(() => {
+    const mode = uzyx.failSafe ? "failsafe-hard" : "normal";
+    helmAPI.setMode(mode);
+    if (uzyx.failSafe && open) helmAPI.setPreviewLevel(0);
+  }, [uzyx.failSafe, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (sel?.id) helmAPI.select(sel.id);
+  }, [open, sel?.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    const desired = helm.selectedPageId;
+    if (!desired) return;
+    const idx = adjacent.indexOf(desired as NodeId);
+    if (idx < 0) return;
+    const n = Math.max(1, adjacent.length);
+    if (sel?.idx === idx) return;
+    const target = normalizeAngle((idx / n) * Math.PI * 2 - Math.PI / 2);
+    setTheta(target);
+  }, [open, helm.selectedPageId, adjacent, sel?.idx]);
 
   // Gesture (optional): two-finger hold opens the molette (mobile-friendly, low false positives).
   useEffect(() => {
@@ -146,7 +248,7 @@ export function Molette(props: { current: NodeId }) {
       clear();
       t = window.setTimeout(() => {
         t = null;
-        setOpen(true);
+        helmAPI.toggle(true);
       }, 260);
     };
 
@@ -183,7 +285,6 @@ export function Molette(props: { current: NodeId }) {
     const d = clamp((e.deltaX || 0) + (e.deltaY || 0), -120, 120);
     const k = store.getReducedMotion() ? 0.002 : 0.006;
     setTheta((t) => normalizeAngle(t + d * k));
-    stopHold({ resetFired: true });
   };
 
   const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -203,7 +304,6 @@ export function Molette(props: { current: NodeId }) {
     try {
       (e.currentTarget as any).setPointerCapture?.(e.pointerId);
     } catch {}
-    startHold();
   };
 
   const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
@@ -211,7 +311,7 @@ export function Molette(props: { current: NodeId }) {
     if (dragRef.current.pointerId !== e.pointerId) return;
     const dx = e.clientX - dragRef.current.x;
     const dy = e.clientY - dragRef.current.y;
-    if (Math.hypot(dx, dy) > 10) stopHold({ resetFired: true });
+    if (Math.hypot(dx, dy) > 10) lastDragRef.current = Date.now();
     const a = angleOf(e.clientX, e.clientY);
     const d = normalizeAngle(a - dragRef.current.startA);
     setTheta(normalizeAngle(dragRef.current.startTheta + d));
@@ -220,27 +320,63 @@ export function Molette(props: { current: NodeId }) {
   const onPointerUp: React.PointerEventHandler<HTMLDivElement> = () => {
     dragRef.current.active = false;
     dragRef.current.pointerId = null;
-    stopHold({ resetFired: true });
   };
 
-  const onClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    if (holdRef.current.fired) {
-      e.preventDefault();
-      e.stopPropagation();
-      holdRef.current.fired = false;
-    }
+  const onCommit = () => {
+    if (commitRef.current.busy) return;
+    const id = sel?.id;
+    if (!id) return;
+    commitRef.current.busy = true;
+    setPhase("traverse");
+    const jump = () => {
+      helmAPI.commit();
+      window.location.hash = hrefFor(id);
+      helmAPI.toggle(false);
+      setPhase("idle");
+      commitRef.current.busy = false;
+    };
+    if (store.getReducedMotion()) jump();
+    else window.setTimeout(jump, 220);
   };
+
+  const hint = ghostFor(sel?.id ?? null);
+  const thetaDeg = Math.round(((theta + Math.PI * 2) % (Math.PI * 2)) * (180 / Math.PI));
+
+  const birds = useMemo(() => {
+    const n = Math.max(12, Math.min(48, 14 + adjacent.length * 7));
+    const list: Array<{ a: number; r: number; g: string; k: number }> = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + (i % 3) * 0.06;
+      const r = 0.72 + (i % 9) * 0.012;
+      const g = i % 4 === 0 ? "/" : i % 3 === 0 ? "\\" : i % 2 === 0 ? "." : "·";
+      list.push({ a, r, g, k: 0 });
+    }
+    return list;
+  }, [adjacent.length]);
+
+  const birdsStyled = useMemo(() => {
+    const base = theta;
+    const hard = helm.mode === "failsafe-hard";
+    return birds.map((b) => {
+      const d = minAngleDist(b.a, base);
+      const k = Math.max(0, 1 - d / 0.32);
+      const opacity = hard ? 0.02 + k * 0.04 : 0.06 + k * 0.18;
+      return { ...b, k, opacity };
+    });
+  }, [birds, theta, helm.mode]);
 
   return (
     <div
-      className={`moletteOverlay ${phase === "arming" ? "is-arming" : ""} ${phase === "traverse" ? "is-traversing" : ""}`}
+      className={`helmOverlay ${phase === "deploy" ? "is-deploy" : ""} ${phase === "traverse" ? "is-traversing" : ""}`}
       role="dialog"
-      aria-label="molette"
+      aria-label="helm"
+      data-mode={helm.mode}
       style={
         {
           ["--theta" as any]: `${theta.toFixed(4)}rad`,
           ["--dz-soft-blur" as any]: `${(blend * 0.35).toFixed(2)}px`,
           ["--dz-blur" as any]: `${(blend * 0.9).toFixed(2)}px`,
+          ["--birds-dur" as any]: `${uzyx.towardO ? 44 : 32}s`,
         } as React.CSSProperties
       }
       onWheel={onWheel}
@@ -248,18 +384,42 @@ export function Molette(props: { current: NodeId }) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onClick={onClick}
+      onClick={(e) => {
+        if (e.defaultPrevented) return;
+        if (commitRef.current.busy) return;
+        const now = Date.now();
+        if (now - lastDragRef.current < 240) return;
+        onCommit();
+      }}
     >
-      <div className="moletteWheel" aria-hidden="true">
-        <div className="moletteRing" />
+      <div className="helmWheel" aria-hidden="true">
+        <div className="helmRing" />
+        <div className="helmPoint" aria-hidden="true" />
+        <div className="helmBirdField" aria-hidden="true">
+          {birdsStyled.map((b, i) => (
+            <span
+              key={i}
+              className="helmBird"
+              style={
+                {
+                  ["--ba" as any]: `${b.a.toFixed(4)}rad`,
+                  ["--br" as any]: String(b.r.toFixed(3)),
+                  ["--bo" as any]: String(b.opacity.toFixed(3)),
+                } as React.CSSProperties
+              }
+            >
+              {b.g}
+            </span>
+          ))}
+        </div>
         {adjacent.map((id, i) => {
-          const a = (i / Math.max(1, adjacent.length)) * 360;
+          const a = (i / Math.max(1, adjacent.length)) * 360 - 90;
           const isSelected = sel?.id === id;
           const m = frame.nodes[id];
           return (
             <div
               key={id}
-              className={`moletteSlot ${isSelected ? "is-selected" : ""}`}
+              className={`helmSlot ${isSelected ? "is-selected" : ""}`}
               style={
                 {
                   ["--a" as any]: `${a.toFixed(3)}deg`,
@@ -275,12 +435,41 @@ export function Molette(props: { current: NodeId }) {
               }
               data-node={id}
             >
-              <span className="moletteDot" aria-hidden="true" />
-              <span className="moletteLabel">{id}</span>
+              <span className="helmLabel">{id}</span>
             </div>
           );
         })}
       </div>
+
+      <div
+        ref={centerRef}
+        className="helmCenter"
+        role="link"
+        tabIndex={0}
+        aria-label="commit"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onCommit();
+        }}
+        onKeyDown={(e) => {
+          if (e.defaultPrevented) return;
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          onCommit();
+        }}
+      >
+        <span className="helmCenterDot" aria-hidden="true" />
+        <span className="helmCenterId" aria-hidden="true">
+          {helm.activePageId ?? current}
+        </span>
+      </div>
+
+      {helm.previewLevel > 0 && helm.mode !== "failsafe-hard" ? (
+        <div className="helmGhost" aria-hidden="true">
+          <span className="helmGhostLine">{`//// ${sel?.id ?? "—"} · ${hint} · ${thetaDeg}°`}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
