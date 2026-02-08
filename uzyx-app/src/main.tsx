@@ -11,7 +11,7 @@ import type { NodeId } from "@/graph/graph";
 import { PerceptionProvider } from "@/perception/PerceptionProvider";
 import { Molette } from "@/components/Molette";
 import { useUzyxSignals } from "@/uzyx/useUzyxSignals";
-import { useUzyxFailSafeGuard } from "@/uzyx/useUzyxFailSafeGuard";
+import { useUzyxFailSafe } from "@/uzyx/useUzyxFailSafe";
 import { UzyxImplicitAssist } from "@/uzyx/UzyxImplicitAssist";
 import { assertBicolorVars, assertNoImagesInDOM } from "@/guardrails/oRules";
 
@@ -44,7 +44,7 @@ function App() {
   const [route, setRoute] = useState<Route>(() => parseRouteFromHash(window.location.hash));
 
   useUzyxSignals();
-  useUzyxFailSafeGuard();
+  useUzyxFailSafe();
 
   useEffect(() => {
     const onHash = () => setRoute(parseRouteFromHash(window.location.hash));

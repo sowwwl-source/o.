@@ -20,3 +20,10 @@
   --fg:#0b0d0f;
   /* accent/halo stay: they are "matter", not theme */
 }
+
+[data-failsafe="true"]{
+  --bg:#000000;
+  --fg:#000000;
+  --accent:#000000;
+  --halo:rgba(0,0,0,0);
+}
