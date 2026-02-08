@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>événement — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o" aria-label="Événement">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">événement</span>
+    </header>
+
+    <section class="card" aria-label="Invitation">
+      <h1 class="muted">// ÉVÉNEMENT //</h1>
+      <p class="muted">Une invitation. Pas un profil. Pas un flux.</p>
+      <p class="muted">Louisa est une figure de passage.</p>
+
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Titre: <code id="t">—</code></span>
+        <span class="muted">Lieu: <code id="p">—</code></span>
+        <span class="muted">Date: <code id="d">—</code></span>
+        <span class="muted">Fenêtre: <code id="w">—</code></span>
+      </div>
+
+      <pre id="invite" class="card" style="margin-top:14px;white-space:pre-wrap">—</pre>
+
+      <p class="muted" style="margin-top:12px">
+        Sortie possible à tout moment : ↩ (ou anneau ↙).
+      </p>
+    </section>
+  </main>
+
+  <script>
+    // V0: invite is static; keep it minimal and editable.
+    const INV = {
+      title: "PASSAGE",
+      place: "—",
+      date: "—",
+      window: "—",
+      text:
+`Louisa:
+
+Tu n’as rien “débloqué”.
+Tu as seulement trouvé une porte.
+
+Si tu viens, viens entier.
+Sinon, reste intact.`,
+    };
+
+    document.getElementById("t").textContent = INV.title;
+    document.getElementById("p").textContent = INV.place;
+    document.getElementById("d").textContent = INV.date;
+    document.getElementById("w").textContent = INV.window;
+    document.getElementById("invite").textContent = INV.text;
+  </script>
+
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+

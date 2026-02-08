@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr" data-torus-page="1">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>fl0w — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <div class="o-torus" data-torus data-torus-keys="1">
+    <div class="o-torus-plane" aria-hidden="true">
+      <div class="o-torus-tile"></div><div class="o-torus-tile"></div><div class="o-torus-tile"></div>
+      <div class="o-torus-tile"></div><div class="o-torus-tile"></div><div class="o-torus-tile"></div>
+      <div class="o-torus-tile"></div><div class="o-torus-tile"></div><div class="o-torus-tile"></div>
+    </div>
+  </div>
+
+  <main id="o" class="o-overlay" style="justify-content:flex-start" aria-label="FL0W">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">FL0W</span>
+    </header>
+
+    <section class="card" aria-label="FL0W">
+      <h1 class="muted">// FL0W //</h1>
+      <p class="muted">Navigation libre sur une surface torique (↔ ↕). Pas de feed. Pas de ranking.</p>
+      <p class="muted" style="margin-top:10px">Position: <code data-torus-readout>—</code></p>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" type="button" data-torus-toggle aria-pressed="false">dérive: 0</button>
+        <button class="btn" type="button" data-torus-center>centre</button>
+      </div>
+      <p class="muted" style="margin-top:10px">Clavier: flèches / WASD • Shift = grand pas • 0 = centre.</p>
+    </section>
+  </main>
+
+  <script src="/assets/js/torus.js" defer></script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+

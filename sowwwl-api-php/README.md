@@ -22,6 +22,11 @@
 - POST /auth/login     {email, password}
 - POST /auth/logout    {}
 - GET  /me
+- GET  /soul/token
+- POST /soul/token     {token, config?} (requires X-CSRF)
+- POST /soul/upload    multipart: archive (.zip) + manifest_json? (requires X-CSRF)
+
+Uploads are stored under `SEED_ROOT` (default `/data`) in `soul.cloud/<uid>/uploads/`.
 
 ## Frontend integration (recommended)
 Serve the frontend and proxy API calls through the same origin:

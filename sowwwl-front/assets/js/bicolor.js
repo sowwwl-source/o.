@@ -680,4 +680,429 @@
 
     setUI(false);
   })();
+
+  // ====== Petals: 9 sections (rotation, no classic menu) ======
+  (() => {
+    if (root.hasAttribute("data-no-petals")) return;
+    if (document.getElementById("o-petals")) return;
+
+    const CORE = { id: "core", label: "C0RE", href: "/index.html" };
+    const PETALS = [
+      { id: "flow", label: "FL0W", href: "/fl0w.html" },
+      { id: "stream", label: "STR3AM", href: "/str3am.html" },
+      { id: "bote", label: "B(o)Té", href: "/b0te.html" },
+      { id: "archive", label: "ARCHIVE", href: "/arch1ve.html" },
+      { id: "land", label: "LAND", href: "/l4nd.html" },
+      { id: "signal", label: "SIGNAL", href: "/s1gnal.html" },
+      { id: "salon", label: "SAL0N", href: "/sal0n.html" },
+      { id: "system", label: "SYST3M", href: "/syst3m.html" },
+    ];
+
+    function normalizePath(p) {
+      const s = String(p || "");
+      return s.endsWith("/") ? s.slice(0, -1) : s;
+    }
+
+    function idFromPathname(pathname) {
+      const p = normalizePath(pathname);
+      if (p === "" || p === "/" || p.endsWith("/index.html")) return "core";
+      const hit = PETALS.find((x) => normalizePath(x.href) === p);
+      return hit ? hit.id : null;
+    }
+
+    function findById(id) {
+      return PETALS.find((x) => x.id === id) || null;
+    }
+
+    function rotateFromIndex(idx) {
+      return `${-idx * 45}deg`;
+    }
+
+    const activeId = idFromPathname(window.location.pathname);
+    const remembered = (() => {
+      const v = storage.get("o:petal");
+      return v && findById(v) ? v : null;
+    })();
+    let cursorId = activeId && activeId !== "core" ? activeId : remembered || PETALS[0]?.id;
+
+    // UI
+    const nav = document.createElement("nav");
+    nav.id = "o-petals";
+    nav.className = "o-petals";
+    nav.setAttribute("aria-label", "Ar(chi)bOrescence");
+    nav.setAttribute("data-no-flip", "");
+    nav.setAttribute("data-no-glitch", "");
+
+    const ui = document.createElement("div");
+    ui.className = "o-petals-ui";
+
+    const ring = document.createElement("div");
+    ring.className = "o-petals-ring";
+
+    const marks = document.createElement("div");
+    marks.className = "o-petals-marks";
+
+    const markButtons = PETALS.map((p, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "o-petal";
+      b.tabIndex = -1;
+      b.setAttribute("aria-label", p.label);
+      b.setAttribute("data-id", p.id);
+      b.style.setProperty("--i", String(i));
+      b.textContent = "·";
+      marks.appendChild(b);
+      return b;
+    });
+
+    const coreBtn = document.createElement("button");
+    coreBtn.type = "button";
+    coreBtn.className = "o-petal-core";
+    coreBtn.setAttribute("aria-label", CORE.label);
+    coreBtn.textContent = "O.";
+
+    ring.appendChild(marks);
+    ring.appendChild(coreBtn);
+
+    const actions = document.createElement("div");
+    actions.className = "o-petals-actions";
+
+    function actionButton(label, act) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "o-petals-btn";
+      b.setAttribute("data-act", act);
+      b.textContent = label;
+      return b;
+    }
+
+    const prevBtn = actionButton("←", "prev");
+    const openBtn = actionButton("↵", "open");
+    const nextBtn = actionButton("→", "next");
+    actions.appendChild(prevBtn);
+    actions.appendChild(openBtn);
+    actions.appendChild(nextBtn);
+
+    const label = document.createElement("div");
+    label.className = "o-petals-label muted";
+    label.setAttribute("aria-live", "polite");
+
+    ui.appendChild(ring);
+    ui.appendChild(actions);
+    ui.appendChild(label);
+    nav.appendChild(ui);
+    document.body.appendChild(nav);
+
+    function applyCursor(nextId) {
+      const id = findById(nextId) ? nextId : PETALS[0]?.id;
+      if (!id) return;
+      cursorId = id;
+      storage.set("o:petal", cursorId);
+
+      const idx = PETALS.findIndex((x) => x.id === cursorId);
+      marks.style.setProperty("--spin", rotateFromIndex(Math.max(0, idx)));
+
+      markButtons.forEach((b) => {
+        const bid = b.getAttribute("data-id");
+        b.classList.toggle("is-cursor", bid === cursorId);
+        b.classList.toggle("is-active", Boolean(activeId) && bid === activeId);
+      });
+      coreBtn.classList.toggle("is-active", activeId === "core");
+
+      const cur = findById(cursorId);
+      if (cur) label.textContent = `${cur.label}`;
+    }
+
+    function rotate(delta) {
+      const idx = PETALS.findIndex((x) => x.id === cursorId);
+      const base = idx >= 0 ? idx : 0;
+      const next = (base + delta + PETALS.length) % PETALS.length;
+      applyCursor(PETALS[next].id);
+    }
+
+    async function go(href) {
+      const url = new URL(href, window.location.href).toString();
+      window.location.href = url;
+    }
+
+    async function openCursor() {
+      const cur = findById(cursorId);
+      if (!cur) return;
+      await go(cur.href);
+    }
+
+    coreBtn.addEventListener("click", () => go(CORE.href));
+    prevBtn.addEventListener("click", () => rotate(-1));
+    nextBtn.addEventListener("click", () => rotate(1));
+    openBtn.addEventListener("click", () => openCursor());
+
+    markButtons.forEach((b) => {
+      b.addEventListener("click", () => {
+        const id = b.getAttribute("data-id") || "";
+        if (id === cursorId) return openCursor();
+        applyCursor(id);
+      });
+    });
+
+    nav.addEventListener("keydown", (e) => {
+      if (e.defaultPrevented) return;
+      const ae = document.activeElement;
+      const editing =
+        ae instanceof Element &&
+        (ae.matches("input, textarea, select, option") || (ae instanceof HTMLElement && ae.isContentEditable));
+      if (editing) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        rotate(-1);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        rotate(1);
+      }
+      if (e.key === "Escape") {
+        (document.activeElement instanceof HTMLElement ? document.activeElement : nav).blur();
+      }
+    });
+
+    // Initialize (no animation on first paint).
+    applyCursor(cursorId);
+    // Show active label if we're on a petal page.
+    if (activeId && activeId !== "core") applyCursor(activeId);
+  })();
+
+  // ====== Secret gesture "O" (rotation inertielle, no explicit UI) ======
+  (() => {
+    if (root.hasAttribute("data-no-gesture-o")) return;
+
+    const debug = (() => {
+      try {
+        const qs = new URLSearchParams(window.location.search);
+        if (qs.has("o_debug")) return true;
+        return window.location.pathname.endsWith("/dev.html");
+      } catch {
+        return false;
+      }
+    })();
+
+    function canVibrate() {
+      try {
+        return typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+      } catch {
+        return false;
+      }
+    }
+
+    function softVibrate(pattern) {
+      if (!canVibrate()) return;
+      try {
+        navigator.vibrate(pattern);
+      } catch {}
+    }
+
+    function setResonance(on, intensity01) {
+      const onBool = Boolean(on);
+      root.classList.toggle("is-o-primed", onBool);
+      const v = Math.max(0, Math.min(1, Number(intensity01) || 0));
+      root.style.setProperty("--o-res", String(onBool ? v : 0));
+    }
+
+    function blockedTarget(target) {
+      if (!(target instanceof Element)) return false;
+      if (isInteractive(target)) return true;
+      if (target.closest("[data-no-gesture-o]")) return true;
+      return false;
+    }
+
+    function loadGestureModule() {
+      if (window.O?.gestureO?.createGestureO) return Promise.resolve(window.O.gestureO);
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector("script[data-gesture-o]");
+        if (existing) {
+          existing.addEventListener("load", () => resolve(window.O?.gestureO), { once: true });
+          existing.addEventListener("error", () => reject(new Error("gesture_o_load_failed")), { once: true });
+          return;
+        }
+        const s = document.createElement("script");
+        s.type = "module";
+        s.async = true;
+        s.src = "/assets/js/gesture-o.mjs";
+        s.setAttribute("data-gesture-o", "1");
+        s.addEventListener("load", () => resolve(window.O?.gestureO), { once: true });
+        s.addEventListener("error", () => reject(new Error("gesture_o_load_failed")), { once: true });
+        (document.head || document.documentElement).appendChild(s);
+      });
+    }
+
+    loadGestureModule()
+      .then((lib) => {
+        if (!lib || typeof lib.createGestureO !== "function") return;
+
+        const audioEnabled = storage.get("o:audio") === "1";
+        const audio =
+          typeof lib.createResonanceAudio === "function"
+            ? lib.createResonanceAudio({ enabled: audioEnabled })
+            : null;
+
+        const dbgEl = (() => {
+          if (!debug) return null;
+          const pre = document.createElement("pre");
+          pre.setAttribute("data-no-flip", "");
+          pre.setAttribute("data-no-glitch", "");
+          pre.style.position = "fixed";
+          pre.style.left = "12px";
+          pre.style.top = "12px";
+          pre.style.zIndex = "9996";
+          pre.style.pointerEvents = "none";
+          pre.style.margin = "0";
+          pre.style.padding = "10px 12px";
+          pre.style.borderRadius = "14px";
+          pre.style.border = "1px solid var(--line)";
+          pre.style.background = "rgba(0,0,0,.16)";
+          pre.style.backdropFilter = "blur(10px)";
+          pre.style.webkitBackdropFilter = "blur(10px)";
+          pre.style.maxWidth = "min(420px, 92vw)";
+          pre.style.opacity = ".66";
+          pre.textContent = "gestureO: —";
+          document.body.appendChild(pre);
+          return pre;
+        })();
+
+        function fmt(x) {
+          return Number.isFinite(x) ? x.toFixed(2) : "—";
+        }
+
+        function setDbg(line) {
+          if (!dbgEl) return;
+          dbgEl.textContent = line;
+        }
+
+        const detector = lib.createGestureO({
+          onPrimed: (meta) => {
+            setResonance(true, meta?.progress01 ?? 0.2);
+            softVibrate(10);
+            if (audio) {
+              audio.arm().catch(() => {});
+              audio.setIntensity(0.35);
+            }
+          },
+          onProgress: (meta) => {
+            if (!meta?.primed) return;
+            setResonance(true, meta.progress01);
+            if (audio) audio.setIntensity(meta.progress01);
+          },
+          onComplete: (dir, meta) => {
+            try {
+              clear();
+              softVibrate(16);
+
+              const origin = meta?.center || null;
+              const href = String(dir) === "ccw" ? "/t0ken.html" : "/ev3nt.html";
+              const url = new URL(href, window.location.href).toString();
+
+              if (flipping) {
+                window.location.href = url;
+                return;
+              }
+              irisCommit(() => {
+                window.location.href = url;
+              }, origin).catch(() => {
+                window.location.href = url;
+              });
+            } catch {}
+          },
+          onDebug: debug
+            ? (s) => {
+                const deg = (s.signedRad * 180) / Math.PI;
+                setDbg(
+                  `gestureO: ${s.type}\n` +
+                    `primed=${s.primed ? 1 : 0} active=${s.active ? 1 : 0}\n` +
+                    `deg=${fmt(deg)} dir=${s.direction} c=${fmt(s.consistency)} v=${fmt(s.speedRadPerS)}\n` +
+                    `r=${fmt(s.radiusPx)} p=${fmt(s.progress01)}`,
+                );
+              }
+            : null,
+        });
+
+        let pid = null;
+        let live = false;
+
+        function tOf(e) {
+          const ts = e && typeof e.timeStamp === "number" ? e.timeStamp : 0;
+          return ts > 0 ? ts : (typeof performance !== "undefined" ? performance.now() : Date.now());
+        }
+
+        function pointFromEvent(e) {
+          return { x: e.clientX, y: e.clientY, t: tOf(e) };
+        }
+
+        function clear() {
+          live = false;
+          pid = null;
+          setResonance(false, 0);
+          if (audio) audio.stop();
+        }
+
+        document.addEventListener(
+          "pointerdown",
+          (e) => {
+            if (e.defaultPrevented) return;
+            if (!e.isPrimary) return;
+            if (e.button !== 0) return;
+            if (pid !== null) return;
+            if (blockedTarget(e.target)) return;
+            pid = e.pointerId;
+            live = true;
+            try {
+              if (audio) audio.arm().catch(() => {});
+            } catch {}
+            detector.start(pointFromEvent(e));
+          },
+          { capture: true, passive: true },
+        );
+
+        document.addEventListener(
+          "pointermove",
+          (e) => {
+            if (!live) return;
+            if (e.pointerId !== pid) return;
+            detector.update(pointFromEvent(e));
+          },
+          { capture: true, passive: true },
+        );
+
+        document.addEventListener(
+          "pointerup",
+          (e) => {
+            if (!live) return;
+            if (e.pointerId !== pid) return;
+            detector.end();
+            clear();
+          },
+          { capture: true, passive: true },
+        );
+        document.addEventListener(
+          "pointercancel",
+          (e) => {
+            if (!live) return;
+            if (e.pointerId !== pid) return;
+            detector.end();
+            clear();
+          },
+          { capture: true, passive: true },
+        );
+
+        window.addEventListener("blur", () => {
+          if (!live) return;
+          detector.end();
+          clear();
+        });
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden && live) {
+            detector.end();
+            clear();
+          }
+        });
+      })
+      .catch(() => {});
+  })();
 })();

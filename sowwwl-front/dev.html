@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr" data-torus-page="1">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>dev — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+  <style>
+    .dev-cross{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:9996;
+      background:
+        linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(255,255,255,.12) 0, transparent calc(50% + 0.5px)),
+        linear-gradient(0deg, transparent calc(50% - 0.5px), rgba(255,255,255,.12) 0, transparent calc(50% + 0.5px));
+      mix-blend-mode:overlay;
+      opacity:.6;
+    }
+    html.is-inverted .dev-cross{
+      background:
+        linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(0,0,0,.12) 0, transparent calc(50% + 0.5px)),
+        linear-gradient(0deg, transparent calc(50% - 0.5px), rgba(0,0,0,.12) 0, transparent calc(50% + 0.5px));
+      mix-blend-mode:multiply;
+    }
+  </style>
+</head>
+<body>
+  <div class="o-torus" data-torus data-torus-keys="1">
+    <div class="o-torus-plane" aria-hidden="true">
+      <div class="o-torus-tile"></div><div class="o-torus-tile"></div><div class="o-torus-tile"></div>
+      <div class="o-torus-tile"></div><div class="o-torus-tile"></div><div class="o-torus-tile"></div>
+      <div class="o-torus-tile"></div><div class="o-torus-tile"></div><div class="o-torus-tile"></div>
+    </div>
+  </div>
+  <div class="dev-cross" aria-hidden="true"></div>
+
+  <main id="o" class="o-overlay" style="justify-content:flex-start" aria-label="dev">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">dev</span>
+    </header>
+
+    <section class="card" aria-label="dev">
+      <h1 class="muted">// dev //</h1>
+      <p class="muted">Test wrap-topologie : scroll/pan (↔ ↕) sans bords.</p>
+      <p class="muted" style="margin-top:10px">Position: <code data-torus-readout>—</code></p>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" type="button" data-torus-toggle aria-pressed="false">dérive: 0</button>
+        <button class="btn" type="button" data-torus-center>centre</button>
+      </div>
+      <p class="muted" style="margin-top:10px">Test pétales : Tab → anneau ↙ • ←/→ • ↵.</p>
+      <p class="muted" style="margin-top:10px">Test geste O : rotation cw → <code>/ev3nt.html</code> • ccw → <code>/t0ken.html</code>.</p>
+    </section>
+  </main>
+
+  <script src="/assets/js/torus.js" defer></script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>

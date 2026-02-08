@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>token — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+  <style>
+    .mono{font-family:var(--font-mono)}
+    .tiny{font-size:12px}
+    .note{white-space:pre-line}
+    .ok{color:var(--accent-green)}
+    .err{color:var(--err-fg)}
+    .dim{opacity:.66}
+    .file{border-radius:18px;padding:12px 14px}
+  </style>
+</head>
+<body>
+  <main id="o" aria-label="Token / Config / Upload">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">token</span>
+    </header>
+
+    <section class="card" aria-label="Message">
+      <h1 class="muted">// Token / Config //</h1>
+      <p class="muted note">
+Vous nous avez trouvés.
+Maintenant, trouvez-vous.
+      </p>
+      <p class="muted">
+        Ici, un token ne te “classe” pas. Il pointe une base personnelle — <span class="mono">soul.cloud</span> — isolée.
+      </p>
+      <p class="muted tiny note" style="margin-top:10px">
+Transparence (V0) :
+- token stocké en empreinte (sha256) + hint (pas en clair)
+- rien n’est publié, rien n’est “poussé”
+      </p>
+
+      <div class="row" style="margin-top:14px">
+        <input id="token" class="mono" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="token…" />
+        <button id="btnToken" class="btn" type="button">valider</button>
+      </div>
+      <p id="tokenState" class="muted tiny" style="margin-top:10px">—</p>
+    </section>
+
+    <section id="uploadCard" class="card" aria-label="Upload" style="display:none">
+      <h2 class="muted">upload</h2>
+      <p class="muted">
+        Contrat V0 :
+        <b>pré-analyse locale</b> (liste + taille) → puis <b>upload</b>.
+        Rien n’est envoyé avant.
+      </p>
+
+      <div class="row" style="margin-top:14px">
+        <input id="zip" class="file" type="file" accept=".zip,application/zip" />
+        <button id="btnUpload" class="btn" type="button" disabled>upload</button>
+        <a id="loginLink" class="btn" href="/login.html" style="display:none">login</a>
+      </div>
+
+      <pre id="scan" class="card tiny" style="margin-top:14px">—</pre>
+
+      <p class="muted tiny note" style="margin-top:10px">
+Transparence data (V0) :
+- envoyé (si login) : archive .zip + manifeste (liste/tailles)
+- stocké : <span class="mono">soul.cloud</span> (isolé) → DB + fichiers sous <span class="mono">SEED_ROOT</span>
+- exclu : __MACOSX/, .DS_Store, .git/, node_modules/, dist/, build/
+- aucun feed • aucun like • aucun ranking • aucun tracking
+      </p>
+
+      <pre id="out" class="card tiny" style="margin-top:14px">—</pre>
+    </section>
+  </main>
+
+  <script type="module">
+    import { parseZipCentralDirectory, formatBytes } from '/assets/js/zip-manifest.mjs';
+
+    const els = {
+      token: document.getElementById('token'),
+      btnToken: document.getElementById('btnToken'),
+      tokenState: document.getElementById('tokenState'),
+      uploadCard: document.getElementById('uploadCard'),
+      zip: document.getElementById('zip'),
+      btnUpload: document.getElementById('btnUpload'),
+      loginLink: document.getElementById('loginLink'),
+      scan: document.getElementById('scan'),
+      out: document.getElementById('out'),
+    };
+
+    function show(el, v) { el.textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2); }
+
+    async function api(path, opts) {
+      const res = await fetch('/api' + path, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    function normalizeToken(s) {
+      return String(s || '').trim();
+    }
+
+    function validToken(s) {
+      const t = normalizeToken(s);
+      if (t.length < 6) return { ok: false, error: 'token_too_short' };
+      if (t.length > 128) return { ok: false, error: 'token_too_long' };
+      if (!/^[A-Za-z0-9._-]+$/.test(t)) return { ok: false, error: 'token_bad_chars' };
+      return { ok: true, token: t };
+    }
+
+    function isExcluded(path) {
+      const p = String(path || '');
+      const lower = p.toLowerCase();
+      if (lower.endsWith('/')) return true;
+      if (lower === '.ds_store' || lower.endsWith('/.ds_store')) return true;
+      if (lower === 'thumbs.db' || lower.endsWith('/thumbs.db')) return true;
+      if (lower.startsWith('__macosx/')) return true;
+      if (lower.startsWith('.git/')) return true;
+      if (lower.includes('/node_modules/')) return true;
+      if (lower.includes('/dist/')) return true;
+      if (lower.includes('/build/')) return true;
+      return false;
+    }
+
+    function categorize(path) {
+      const p = String(path || '');
+      const m = p.toLowerCase().match(/\.([a-z0-9]{1,10})$/);
+      const ext = m ? m[1] : '';
+      if (ext === 'json') return 'json';
+      if (ext === 'txt' || ext === 'md') return 'text';
+      if (ext === 'csv' || ext === 'tsv') return 'tables';
+      if (ext === 'ics') return 'calendar';
+      if (ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'gif' || ext === 'webp') return 'images';
+      if (ext === 'wav' || ext === 'mp3' || ext === 'm4a' || ext === 'ogg') return 'audio';
+      return ext ? 'other' : 'noext';
+    }
+
+    function summarize(entries) {
+      const kept = [];
+      const dropped = [];
+      const byCat = new Map();
+      let keptBytes = 0;
+      let droppedBytes = 0;
+
+      for (const e of entries) {
+        if (!e || e.isDir) continue;
+        const ex = isExcluded(e.name);
+        if (ex) {
+          dropped.push(e);
+          droppedBytes += e.uncompressedSize || 0;
+          continue;
+        }
+        kept.push(e);
+        keptBytes += e.uncompressedSize || 0;
+        const c = categorize(e.name);
+        byCat.set(c, (byCat.get(c) || 0) + 1);
+      }
+
+      const cats = Array.from(byCat.entries()).sort((a, b) => b[1] - a[1]);
+      return { kept, dropped, cats, keptBytes, droppedBytes };
+    }
+
+    let authed = false;
+    let CSRF = '';
+    let tokenReady = false;
+    let tokenHint = '';
+    let currentFile = null;
+    let currentManifest = null;
+
+    function setTokenState(kind, text) {
+      const cls = kind === 'ok' ? 'ok' : kind === 'err' ? 'err' : '';
+      els.tokenState.className = `muted tiny ${cls}`.trim();
+      els.tokenState.textContent = text;
+    }
+
+    function showUploadUI(on) {
+      els.uploadCard.style.display = on ? 'block' : 'none';
+    }
+
+    function setUploadEnabled(on) {
+      els.btnUpload.disabled = !on;
+    }
+
+    async function sync() {
+      const me = await api('/me');
+      authed = Boolean(me.ok);
+      CSRF = String(me.data?.csrf || '');
+      if (!authed) els.loginLink.style.display = 'inline-flex';
+
+      // If backend supports it, show existing token state.
+      if (authed) {
+        const r = await api('/soul/token');
+        if (r.ok) {
+          tokenReady = Boolean(r.data?.token_set);
+          tokenHint = String(r.data?.token_hint || '');
+          if (tokenReady) {
+            setTokenState('ok', tokenHint ? `token: ${tokenHint}` : 'token: ok');
+            showUploadUI(true);
+          } else {
+            setTokenState('', 'token: —');
+          }
+        } else {
+          setTokenState('', 'token: —');
+        }
+      } else {
+        setTokenState('', 'guest: token local (rien n’est envoyé).');
+      }
+    }
+
+    async function storeToken(token) {
+      if (!authed || !CSRF) {
+        tokenReady = true;
+        tokenHint = 'local';
+        setTokenState('ok', 'token: local (guest)');
+        showUploadUI(true);
+        return;
+      }
+
+      const r = await api('/soul/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ token }),
+      });
+      show(els.out, r);
+      if (!r.ok) {
+        tokenReady = false;
+        setTokenState('err', `token: erreur (${r.status})`);
+        return;
+      }
+      tokenReady = true;
+      tokenHint = String(r.data?.token_hint || '');
+      setTokenState('ok', tokenHint ? `token: ${tokenHint}` : 'token: ok');
+      showUploadUI(true);
+    }
+
+    async function scanZip(file) {
+      currentFile = file || null;
+      currentManifest = null;
+      setUploadEnabled(false);
+      if (!file) {
+        show(els.scan, '—');
+        return;
+      }
+
+      const size = file.size || 0;
+      const name = file.name || 'archive.zip';
+      show(els.scan, `lecture… (${name}, ${formatBytes(size)})`);
+
+      let buf;
+      try {
+        buf = await file.arrayBuffer();
+      } catch {
+        show(els.scan, 'erreur: lecture fichier');
+        return;
+      }
+
+      const parsed = parseZipCentralDirectory(buf);
+      if (!parsed.ok) {
+        show(els.scan, { error: parsed.error });
+        return;
+      }
+
+      const { kept, dropped, cats, keptBytes, droppedBytes } = summarize(parsed.entries);
+      const rules =
+`exclusions:
+- __MACOSX/, .DS_Store, Thumbs.db
+- .git/
+- */node_modules/*, */dist/*, */build/*
+
+V0:
+- stocke archive + manifeste
+- import réel (extraction) à venir`;
+
+      const lines = [];
+      lines.push(`archive: ${name}`);
+      lines.push(`taille fichier: ${formatBytes(size)}`);
+      lines.push(`entrées: ${parsed.entries.length} (fichiers=${parsed.totals.files}, dossiers=${parsed.totals.dirs})`);
+      lines.push('');
+      lines.push(`candidats import: ${kept.length} (${formatBytes(keptBytes)})`);
+      lines.push(`exclus: ${dropped.length} (${formatBytes(droppedBytes)})`);
+      lines.push('');
+      lines.push('catégories (candidats):');
+      cats.slice(0, 8).forEach(([c, n]) => lines.push(`- ${c}: ${n}`));
+      lines.push('');
+      lines.push(rules);
+      lines.push('');
+      lines.push('aperçu (candidats, 20 max):');
+      kept.slice(0, 20).forEach((e) => lines.push(`- ${e.name}`));
+      if (kept.length > 20) lines.push('…');
+
+      currentManifest = {
+        version: 0,
+        name,
+        size_bytes: size,
+        totals: parsed.totals,
+        kept: kept.map((e) => ({ name: e.name, u: e.uncompressedSize, c: e.compressedSize, m: e.method })),
+        excluded: dropped.slice(0, 500).map((e) => ({ name: e.name, u: e.uncompressedSize, c: e.compressedSize, m: e.method })),
+        excluded_truncated: dropped.length > 500,
+        rules: {
+          note: "rules apply to manifest/future extraction; V0 stores raw archive too",
+        },
+      };
+
+      show(els.scan, lines.join('\n'));
+      setUploadEnabled(tokenReady);
+    }
+
+    async function upload() {
+      if (!currentFile) return;
+      if (!tokenReady) return;
+
+      if (!authed || !CSRF) {
+        show(els.out, {
+          ok: false,
+          error: 'guest_upload_disabled',
+          note: 'Connecte-toi via /login.html pour uploader. En guest, rien n’est envoyé.',
+        });
+        return;
+      }
+
+      els.btnUpload.disabled = true;
+      show(els.out, 'upload…');
+
+      const fd = new FormData();
+      fd.append('archive', currentFile, currentFile.name || 'archive.zip');
+      if (currentManifest) fd.append('manifest_json', JSON.stringify(currentManifest));
+
+      const res = await fetch('/api/soul/upload', {
+        method: 'POST',
+        headers: { 'X-CSRF': CSRF },
+        credentials: 'include',
+        body: fd,
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      show(els.out, { ok: res.ok, status: res.status, data });
+      els.btnUpload.disabled = false;
+    }
+
+    els.btnToken.addEventListener('click', () => {
+      const v = validToken(els.token.value);
+      if (!v.ok) {
+        setTokenState('err', `token: ${v.error}`);
+        return;
+      }
+      setTokenState('', 'token: …');
+      storeToken(v.token).catch(() => setTokenState('err', 'token: erreur'));
+    });
+
+    els.token.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      els.btnToken.click();
+    });
+
+    els.zip.addEventListener('change', () => {
+      const f = els.zip.files && els.zip.files[0] ? els.zip.files[0] : null;
+      scanZip(f).catch(() => show(els.scan, 'erreur: scan'));
+    });
+
+    els.btnUpload.addEventListener('click', () => upload().catch(() => show(els.out, 'upload: erreur')));
+
+    sync();
+  </script>
+
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>

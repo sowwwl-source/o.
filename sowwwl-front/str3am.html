@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>str3am — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+</head>
+<body>
+  <main id="o" aria-label="STR3AM">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/index.html">↩</a>
+      <span class="muted">STR3AM</span>
+    </header>
+
+    <section class="card" aria-label="STR3AM">
+      <h1 class="muted">// STR3AM //</h1>
+      <p class="muted">Champ d’activité (pas de feed, pas de like, pas de ranking). Stub local.</p>
+      <pre id="field" class="card" style="margin-top:14px;white-space:pre">—</pre>
+      <p class="muted" style="margin-top:10px">Rien n’est envoyé au serveur depuis cette page.</p>
+    </section>
+  </main>
+
+  <script>
+    const pre = document.getElementById('field');
+    let energy = 0;
+    let lastTs = 0;
+    let lastRender = 0;
+
+    function isEditingElement(el) {
+      return el && el.matches && el.matches('input, textarea, select, option');
+    }
+
+    function bump(a) {
+      energy = Math.min(1, energy + a);
+    }
+
+    window.addEventListener('scroll', () => bump(0.02), { passive: true });
+    document.addEventListener('pointerdown', () => bump(0.10), { passive: true });
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (isEditingElement(document.activeElement)) return;
+      bump(0.06);
+    }, { capture: true });
+
+    function bar(n) {
+      const full = '█'.repeat(n);
+      const rest = '·'.repeat(Math.max(0, 24 - n));
+      return full + rest;
+    }
+
+    function fmt2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function render(ts) {
+      const d = new Date();
+      const hh = fmt2(d.getHours());
+      const mm = fmt2(d.getMinutes());
+      const ss = fmt2(d.getSeconds());
+      const n = Math.max(0, Math.min(24, Math.round(energy * 24)));
+      const pct = Math.max(0, Math.min(100, Math.round(energy * 100)));
+      pre.textContent =
+`${hh}:${mm}:${ss}
+[${bar(n)}] ${pct}%
+
+champ d’activité (local)
+— aucun social
+— aucune archive
+— aucune incitation`;
+    }
+
+    function tick(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = Math.max(0, ts - lastTs);
+      lastTs = ts;
+
+      // Exponential decay (half-life ~ 3.6s).
+      const k = Math.pow(0.5, dt / 3600);
+      energy = Math.max(0, Math.min(1, energy * k));
+
+      if (ts - lastRender > 160) {
+        lastRender = ts;
+        render(ts);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  </script>
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>
+

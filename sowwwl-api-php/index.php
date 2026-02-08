@@ -356,6 +356,62 @@ function seed_root_dir(): string {
     return rtrim($base, '/');
 }
 
+function ensure_soul_schema(PDO $pdo): void {
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS soul_cloud (
+              user_id INT UNSIGNED PRIMARY KEY,
+              token_sha256 CHAR(64) NOT NULL,
+              token_hint VARCHAR(16) NOT NULL,
+              config_json MEDIUMTEXT NULL,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS soul_uploads (
+              id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+              user_id INT UNSIGNED NOT NULL,
+              archive_name VARCHAR(255) NOT NULL,
+              archive_bytes BIGINT UNSIGNED NOT NULL,
+              archive_sha256 CHAR(64) NOT NULL,
+              archive_path VARCHAR(255) NOT NULL,
+              manifest_json MEDIUMTEXT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              INDEX idx_user_created (user_id, created_at),
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    } catch (Throwable) {
+        // Rollout-safe.
+    }
+}
+
+function normalize_soul_token(string $s): string {
+    return trim($s);
+}
+
+function validate_soul_token(string $token): array {
+    $t = normalize_soul_token($token);
+    $len = mb_strlen($t);
+    if ($len < 6) return ['ok' => false, 'error' => 'token_too_short'];
+    if ($len > 128) return ['ok' => false, 'error' => 'token_too_long'];
+    if (!preg_match('/^[A-Za-z0-9._-]+$/', $t)) return ['ok' => false, 'error' => 'token_bad_chars'];
+    return ['ok' => true, 'token' => $t];
+}
+
+function soul_token_hint(string $token): string {
+    $t = normalize_soul_token($token);
+    if ($t === '') return '';
+    $tail = mb_strlen($t) > 4 ? mb_substr($t, -4) : $t;
+    return '…' . $tail;
+}
+
+function soul_token_sha256(string $token): string {
+    return hash('sha256', normalize_soul_token($token));
+}
+
 function write_o_seed_file(int $uid, string $glyph, string $archetype, string $firstLine): array {
     $root = seed_root_dir();
     $dir = $root . '/0.users.O/' . $uid . '/seed';
@@ -1733,6 +1789,198 @@ if ($path === '/bote/validate') {
         'bote' => $row,
         'seed' => $seed,
         'unlock_until' => $unlock['unlock_until'],
+    ]);
+}
+
+// ====== soul.cloud (token + upload, V0) ======
+if ($path === '/soul/token') {
+    $uid = (int)($_SESSION['uid'] ?? 0);
+    if ($uid <= 0) out(401, ['guest' => true]);
+
+    $pdo = db();
+    ensure_soul_schema($pdo);
+
+    if ($method === 'GET') {
+        try {
+            $stmt = $pdo->prepare("SELECT token_hint, config_json, updated_at FROM soul_cloud WHERE user_id = :u LIMIT 1");
+            $stmt->execute([':u' => $uid]);
+            $row = $stmt->fetch();
+        } catch (Throwable) {
+            $row = null;
+        }
+
+        if (!$row) out(200, ['token_set' => false]);
+
+        $cfg = null;
+        $cfgRaw = (string)($row['config_json'] ?? '');
+        if ($cfgRaw !== '') {
+            $decoded = json_decode($cfgRaw, true);
+            if (is_array($decoded)) $cfg = $decoded;
+        }
+
+        out(200, [
+            'token_set' => true,
+            'token_hint' => (string)($row['token_hint'] ?? ''),
+            'config' => $cfg,
+            'updated_at' => $row['updated_at'] ?? null,
+        ]);
+    }
+
+    if ($method === 'POST') {
+        require_csrf();
+        $in = json_input();
+
+        $v = validate_soul_token((string)($in['token'] ?? ''));
+        if (!$v['ok']) out(422, ['error' => $v['error']]);
+        $token = (string)$v['token'];
+        $hint = soul_token_hint($token);
+        $sha = soul_token_sha256($token);
+
+        $cfgJson = null;
+        if (array_key_exists('config', $in)) {
+            $cfgJson = json_encode($in['config'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($cfgJson === false) out(422, ['error' => 'invalid_config']);
+            if (strlen($cfgJson) > 50_000) out(413, ['error' => 'config_too_large']);
+        }
+
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO soul_cloud (user_id, token_sha256, token_hint, config_json)
+                VALUES (:u, :h, :hint, :cfg)
+                ON DUPLICATE KEY UPDATE
+                  token_sha256 = VALUES(token_sha256),
+                  token_hint = VALUES(token_hint),
+                  config_json = IFNULL(VALUES(config_json), config_json),
+                  updated_at = CURRENT_TIMESTAMP
+            ");
+            $stmt->execute([':u' => $uid, ':h' => $sha, ':hint' => $hint, ':cfg' => $cfgJson]);
+        } catch (Throwable) {
+            out(500, ['error' => 'token_store_failed']);
+        }
+
+        out(200, ['ok' => true, 'token_hint' => $hint]);
+    }
+
+    out(405, ['error' => 'method_not_allowed']);
+}
+
+if ($path === '/soul/upload') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+
+    $pdo = db();
+    ensure_soul_schema($pdo);
+
+    // Require token set (V0 contract).
+    try {
+        $stmt = $pdo->prepare("SELECT token_sha256 FROM soul_cloud WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $hasToken = $row && !empty($row['token_sha256']);
+    } catch (Throwable) {
+        $hasToken = false;
+    }
+    if (!$hasToken) out(409, ['error' => 'token_required']);
+
+    if (!isset($_FILES['archive'])) out(400, ['error' => 'missing_archive']);
+    $f = $_FILES['archive'];
+    if (!is_array($f)) out(400, ['error' => 'missing_archive']);
+
+    $err = (int)($f['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($err !== UPLOAD_ERR_OK) {
+        if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) out(413, ['error' => 'upload_too_large']);
+        if ($err === UPLOAD_ERR_PARTIAL) out(400, ['error' => 'upload_partial']);
+        if ($err === UPLOAD_ERR_NO_FILE) out(400, ['error' => 'missing_archive']);
+        out(400, ['error' => 'upload_failed', 'code' => $err]);
+    }
+
+    $tmp = (string)($f['tmp_name'] ?? '');
+    if ($tmp === '' || !is_uploaded_file($tmp)) out(422, ['error' => 'upload_invalid']);
+
+    $size = (int)($f['size'] ?? 0);
+    if ($size <= 0) out(422, ['error' => 'empty_archive']);
+
+    $max = (int)(env('SOUL_UPLOAD_MAX_BYTES', '104857600') ?? '104857600'); // 100MB default
+    if ($max > 0 && $size > $max) out(413, ['error' => 'upload_too_large', 'max_bytes' => $max]);
+
+    // Basic ZIP sniff: must start with "PK"
+    $sig = '';
+    try {
+        $fh = @fopen($tmp, 'rb');
+        if ($fh !== false) {
+            $sig = (string)(@fread($fh, 4) ?: '');
+            @fclose($fh);
+        }
+    } catch (Throwable) {
+        $sig = '';
+    }
+    if (strlen($sig) < 2 || $sig[0] !== 'P' || $sig[1] !== 'K') out(422, ['error' => 'not_zip']);
+
+    $sha = hash_file('sha256', $tmp);
+    if (!$sha) out(500, ['error' => 'hash_failed']);
+
+    $orig = str_replace("\0", '', (string)($f['name'] ?? 'archive.zip'));
+    $orig = trim($orig) !== '' ? trim($orig) : 'archive.zip';
+    if (mb_strlen($orig) > 255) $orig = mb_substr($orig, 0, 255);
+
+    $manifestJson = null;
+    $rawManifest = (string)($_POST['manifest_json'] ?? '');
+    if (trim($rawManifest) !== '') {
+        if (strlen($rawManifest) > 1_000_000) out(413, ['error' => 'manifest_too_large']);
+        $decoded = json_decode($rawManifest, true);
+        if (!is_array($decoded)) out(422, ['error' => 'manifest_invalid']);
+        $manifestJson = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($manifestJson === false) out(422, ['error' => 'manifest_invalid']);
+    }
+
+    // Storage: /data (SEED_ROOT) / soul.cloud/<uid>/uploads/<key>-<sha>.zip
+    $root = seed_root_dir();
+    $dir = $root . '/soul.cloud/' . $uid . '/uploads';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0770, true);
+    }
+    if (!is_dir($dir)) out(500, ['error' => 'storage_unavailable']);
+
+    $key = bin2hex(random_bytes(8));
+    $file = $key . '-' . substr($sha, 0, 12) . '.zip';
+    $rel = 'soul.cloud/' . $uid . '/uploads/' . $file;
+    $dest = $root . '/' . $rel;
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO soul_uploads (user_id, archive_name, archive_bytes, archive_sha256, archive_path, manifest_json)
+            VALUES (:u, :n, :b, :h, :p, :m)
+        ");
+        $stmt->execute([':u' => $uid, ':n' => $orig, ':b' => $size, ':h' => $sha, ':p' => $rel, ':m' => $manifestJson]);
+        $uploadId = (int)$pdo->lastInsertId();
+    } catch (Throwable) {
+        out(500, ['error' => 'upload_store_failed']);
+    }
+
+    if (!@move_uploaded_file($tmp, $dest)) {
+        try {
+            $pdo->prepare("DELETE FROM soul_uploads WHERE id = :id AND user_id = :u")->execute([':id' => $uploadId, ':u' => $uid]);
+        } catch (Throwable) {
+            // Ignore.
+        }
+        out(500, ['error' => 'storage_write_failed']);
+    }
+    @chmod($dest, 0660);
+
+    out(201, [
+        'ok' => true,
+        'upload_id' => $uploadId,
+        'archive' => [
+            'name' => $orig,
+            'bytes' => $size,
+            'sha256' => $sha,
+        ],
+        'stored' => [
+            'scope' => 'soul.cloud',
+            'path' => $rel,
+            'manifest' => $manifestJson !== null,
+        ],
     ]);
 }
 
