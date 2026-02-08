@@ -483,18 +483,14 @@ export function Molette(props: { current: NodeId }) {
             } as React.CSSProperties
           }
         >
-          <text className="oPointText" x="160" y="40" textAnchor="middle" dominantBaseline="middle">
-            .
-          </text>
           <text className="oPointText" x="205" y="40" textAnchor="middle" dominantBaseline="middle">
-            O
+            . O.
           </text>
-          <text className="oPointText" x="250" y="40" textAnchor="middle" dominantBaseline="middle">
-            .
-          </text>
-          <g id="orbit" className="oPointOrbit">
-            <circle className="oPointPivot" cx="205" cy="40" r="0.01" opacity="0" />
-            <circle id="aliveDot" className="oPointAlive" cx="265" cy="44" r="4" />
+          <g transform="translate(205 40)">
+            <g id="orbit" className="oPointOrbit">
+              <circle className="oPointPivot" cx="0" cy="0" r="0.01" opacity="0" />
+              <circle id="aliveDot" className="oPointAlive" cx="60" cy="4" r="4" />
+            </g>
           </g>
         </svg>
         <span className="helmCenterId" aria-hidden="true">
