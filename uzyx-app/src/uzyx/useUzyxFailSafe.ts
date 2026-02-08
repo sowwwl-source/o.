@@ -26,6 +26,15 @@ function meanAndStd(dts: number[]): { mean: number; std: number } {
   return { mean, std: Math.sqrt(variance) };
 }
 
+function isTypingTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof Element)) return false;
+  if (t.closest("textarea,[contenteditable='true']")) return true;
+  const input = t.closest("input");
+  if (!input) return false;
+  const type = (input.getAttribute("type") || "text").toLowerCase();
+  return type !== "button" && type !== "submit" && type !== "reset" && type !== "checkbox" && type !== "radio";
+}
+
 export function useUzyxFailSafe() {
   const uzyx = useUzyxState();
 
@@ -87,6 +96,9 @@ export function useUzyxFailSafe() {
   };
 
   useEffect(() => {
+    const lastWheelAt = { v: 0 };
+    const lastScrollAt = { v: 0 };
+
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
       const target = e.target;
@@ -94,9 +106,22 @@ export function useUzyxFailSafe() {
       const onInvoke = target instanceof Element ? Boolean(target.closest(".uzyxInvoke")) : false;
       record("tap", e, { nonInteractive, onInvoke });
     };
-    const onKeyDown = (e: KeyboardEvent) => record("key", e);
-    const onWheel = (e: WheelEvent) => record("wheel", e);
-    const onScroll = (e: Event) => record("scroll", e);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      record("key", e);
+    };
+    const onWheel = (e: WheelEvent) => {
+      const now = Date.now();
+      if (now - lastWheelAt.v < 520) return;
+      lastWheelAt.v = now;
+      record("wheel", e);
+    };
+    const onScroll = (e: Event) => {
+      const now = Date.now();
+      if (now - lastScrollAt.v < 520) return;
+      lastScrollAt.v = now;
+      record("scroll", e);
+    };
     const onTouchStart = (e: TouchEvent) => record("touch", e);
     const onFocus = (e: FocusEvent) => record("focus", e);
     const onBlur = (e: FocusEvent) => record("blur", e);
