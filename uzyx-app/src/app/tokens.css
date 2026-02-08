@@ -1,7 +1,7 @@
 :root{
   /* Bicolor tokens (O. socle) */
-  --bg:#0b0d0f;
-  --fg:#e7e7e7;
+  --bg:#04120b;
+  --fg:#ffe7c7;
   /* Optional accents MUST remain derived from bg/fg (no 3rd hue). */
   --accent:var(--fg);
   --halo:transparent;
@@ -18,8 +18,8 @@
 
 [data-invert="false"]{
   /* explicit default for mutation-observed UIs */
-  --bg:#0b0d0f;
-  --fg:#e7e7e7;
+  --bg:#04120b;
+  --fg:#ffe7c7;
 }
 
 @supports (color: color-mix(in srgb, #000 50%, #fff)){
@@ -30,8 +30,8 @@
 }
 
 [data-invert="true"]{
-  --bg:#e7e7e7;
-  --fg:#0b0d0f;
+  --bg:#ffe7c7;
+  --fg:#04120b;
 }
 
 [data-failsafe="true"]{
@@ -40,4 +40,3 @@
   --accent:var(--fg);
   --halo:transparent;
 }
-

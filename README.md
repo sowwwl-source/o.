@@ -13,6 +13,11 @@ Complete CI/CD pipeline with Docker, GitHub Actions, and production deployment.
 ### CI/CD Workflows
 - **deploy-api.yml** - Automated API deployment to DigitalOcean
 - **deploy-frontend.yml** - Automated frontend deployment to DigitalOcean (static files)
+- **deploy-uzyx.yml** - Automated uzyx-app deployment to `/var/www/o` (keeps `/var/www/o/signals`)
+
+### Frontends
+- `sowwwl-front/` — legacy/static site (served on `sowwwl.com`)
+- `uzyx-app/` — O. “UI globale” (React build output served on `0.user.o.sowwwl.cloud`)
 
 ### Scripts & Tools
 - **Makefile** for common development tasks

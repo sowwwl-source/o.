@@ -1,6 +1,29 @@
 # Caddyfile for sowwwl (front + API)
 # Place in /etc/caddy/Caddyfile on production server.
 
+# O. / Uzyx (global UI) — deployed to /var/www/o by GitHub Actions:
+# - `.github/workflows/deploy-uzyx.yml` rsyncs `uzyx-app/dist/` → `/var/www/o/`
+# - `/var/www/o/signals` is reserved for server-side drops (do not delete)
+#
+# Domain target (acté): `0.user.o.sowwwl.cloud`
+0.user.o.sowwwl.cloud {
+    root * /var/www/o
+
+    # Optional: same-origin API proxy (strips /api)
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+
+    file_server
+}
+
 # Frontend + same-origin API proxy (/api/* strips /api)
 sowwwl.com, www.sowwwl.com {
     root * /var/www/sowwwl-front

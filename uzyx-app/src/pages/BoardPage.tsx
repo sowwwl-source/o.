@@ -56,19 +56,6 @@ export function BoardPage(props: { active?: NodeId }) {
     };
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return;
-      const k = String(e.key || "").toLowerCase();
-      if (k !== "i") return;
-      if (isInteractiveTarget(e.target)) return;
-      e.preventDefault();
-      toggleInvert();
-    };
-    window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, []);
-
   const boardRef = useRef<HTMLElement | null>(null);
   const [viewport, setViewport] = useState<{ w: number; h: number }>({ w: 1, h: 1 });
 

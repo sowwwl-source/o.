@@ -10,8 +10,18 @@ npm install
 npm run dev
 ```
 
+## API (session)
+
+- Front calls the backend through same-origin `/api/*` with `credentials: "include"` (`GET /me`, `POST /auth/*`, `GET/POST /land/*`).
+- Dev: Vite proxies `/api/*` → `http://127.0.0.1:8000/*` and strips `/api` (see `vite.config.ts`).
+
 ## Routes (hash)
 
+- `#/` (home)
+- `#/entry` (passage · identité)
+- `#/anchored` (succès)
+- `#/lande/new` (création lande)
+- `#/app` (gated by `/me`)
 - `#/HAUT` (b0ard)
 - `#/LAND`
 - `#/FERRY`

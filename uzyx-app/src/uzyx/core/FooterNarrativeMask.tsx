@@ -146,7 +146,7 @@ function maybeFlipLetter(letter: string, timeDigit: number): string {
 
 export function FooterNarrativeMask(props: {
   /** Link target for the dedicated .O. interface */
-  joinUrl?: string; // e.g. "https://sowwwl.cloud/o"
+  joinUrl?: string; // e.g. "https://0.user.o.sowwwl.cloud/#/entry"
   /** If you want to pass a nonce without exposing state */
   nonceProvider?: () => string; // returns short nonce
 }) {
@@ -279,7 +279,9 @@ export function FooterNarrativeMask(props: {
 
   // Join URL without leaking state
   const joinUrl = useMemo(() => {
-    const base = props.joinUrl ?? "https://sowwwl.cloud/o";
+    const base =
+      props.joinUrl ??
+      (typeof window !== "undefined" ? `${window.location.origin}/#/entry` : "https://0.user.o.sowwwl.cloud/#/entry");
     const nonce = props.nonceProvider?.();
     if (!nonce) return base;
     const url = new URL(base);

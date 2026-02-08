@@ -1,0 +1,91 @@
+.landNewRoot{
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+}
+
+.landNewTop{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+}
+.landNewTitle{
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.84;
+}
+.landNewMeta{
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  opacity: 0.62;
+}
+
+.landNewEdge{
+  position: absolute;
+  left: calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  top: calc(50% - 20px);
+  transform: translateY(-50%);
+  display: grid;
+  gap: 14px;
+}
+
+.landNewLine{
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  opacity: 0.72;
+}
+
+.landNewCmds{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.landNewCmd{
+  display:inline-flex;
+  gap: 10px;
+  align-items: baseline;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.86;
+  user-select:none;
+}
+.landNewCmd[data-disabled="1"]{ opacity: 0.32; pointer-events: none; }
+.landNewCmd:hover{ opacity: 1; text-decoration: underline; text-underline-offset: .35em; }
+.landNewCmd:focus-visible{ outline: 2px solid var(--fg); outline-offset: 4px; }
+
+.landNewHint{
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  opacity: 0.52;
+  text-transform: lowercase;
+}
+
+.landNewStatus{
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  opacity: 0.62;
+}
+
+@media (max-width: 520px){
+  .landNewRoot{
+    padding:
+      calc(var(--space-lg) + env(safe-area-inset-top, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-right, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-bottom, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+  }
+  .landNewEdge{
+    left: calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+  }
+}
+

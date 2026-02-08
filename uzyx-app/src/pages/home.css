@@ -1,0 +1,81 @@
+.homeRoot{
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+}
+
+.homeTop{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+}
+.homeTitle{
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.84;
+}
+.homeMeta{
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  opacity: 0.62;
+}
+
+.homeEdge{
+  position: absolute;
+  left: calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  bottom: calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  gap: 14px;
+}
+
+.homeLine{
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  opacity: 0.76;
+}
+
+.homeCmds{
+  display:flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.homeCmd{
+  display:inline-block;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.86;
+  user-select:none;
+}
+.homeCmd:hover{ opacity: 1; text-decoration: underline; text-underline-offset: .35em; }
+.homeCmd:focus-visible{ outline: 2px solid var(--fg); outline-offset: 4px; }
+
+.homeHint{
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  opacity: 0.5;
+}
+
+@media (max-width: 520px){
+  .homeRoot{
+    padding:
+      calc(var(--space-lg) + env(safe-area-inset-top, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-right, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-bottom, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+  }
+  .homeEdge{
+    left: calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+    bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  }
+}
+

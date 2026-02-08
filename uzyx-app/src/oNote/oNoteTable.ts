@@ -1,0 +1,114 @@
+import type { OCopy, OEvent, OScore, ORenderMode } from "./oNote.types";
+
+type Ladder = {
+  event: OEvent;
+  delta: number;
+  // Ordered by rising min-o.
+  ladder: Array<{ min: OScore; micro: string; short: string; plain: string }>;
+};
+
+export const O_NOTE_TABLE: Record<OEvent, Ladder> = {
+  auth_passkey_success: {
+    event: "auth_passkey_success",
+    delta: +2,
+    ladder: [
+      { min: 0, micro: "ok", short: "passkey prise", plain: "Passkey prise. Ça tient." },
+      { min: 6, micro: "ok", short: "prise", plain: "Ça prend." },
+      { min: 10, micro: "ok", short: "tenu", plain: "Tenue." },
+    ],
+  },
+  session_restored: {
+    event: "session_restored",
+    delta: +1,
+    ladder: [
+      { min: 0, micro: "ok", short: "session", plain: "Session retrouvée." },
+      { min: 8, micro: "ok", short: "revient", plain: "Ça revient." },
+    ],
+  },
+  land_created: {
+    event: "land_created",
+    delta: +2,
+    ladder: [
+      { min: 0, micro: "ok", short: "lande créée", plain: "Lande créée." },
+      { min: 7, micro: "ok", short: "la lande", plain: "La Lande prend." },
+    ],
+  },
+  completed_first_run: {
+    event: "completed_first_run",
+    delta: +1,
+    ladder: [
+      { min: 0, micro: "ok", short: "passage", plain: "Premier passage." },
+      { min: 9, micro: "ok", short: "déjà", plain: "Déjà." },
+    ],
+  },
+
+  auth_passkey_cancelled: {
+    event: "auth_passkey_cancelled",
+    delta: -1,
+    ladder: [
+      { min: 0, micro: "—", short: "annulé", plain: "Annulé." },
+      { min: 6, micro: "—", short: "pas là", plain: "Pas là." },
+    ],
+  },
+  auth_passkey_failed: {
+    event: "auth_passkey_failed",
+    delta: -2,
+    ladder: [
+      { min: 0, micro: "err", short: "passkey", plain: "Passkey non disponible ici." },
+      { min: 6, micro: "err", short: "pas pris", plain: "Ça n’a pas pris." },
+    ],
+  },
+  network_error: {
+    event: "network_error",
+    delta: -2,
+    ladder: [
+      { min: 0, micro: "net", short: "réseau", plain: "Réseau fragile. Réessayer." },
+      { min: 8, micro: "net", short: "fragile", plain: "Fragile." },
+    ],
+  },
+  form_validation_error: {
+    event: "form_validation_error",
+    delta: -1,
+    ladder: [
+      { min: 0, micro: "form", short: "forme", plain: "Forme incomplète. Vérifier." },
+      { min: 7, micro: "form", short: "à reprendre", plain: "À reprendre." },
+    ],
+  },
+  repeated_error_threshold: {
+    event: "repeated_error_threshold",
+    delta: -3,
+    ladder: [
+      { min: 0, micro: "…", short: "pause", plain: "Pause. Respirer." },
+      { min: 8, micro: "…", short: "silence", plain: "Silence." },
+    ],
+  },
+} as const;
+
+function clampScore(n: number): OScore {
+  const v = Math.max(0, Math.min(11, Math.round(n)));
+  return v as OScore;
+}
+
+export function applyDelta(o: OScore, event: OEvent): OScore {
+  const d = O_NOTE_TABLE[event]?.delta ?? 0;
+  const next = clampScore(o + d);
+  return next;
+}
+
+export function pickCopy(event: OEvent, o: OScore, mode: ORenderMode): OCopy {
+  const row = O_NOTE_TABLE[event];
+  const ladder = row?.ladder ?? [];
+  let best = ladder[0];
+  for (const step of ladder) {
+    if (o >= step.min) best = step;
+  }
+  const text =
+    mode === "glyph"
+      ? `o:${o}`
+      : mode === "micro"
+        ? best?.micro ?? "—"
+        : mode === "short"
+          ? best?.short ?? "—"
+          : best?.plain ?? "—";
+  return { o, mode, text };
+}

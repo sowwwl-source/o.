@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { BoardPage } from "@/pages/BoardPage";
+import { HomePage } from "@/pages/HomePage";
+import { EntryPage } from "@/pages/EntryPage";
+import { AnchoredPage } from "@/pages/AnchoredPage";
+import { LandNewPage } from "@/pages/LandNewPage";
 import { ContactsPage } from "@/pages/ContactsPage";
 import { FerryPage } from "@/pages/FerryPage";
 import { LandPage } from "@/pages/LandPage";
@@ -14,9 +18,23 @@ import { useUzyxFailSafe } from "@/uzyx/useUzyxFailSafe";
 import { UzyxImplicitAssist } from "@/uzyx/UzyxImplicitAssist";
 import { assertBicolorVars } from "@/guards/bicolor";
 import { assertNoImagesInDOM } from "@/guards/noImages";
+import { useSession } from "@/api/sessionStore";
+import { ONoteLine } from "@/components/ONoteLine";
+import { toggleInvert } from "@/theme/invert";
+import { useONoteFloor } from "@/oNote/useONoteFloor";
+import { oNoteStore } from "@/oNote/oNoteStore";
+
+function isTypingTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof Element)) return false;
+  return Boolean(t.closest("input,textarea,select,[contenteditable='true']"));
+}
 
 type Route =
-  | { kind: "node"; id: NodeId }
+  | { kind: "home" }
+  | { kind: "entry" }
+  | { kind: "anchored" }
+  | { kind: "lande_new" }
+  | { kind: "app"; id: NodeId }
   | { kind: "profile"; handle: string }
   | { kind: "cloud" };
 
@@ -25,6 +43,11 @@ function parseRouteFromHash(hash: string): Route {
   const parts = raw.split("/").filter(Boolean);
   const head = (parts[0] ?? "").toLowerCase();
 
+  if (raw.trim() === "") return { kind: "home" };
+  if (head === "entry") return { kind: "entry" };
+  if (head === "anchored") return { kind: "anchored" };
+  if (head === "lande" && (parts[1] ?? "").toLowerCase() === "new") return { kind: "lande_new" };
+
   if (head === "u" && parts[1]) {
     const handle = decodeURIComponent(parts[1]).replace(/^@+/, "");
     return { kind: "profile", handle };
@@ -32,13 +55,24 @@ function parseRouteFromHash(hash: string): Route {
 
   if (head === "cloud" || head === "soul" || head === "soul.cloud") return { kind: "cloud" };
 
+  if (head === "app") {
+    const k2 = String(parts[1] ?? "").trim().toUpperCase();
+    if (k2 === "" || k2 === "HAUT" || k2 === "B0ARD" || k2 === "BOARD") return { kind: "app", id: "HAUT" };
+    if (k2 === "LAND") return { kind: "app", id: "LAND" };
+    if (k2 === "FERRY") return { kind: "app", id: "FERRY" };
+    if (k2 === "STR3M" || k2 === "STR3AM" || k2 === "STREAM") return { kind: "app", id: "STR3M" };
+    if (k2 === "CONTACT" || k2 === "CONTACTS") return { kind: "app", id: "CONTACT" };
+    return { kind: "app", id: "HAUT" };
+  }
+
+  // Back-compat: node ids at the root are treated as "/app/<node>".
   const key = raw.trim().toUpperCase();
-  if (key === "" || key === "HAUT" || key === "B0ARD" || key === "BOARD") return { kind: "node", id: "HAUT" };
-  if (key === "LAND") return { kind: "node", id: "LAND" };
-  if (key === "FERRY") return { kind: "node", id: "FERRY" };
-  if (key === "STR3M" || key === "STR3AM" || key === "STREAM") return { kind: "node", id: "STR3M" };
-  if (key === "CONTACT" || key === "CONTACTS") return { kind: "node", id: "CONTACT" };
-  return { kind: "node", id: "HAUT" };
+  if (key === "HAUT" || key === "B0ARD" || key === "BOARD") return { kind: "app", id: "HAUT" };
+  if (key === "LAND") return { kind: "app", id: "LAND" };
+  if (key === "FERRY") return { kind: "app", id: "FERRY" };
+  if (key === "STR3M" || key === "STR3AM" || key === "STREAM") return { kind: "app", id: "STR3M" };
+  if (key === "CONTACT" || key === "CONTACTS") return { kind: "app", id: "CONTACT" };
+  return { kind: "home" };
 }
 
 export function App() {
@@ -53,6 +87,21 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // Global inversion: must exist everywhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const k = String(e.key || "").toLowerCase();
+      if (k !== "i") return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (isTypingTarget(e.target)) return;
+      e.preventDefault();
+      toggleInvert();
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     queueMicrotask(() => {
@@ -61,27 +110,99 @@ export function App() {
     });
   }, []);
 
-  const nodeForMolette: NodeId = route.kind === "node" ? route.id : "HAUT";
+  return (
+    <>
+      {route.kind === "home" ? (
+        <HomePage />
+      ) : route.kind === "entry" ? (
+        <EntryPage />
+      ) : route.kind === "anchored" ? (
+        <AnchoredPage />
+      ) : route.kind === "lande_new" ? (
+        <LandNewPage />
+      ) : route.kind === "profile" ? (
+        <PerceptionProvider>
+          <ProfilePage handle={route.handle} />
+        </PerceptionProvider>
+      ) : route.kind === "cloud" ? (
+        <PerceptionProvider>
+          <CloudGatePage />
+        </PerceptionProvider>
+      ) : (
+        <AppGate id={route.id} />
+      )}
+
+      <ONoteLine muted align={route.kind === "app" ? "right" : "left"} />
+      <UzyxImplicitAssist />
+    </>
+  );
+}
+
+function AppGate(props: { id: NodeId }) {
+  const id = props.id;
+  useONoteFloor(id === "LAND" ? 6 : id === "FERRY" ? 4 : id === "CONTACT" ? 4 : id === "STR3M" ? 3 : 2);
+
+  const session = useSession();
+
+  useEffect(() => {
+    void session.api.refresh();
+  }, [session.api]);
+
+  useEffect(() => {
+    if (session.state.phase === "guest") window.location.hash = "#/entry";
+  }, [session.state.phase]);
+
+  useEffect(() => {
+    if (session.state.phase !== "error") return;
+    oNoteStore.emit("network_error", "plain");
+  }, [session.state.phase]);
+
+  if (session.state.phase === "checking" || session.state.phase === "unknown") {
+    return (
+      <main
+        aria-label="app gate"
+        style={{
+          minHeight: "100vh",
+          padding: "calc(var(--space-xl) + env(safe-area-inset-top, 0px))",
+          letterSpacing: "0.14em",
+          opacity: 0.66,
+        }}
+      >
+        …
+      </main>
+    );
+  }
+
+  if (session.state.phase !== "authed") {
+    return (
+      <main
+        aria-label="app gate blocked"
+        style={{
+          minHeight: "100vh",
+          padding: "calc(var(--space-xl) + env(safe-area-inset-top, 0px))",
+          letterSpacing: "0.14em",
+          opacity: 0.66,
+        }}
+      >
+        —
+      </main>
+    );
+  }
 
   return (
     <PerceptionProvider>
-      {route.kind === "profile" ? (
-        <ProfilePage handle={route.handle} />
-      ) : route.kind === "cloud" ? (
-        <CloudGatePage />
-      ) : route.id === "HAUT" ? (
+      {id === "HAUT" ? (
         <BoardPage active="HAUT" />
-      ) : route.id === "STR3M" ? (
+      ) : id === "STR3M" ? (
         <StreamPage />
-      ) : route.id === "FERRY" ? (
+      ) : id === "FERRY" ? (
         <FerryPage />
-      ) : route.id === "CONTACT" ? (
+      ) : id === "CONTACT" ? (
         <ContactsPage />
       ) : (
         <LandPage />
       )}
-      <Molette current={nodeForMolette} />
-      <UzyxImplicitAssist />
+      <Molette current={id} />
     </PerceptionProvider>
   );
 }

@@ -1,0 +1,31 @@
+.oNoteLine{
+  position: fixed;
+  left: var(--space-lg);
+  bottom: var(--space-lg);
+  max-width: min(78ch, calc(100vw - 2 * var(--space-lg)));
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  opacity: 0.82;
+  z-index: 60;
+  pointer-events: none;
+  user-select: none;
+}
+
+.oNoteLine[data-align="right"]{ left:auto; right: var(--space-lg); text-align:right; }
+.oNoteLine.is-muted{ opacity: 0.62; }
+
+.oNoteKey{ opacity: 0.76; }
+.oNoteVal{ margin-left: 10px; opacity: 0.86; }
+.oNoteSep{ margin: 0 10px; opacity: 0.48; }
+.oNoteText{ opacity: 0.92; }
+
+@media (max-width: 420px){
+  .oNoteLine{
+    left: var(--space-md);
+    right: var(--space-md);
+    bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+    max-width: none;
+  }
+}
+

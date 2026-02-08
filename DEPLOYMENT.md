@@ -44,13 +44,20 @@ O_NETWORK_ADMINS=you@example.com
 
 ### 2. Frontend Setup (Static)
 
-The frontend is just static files in `sowwwl-front/`.
+This repo ships **two** static frontends:
+
+- `sowwwl-front/` → legacy/static site (served on `sowwwl.com`)
+- `uzyx-app/` → O. “UI globale” (React build output deployed to `/var/www/o`, served on `0.user.o.sowwwl.cloud`)
 
 On the droplet, copy it to a web root (example):
 ```bash
 sudo mkdir -p /var/www/sowwwl-front
 sudo rsync -a --delete sowwwl-front/ /var/www/sowwwl-front/
 ```
+
+Uzyx (O signals) is deployed by GitHub Actions to `/var/www/o`:
+- workflow: `.github/workflows/deploy-uzyx.yml`
+- reserved: `/var/www/o/signals` (server-side drops; do not delete)
 
 Optional (signals directory used by some server-side drops):
 ```bash
@@ -60,6 +67,7 @@ sudo chown -R www-data:www-data /var/www/o/signals
 
 Then configure your reverse proxy so:
 - `sowwwl.com` serves `/var/www/sowwwl-front`
+- `0.user.o.sowwwl.cloud` serves `/var/www/o`
 - `/api/*` is proxied to the API and **strips** the `/api` prefix (so `/api/me` → `/me`)
 
 ### 3. GitHub Secrets
@@ -132,11 +140,13 @@ Push to `main` branch triggers:
 1. API build and push to GitHub Container Registry
 2. Deployment to DigitalOcean via SSH
 3. Frontend deployment to the droplet (static files)
+4. Uzyx (O. UI globale) deployment to `/var/www/o` (keeps `/var/www/o/signals`)
 
 ### Workflow Files
 
 - `.github/workflows/deploy-api.yml` - Backend deployment
 - `.github/workflows/deploy-frontend.yml` - Frontend deployment
+- `.github/workflows/deploy-uzyx.yml` - Uzyx (O signals) deployment
 
 ## Monitoring
 
