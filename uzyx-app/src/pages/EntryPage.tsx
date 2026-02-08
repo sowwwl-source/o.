@@ -21,58 +21,15 @@ function looksLikeRescueCode(s: string): boolean {
   return String(s || "").length >= 8;
 }
 
-function isPasskeySupported(): boolean {
-  return typeof window !== "undefined" && "PublicKeyCredential" in window && !!navigator.credentials?.create;
-}
+const NOTE_TTL_MS = 2400;
 
-function randBytes(n: number): Uint8Array<ArrayBuffer> {
-  const a = new Uint8Array(Math.max(1, n | 0));
-  crypto.getRandomValues(a);
-  return a;
-}
-
-function safeBase64Url(bytes: Uint8Array): string {
-  let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
-  const b64 = btoa(bin);
-  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-async function createLocalPasskey(label: string): Promise<{ id: string } | null> {
-  if (!isPasskeySupported()) return null;
-  const userName = normalizeLine(label || "sowwwl", 64) || "sowwwl";
-
-  const publicKey: PublicKeyCredentialCreationOptions = {
-    challenge: randBytes(32),
-    rp: { name: "sowwwl" },
-    user: {
-      id: randBytes(32),
-      name: userName,
-      displayName: userName,
-    },
-    pubKeyCredParams: [
-      { type: "public-key", alg: -7 }, // ES256
-      { type: "public-key", alg: -257 }, // RS256
-    ],
-    timeout: 60_000,
-    attestation: "none",
-    authenticatorSelection: {
-      residentKey: "preferred",
-      userVerification: "preferred",
-    },
-  };
-
-  const cred = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null;
-  if (!cred) return null;
-
-  // We keep only a non-sensitive marker (public id) for UX purposes.
-  // Server-side registration is out of scope here.
-  const rawId = new Uint8Array(cred.rawId);
-  return { id: safeBase64Url(rawId) };
+function normalizeErrTag(x: unknown): string {
+  const raw = String(x || "").trim();
+  if (!raw) return "err";
+  return raw.length > 64 ? raw.slice(0, 64) : raw;
 }
 
 export function EntryPage() {
-  const canPasskey = useMemo(() => isPasskeySupported(), []);
   const dispatch = useOEvent();
 
   const session = useSession();
@@ -91,6 +48,13 @@ export function EntryPage() {
   const [code, setCode] = useState("");
 
   const [busy, setBusy] = useState<null | "passkey" | "anchor">(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!note) return;
+    const t = window.setTimeout(() => setNote(null), NOTE_TTL_MS);
+    return () => window.clearTimeout(t);
+  }, [note]);
 
   useEffect(() => {
     try {
@@ -105,34 +69,10 @@ export function EntryPage() {
 
   const onPasskey = async () => {
     if (busy) return;
-    if (!canPasskey) {
-      dispatch("auth_passkey_failed");
-      return;
-    }
-
-    setBusy("passkey");
-    try {
-      const label = identity || address || "sowwwl";
-      const r = await createLocalPasskey(label);
-      if (!r) {
-        dispatch("auth_passkey_failed");
-        return;
-      }
-      try {
-        localStorage.setItem("sowwwl:passkey_id_v1", r.id);
-      } catch {}
-
-      dispatch("auth_passkey_success");
-    } catch (e: any) {
-      const name = String(e?.name || "");
-      if (name === "NotAllowedError" || name === "AbortError") {
-        dispatch("auth_passkey_cancelled");
-      } else {
-        dispatch("auth_passkey_failed");
-      }
-    } finally {
-      setBusy(null);
-    }
+    // Guardrail: do not fake a server session with a local-only passkey marker.
+    // PASSKEY is visible, but only becomes active once backend WebAuthn is deployed.
+    dispatch("auth_passkey_failed");
+    setNote("passkey: pas ici");
   };
 
   const onAnchor = async () => {
@@ -142,6 +82,7 @@ export function EntryPage() {
 
     if (!looksLikeEmail(email) || !looksLikeRescueCode(rescue)) {
       dispatch("form_validation_error");
+      setNote("forme: incomplète");
       return;
     }
 
@@ -163,13 +104,23 @@ export function EntryPage() {
           window.location.hash = "#/anchored";
           return;
         }
-        if (log.status === 0) dispatch("network_error");
-        else dispatch("form_validation_error");
+        if (log.status === 0) {
+          dispatch("network_error");
+          setNote("réseau: fragile");
+        } else {
+          dispatch("form_validation_error");
+          setNote(`forme: ${normalizeErrTag(log.data?.error)}`);
+        }
         return;
       }
 
-      if (reg.status === 0) dispatch("network_error");
-      else dispatch("form_validation_error");
+      if (reg.status === 0) {
+        dispatch("network_error");
+        setNote("réseau: fragile");
+      } else {
+        dispatch("form_validation_error");
+        setNote(`forme: ${normalizeErrTag(reg.data?.error)}`);
+      }
     } finally {
       setBusy(null);
     }
@@ -252,7 +203,8 @@ export function EntryPage() {
             className="entryCmd"
             href="#"
             aria-label="create passkey"
-            data-disabled={!canPasskey || busy ? "1" : "0"}
+            data-disabled="1"
+            aria-disabled="true"
             onClick={(e) => {
               e.preventDefault();
               if (busy) return;
@@ -275,6 +227,12 @@ export function EntryPage() {
             ANCRER
           </a>
         </div>
+
+        {note ? (
+          <div className="entryErr" aria-live="polite">
+            {note}
+          </div>
+        ) : null}
 
         <div className="entryHint" aria-hidden="true">
           pas de jargon · un message à la fois

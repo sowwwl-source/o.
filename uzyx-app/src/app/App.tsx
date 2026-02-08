@@ -25,6 +25,7 @@ import { ONoteProvider, useONoteAPI } from "@/oNote/oNote.store";
 import type { OScore } from "@/oNote/oNote.types";
 import { useOEvent } from "@/oNote/oNote.hooks";
 import { HelmDock } from "@/uzyx/HelmDock";
+import { apiLandGet } from "@/api/apiClient";
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
@@ -83,7 +84,9 @@ function isPasskeySupported(): boolean {
 
 function minOForRoute(route: Route): OScore {
   if (route.kind === "home") return 0;
-  if (route.kind === "entry") return isPasskeySupported() ? 8 : 7;
+  // Passkeys must never "fake" a server session. Until backend WebAuthn is deployed,
+  // keep entry in identity mode (min 7).
+  if (route.kind === "entry") return 7;
   if (route.kind === "anchored") return 4;
   if (route.kind === "lande_new") return 5;
   if (route.kind === "app") return route.id === "LAND" ? 6 : route.id === "FERRY" ? 4 : route.id === "CONTACT" ? 4 : route.id === "STR3M" ? 3 : 2;
@@ -158,8 +161,10 @@ export function App() {
 function AppGate(props: { id: NodeId }) {
   const id = props.id;
   const dispatch = useOEvent();
+  const { setContext } = useONoteAPI();
 
   const session = useSession();
+  const [landCreated, setLandCreated] = useState<boolean | null>(null);
 
   useEffect(() => {
     void session.api.refresh();
@@ -173,6 +178,32 @@ function AppGate(props: { id: NodeId }) {
     if (session.state.phase !== "error") return;
     dispatch("network_error");
   }, [session.state.phase, dispatch]);
+
+  useEffect(() => {
+    if (session.state.phase !== "authed") {
+      setLandCreated(null);
+      setContext({ hasLand: false });
+      return;
+    }
+    let alive = true;
+    void (async () => {
+      const r = await apiLandGet();
+      if (!alive) return;
+      if (r.ok) {
+        const created = Boolean(r.data.created);
+        setLandCreated(created);
+        setContext({ hasLand: created });
+        if (!created) window.location.hash = "#/lande/new";
+        return;
+      }
+      // If we cannot resolve land state, stay conservative: route to lande/new.
+      dispatch(r.status === 0 ? "network_error" : "form_validation_error");
+      window.location.hash = "#/lande/new";
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [session.state.phase, dispatch, setContext]);
 
   if (session.state.phase === "checking" || session.state.phase === "unknown") {
     return (
@@ -202,6 +233,23 @@ function AppGate(props: { id: NodeId }) {
         }}
       >
         —
+      </main>
+    );
+  }
+
+  if (landCreated !== true) {
+    // Land check is in-flight (or about to redirect).
+    return (
+      <main
+        aria-label="app gate land"
+        style={{
+          minHeight: "100vh",
+          padding: "calc(var(--space-xl) + env(safe-area-inset-top, 0px))",
+          letterSpacing: "0.14em",
+          opacity: 0.66,
+        }}
+      >
+        …
       </main>
     );
   }
