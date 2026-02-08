@@ -18,12 +18,14 @@
       <p class="muted">Tu arrives ici après login : l’arborescence des lands visibles.</p>
       <p class="muted" style="margin-top:10px">Origin: <code id="origin">—</code></p>
       <p class="muted" style="margin-top:10px">Moi: <code id="me">—</code></p>
+      <p class="muted" style="margin-top:10px">Land: <code id="land">—</code></p>
       <div class="row" style="margin-top:14px">
         <a class="btn" href="/0.html">0</a>
         <a class="btn" href="/b0te.html">b0té</a>
         <a class="btn" href="/li3ns.html">li3ns</a>
         <a class="btn" href="/d0rs.html">d0rs</a>
         <a class="btn" href="/c0ur.html">c0ur</a>
+        <a class="btn" href="/l4nd.html">l4nd</a>
         <a class="btn" href="/etat.html">état</a>
         <a class="btn" href="/login.html">login</a>
       </div>
@@ -60,6 +62,14 @@
       return { ok: res.ok, status: res.status, data };
     }
 
+    async function land() {
+      const res = await fetch('/api/land', { credentials: 'include' });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
     (async () => {
       const r = await me();
       if (!r.ok) {
@@ -69,6 +79,14 @@
       const u = r.data?.user;
       const handle = u?.handle || ('o.' + (u?.id || '?'));
       document.getElementById('me').textContent = `${handle} (${u?.email || '—'})`;
+
+      const l = await land();
+      const lt = l.data?.land?.land_type || null;
+      document.getElementById('land').textContent = lt ? String(lt) : '—';
+      if (!lt) {
+        // Land type is mandatory: pick once.
+        window.location.href = '/l4nd.html';
+      }
     })();
   </script>
   <script src="/assets/js/bicolor.js" defer></script>

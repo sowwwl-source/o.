@@ -48,6 +48,7 @@ load_env(__DIR__ . '/.env');
 
 // Modules
 require_once __DIR__ . '/lib/land-theme.php';
+require_once __DIR__ . '/lib/bonuze.php';
 
 // ====== Sessions ======
 function is_https_request(): bool {
@@ -235,6 +236,70 @@ function ensure_land(PDO $pdo, int $uid): void {
     } catch (Throwable) {
         // Rollout-safe: ignore if table isn't there yet.
     }
+}
+
+function land_table_has_column(PDO $pdo, string $col): bool {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 1
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'land'
+              AND COLUMN_NAME = :c
+            LIMIT 1
+        ");
+        $stmt->execute([':c' => $col]);
+        return (bool)$stmt->fetchColumn();
+    } catch (Throwable) {
+        return false;
+    }
+}
+
+function ensure_land_type_schema(PDO $pdo): void {
+    try {
+        if (!land_table_has_column($pdo, 'land_type')) {
+            $pdo->exec("ALTER TABLE land ADD COLUMN land_type ENUM('A','B','C') NULL AFTER user_id");
+        }
+    } catch (Throwable) {
+        // Ignore (rollout-safe).
+    }
+}
+
+function ensure_land_state_schema(PDO $pdo): void {
+    try {
+        if (!land_table_has_column($pdo, 'lambda_val')) {
+            $pdo->exec("ALTER TABLE land ADD COLUMN lambda_val DECIMAL(5,3) NULL AFTER land_type");
+        }
+        if (!land_table_has_column($pdo, 'beaute_text')) {
+            $pdo->exec("ALTER TABLE land ADD COLUMN beaute_text MEDIUMTEXT NULL AFTER lambda_val");
+        }
+        if (!land_table_has_column($pdo, 'beaute_updated_at')) {
+            $pdo->exec("ALTER TABLE land ADD COLUMN beaute_updated_at TIMESTAMP NULL AFTER beaute_text");
+        }
+    } catch (Throwable) {
+        // Ignore (rollout-safe).
+    }
+}
+
+function normalize_land_type(string $s): string {
+    $t = strtoupper(trim($s));
+    if ($t === 'A' || $t === 'B' || $t === 'C') return $t;
+    return '';
+}
+
+function land_token_for_type(string $t): string {
+    if ($t === 'A') return 'culbu1on';
+    if ($t === 'B') return 'dur3rb';
+    if ($t === 'C') return 'toCu';
+    return '';
+}
+
+function land_type_from_archetype(string $a): string {
+    $norm = mb_strtolower(preg_replace('/[^a-z0-9]+/u', '', $a));
+    if ($norm === 'culbu1on' || str_starts_with($norm, 'culbu')) return 'A';
+    if ($norm === 'dur3rb' || str_starts_with($norm, 'dur3r')) return 'B';
+    if ($norm === 'tocu' || $norm === 't0cu' || str_starts_with($norm, 'toc')) return 'C';
+    return '';
 }
 
 function greek_letter_or_empty(string $s): string {
@@ -548,6 +613,176 @@ if ($path === '/land/theme') {
     out(200, ['theme' => $theme]);
 }
 
+if ($path === '/land') {
+    require_method('GET');
+    $uid = require_auth_uid();
+    $pdo = db();
+
+    ensure_land($pdo, $uid);
+    ensure_land_type_schema($pdo);
+    ensure_land_state_schema($pdo);
+
+    try {
+        $stmt = $pdo->prepare("SELECT land_type, lambda_val, beaute_text, beaute_updated_at, glyph, o_seed_line, seal, updated_at FROM land WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+    } catch (Throwable) {
+        $row = null;
+    }
+
+    $landType = normalize_land_type((string)($row['land_type'] ?? ''));
+    out(200, [
+        'created' => $landType !== '',
+        'land' => [
+            'land_type' => $landType !== '' ? $landType : null,
+            'token' => $landType !== '' ? land_token_for_type($landType) : null,
+            'lambda' => isset($row['lambda_val']) ? (float)$row['lambda_val'] : null,
+            'beaute_text' => $row['beaute_text'] ?? null,
+            'beaute_updated_at' => $row['beaute_updated_at'] ?? null,
+            'glyph' => $row['glyph'] ?? null,
+            'o_seed_line' => $row['o_seed_line'] ?? null,
+            'seal' => $row['seal'] ?? null,
+            'updated_at' => $row['updated_at'] ?? null,
+        ],
+    ]);
+}
+
+if ($path === '/land/create') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+    $in = json_input();
+
+    $t = normalize_land_type((string)($in['land_type'] ?? $in['type'] ?? $in['land'] ?? ''));
+    if ($t === '') out(400, ['error' => 'invalid_land_type']);
+
+    ensure_land($pdo, $uid);
+    ensure_land_type_schema($pdo);
+
+    $existing = '';
+    try {
+        $stmt = $pdo->prepare("SELECT land_type FROM land WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $existing = normalize_land_type((string)($row['land_type'] ?? ''));
+    } catch (Throwable) {
+        $existing = '';
+    }
+
+    if ($existing !== '') {
+        out(409, ['error' => 'land_already_created', 'land_type' => $existing, 'token' => land_token_for_type($existing)]);
+    }
+
+    try {
+        $pdo->prepare("UPDATE land SET land_type = :t WHERE user_id = :u")->execute([':t' => $t, ':u' => $uid]);
+    } catch (Throwable) {
+        out(500, ['error' => 'land_create_failed']);
+    }
+
+    out(200, ['ok' => true, 'land_type' => $t, 'token' => land_token_for_type($t)]);
+}
+
+if ($path === '/land/state') {
+    if ($method === 'GET') {
+        $uid = require_auth_uid();
+        $pdo = db();
+
+        ensure_land($pdo, $uid);
+        ensure_land_type_schema($pdo);
+        ensure_land_state_schema($pdo);
+
+        $stmt = $pdo->prepare("SELECT land_type, lambda_val, beaute_text, beaute_updated_at FROM land WHERE user_id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch() ?: [];
+
+        $landType = normalize_land_type((string)($row['land_type'] ?? ''));
+        out(200, [
+            'land_type' => $landType !== '' ? $landType : null,
+            'lambda' => isset($row['lambda_val']) ? (float)$row['lambda_val'] : null,
+            'beaute_text' => $row['beaute_text'] ?? null,
+            'beaute_updated_at' => $row['beaute_updated_at'] ?? null,
+        ]);
+    }
+
+    if ($method === 'POST') {
+        $uid = require_auth_uid();
+        require_csrf();
+        $pdo = db();
+        $in = json_input();
+
+        ensure_land($pdo, $uid);
+        ensure_land_type_schema($pdo);
+        ensure_land_state_schema($pdo);
+
+        $lambda = null;
+        if (array_key_exists('lambda', $in)) {
+            if (!is_numeric($in['lambda'])) out(422, ['error' => 'invalid_lambda']);
+            $lambda = max(0.0, min(1.0, (float)$in['lambda']));
+        }
+
+        $beaute = null;
+        if (array_key_exists('beaute_text', $in)) {
+            $beaute = (string)$in['beaute_text'];
+            if (mb_strlen($beaute) > 5000) out(413, ['error' => 'beaute_too_large']);
+        }
+
+        $fields = [];
+        $params = [':u' => $uid];
+        if ($lambda !== null) {
+            $fields[] = "lambda_val = :l";
+            $params[':l'] = $lambda;
+        }
+        if ($beaute !== null) {
+            $fields[] = "beaute_text = :b";
+            $fields[] = "beaute_updated_at = CURRENT_TIMESTAMP";
+            $params[':b'] = $beaute;
+        }
+        if (!$fields) out(422, ['error' => 'no_changes']);
+
+        $sql = "UPDATE land SET " . implode(', ', $fields) . " WHERE user_id = :u";
+        $pdo->prepare($sql)->execute($params);
+
+        out(200, ['ok' => true, 'lambda' => $lambda, 'beaute_text' => $beaute !== null ? $beaute : null]);
+    }
+
+    out(405, ['error' => 'method_not_allowed']);
+}
+
+// ====== b0n uZe (alphabetic equilibrium) ======
+if ($path === '/bonuze/consent') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+    $r = bonuze_accept($pdo, $uid);
+    out(200, $r);
+}
+
+if ($path === '/bonuze/letter') {
+    require_method('GET');
+    $uid = require_auth_uid();
+    $pdo = db();
+    $r = bonuze_letter($pdo, $uid);
+    out(200, $r);
+}
+
+if ($path === '/bonuze/event') {
+    require_method('POST');
+    $uid = require_auth_uid();
+    require_csrf();
+    $pdo = db();
+    $in = json_input();
+    $type = strtolower(trim((string)($in['type'] ?? '')));
+    $sig = (string)($in['sig'] ?? '');
+    $weight = isset($in['weight']) ? (float)$in['weight'] : 1.0;
+    if (!preg_match('/^[a-z0-9_-]{1,20}$/', $type)) out(422, ['error' => 'invalid_type']);
+    if ($sig !== '' && mb_strlen($sig) > 64) $sig = mb_substr($sig, 0, 64);
+    if ($weight <= 0 || $weight > 5) $weight = 1.0;
+    $r = bonuze_event($pdo, $uid, ['type' => $type, 'sig' => $sig, 'weight' => $weight]);
+    out($r['ok'] ? 200 : 403, $r);
+}
+
 // ====== Quest DELTA (4n0d3) ======
 if ($path === '/quest/delta') {
     require_method('GET');
@@ -667,6 +902,28 @@ if ($path === '/quest/delta/answer') {
         if ($norm === 'd' || str_starts_with($norm, 'dur3rb') || str_starts_with($norm, 'dur3r')) $choice = 'dur3rb';
         if ($norm === 'o' || str_starts_with($norm, 'tocu') || str_starts_with($norm, 't0cu')) $choice = 'toCu';
         if ($choice === '') out(200, ['ok' => false, 'step' => 3, 'error' => 'invalid_choice']);
+
+        // Land type is structural: if a land type already exists, the archetype must match.
+        $lt = land_type_from_archetype($choice);
+        if ($lt !== '') {
+            try {
+                ensure_land($pdo, $uid);
+                ensure_land_type_schema($pdo);
+                $stmt = $pdo->prepare("SELECT land_type FROM land WHERE user_id = :u LIMIT 1");
+                $stmt->execute([':u' => $uid]);
+                $lrow = $stmt->fetch();
+                $existing = normalize_land_type((string)($lrow['land_type'] ?? ''));
+                if ($existing !== '' && $existing !== $lt) {
+                    out(200, ['ok' => false, 'step' => 3, 'error' => 'land_type_conflict', 'land_type' => $existing]);
+                }
+                if ($existing === '') {
+                    $pdo->prepare("UPDATE land SET land_type = :t WHERE user_id = :u")->execute([':t' => $lt, ':u' => $uid]);
+                }
+            } catch (Throwable) {
+                // Ignore (rollout-safe).
+            }
+        }
+
         $pdo->prepare("UPDATE quest_delta SET passage_choice = :c, step = 4 WHERE user_id = :u")
             ->execute([':c' => $choice, ':u' => $uid]);
         out(200, ['ok' => true, 'step' => 4]);

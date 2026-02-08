@@ -6,6 +6,7 @@
   const STORE_DEPTH = "o:depth";
   const STORE_UID = "o:uid";
   const STORE_SEQ_PREFIX = "o:seq:";
+  const STORE_LAND_PREFIX = "o:land:";
 
   const storage = {
     get(key) {
@@ -199,7 +200,58 @@
       storage.set(STORE_UID, String(uid));
       storage.set(this.seqKey(uid), String(seq));
     },
+    landKey(uid) {
+      return `${STORE_LAND_PREFIX}${uid}`;
+    },
+    lastLand(uid) {
+      const v = storage.get(this.landKey(uid));
+      return v ? String(v) : null;
+    },
+    rememberLand(uid, landType) {
+      storage.set(this.landKey(uid), String(landType || ""));
+    },
   };
+
+  function normalizeLandType(v) {
+    const t = String(v || "").trim().toUpperCase();
+    return t === "A" || t === "B" || t === "C" ? t : "";
+  }
+
+  function applyLandType(v) {
+    const t = normalizeLandType(v);
+    if (!t) {
+      delete root.dataset.land;
+      return;
+    }
+    root.dataset.land = t;
+  }
+
+  async function syncLandFromServer({ force = false } = {}) {
+    const uid = ux.uid;
+    if (!uid) {
+      applyLandType("");
+      return { ok: false, status: 401, data: { guest: true } };
+    }
+
+    const cached = ux.lastLand(uid);
+    if (cached && !force) applyLandType(cached);
+
+    const r = await api.json("/api/land");
+    if (!r.ok) {
+      if (r.status === 401) applyLandType("");
+      return r;
+    }
+
+    const landType = normalizeLandType(r.data?.land?.land_type || r.data?.land?.type || r.data?.land_type);
+    if (landType) {
+      applyLandType(landType);
+      ux.rememberLand(uid, landType);
+    } else {
+      applyLandType("");
+      ux.rememberLand(uid, "");
+    }
+    return r;
+  }
 
   async function syncFromServer({ animate = false } = {}) {
     const r = await api.json("/api/me");
@@ -207,6 +259,7 @@
       ux.uid = null;
       ux.csrf = "";
       ux.seq = null;
+      applyLandType("");
       return { ok: false, status: r.status, data: r.data };
     }
 
@@ -223,6 +276,13 @@
     const last = uid ? ux.lastSeq(uid) : null;
 
     if (uid) ux.remember(uid, seq);
+    if (uid) {
+      const cachedLand = ux.lastLand(uid);
+      if (cachedLand) applyLandType(cachedLand);
+      syncLandFromServer({ force: false }).catch(() => {});
+    } else {
+      applyLandType("");
+    }
 
     // Avoid animating on first sync; animate only when token advances.
     const tokenAdvanced = last !== null && seq !== last;

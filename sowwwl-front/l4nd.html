@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>l4nd — O.</title>
+  <link rel="stylesheet" href="/assets/css/o.css" />
+  <style>
+    .land-choice{display:block}
+    .land-choice .token{opacity:.86}
+    .land-choice .sig{margin-top:10px;font-size:12px;opacity:.72}
+    .land-status{white-space:pre-wrap}
+    .land-choice[aria-disabled="true"]{opacity:.55;pointer-events:none}
+    .lambda-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .lambda-pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;opacity:.85}
+    .beaute{
+      width:100%;
+      min-height:24vh;
+      resize:vertical;
+      border-radius:18px;
+      padding:12px 14px;
+    }
+    .beaute-hint{font-size:12px;opacity:.72;margin-top:8px}
+  </style>
+</head>
+<body>
+  <main id="o">
+    <header class="row" style="justify-content:space-between;gap:18px">
+      <a class="muted" href="/sh0re.html">↩</a>
+      <span class="muted">Land</span>
+    </header>
+
+    <section class="card" aria-label="Land">
+      <h1 class="muted">// l4nd //</h1>
+      <p class="muted">Un Land n’est pas un thème. C’est un programme (visuel + comportement).</p>
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Origin: <code id="origin">—</code></span>
+        <span class="muted">Moi: <code id="me">—</code></span>
+        <span class="muted">Type: <code id="lt">—</code></span>
+      </div>
+      <p class="muted" style="margin-top:10px">Choix unique. Après création : palette verrouillée.</p>
+    </section>
+
+    <section id="inhabit" class="card" aria-label="Inhabiter" style="display:none">
+      <h2 class="muted">habiter</h2>
+      <p class="muted">Tu n’agis qu’avec <b>Lambda</b> et <b>Beauté</b>.</p>
+
+      <div class="lambda-row" style="margin-top:12px">
+        <span class="muted">Lambda:</span>
+        <span id="lambdaLabel" class="lambda-pill">—</span>
+        <button id="lambdaDown" class="btn" type="button">ralentir</button>
+        <button id="lambdaUp" class="btn" type="button">tendre</button>
+      </div>
+
+      <div style="margin-top:16px">
+        <p class="muted">Beauté (écris). Le système réagit, puis se fige.</p>
+        <textarea id="beaute" class="beaute" spellcheck="false" placeholder="…"></textarea>
+        <div class="beaute-hint muted">Le texte n’explique rien. Il aligne.</div>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Choisir">
+      <h2 class="muted">création</h2>
+      <div id="choices" class="cards" aria-label="Types">
+        <a class="o-card land-choice" href="#" data-type="A" aria-label="Créer Land A">
+          <div class="o-card-top">
+            <h3 class="muted">Land A</h3>
+            <div class="badges">
+              <span class="badge ok">1</span>
+            </div>
+          </div>
+          <p class="muted">équilibre / oscillation</p>
+          <p class="token muted">token: <code>(c)ulbu1o(n)</code></p>
+          <div class="sig muted">palette: bleu/gris vitreux • saturation basse • luminosité haute</div>
+        </a>
+
+        <a class="o-card land-choice" href="#" data-type="B" aria-label="Créer Land B">
+          <div class="o-card-top">
+            <h3 class="muted">Land B</h3>
+            <div class="badges">
+              <span class="badge ok">1</span>
+            </div>
+          </div>
+          <p class="muted">référence / mesure</p>
+          <p class="token muted">token: <code>(d)ur3r(b)</code></p>
+          <div class="sig muted">palette: noir/blanc/gris • contraste haut • saturation nulle</div>
+        </a>
+
+        <a class="o-card land-choice" href="#" data-type="C" aria-label="Créer Land C">
+          <div class="o-card-top">
+            <h3 class="muted">Land C</h3>
+            <div class="badges">
+              <span class="badge ok">1</span>
+            </div>
+          </div>
+          <p class="muted">décision / tension</p>
+          <p class="token muted">token: <code>t(o)C.u</code></p>
+          <div class="sig muted">palette: primaires retenues (signaux) • pas décoratif</div>
+        </a>
+      </div>
+      <p class="muted" style="margin-top:12px">Réponse:</p>
+      <pre id="out" class="card land-status" style="margin-top:10px">—</pre>
+    </section>
+  </main>
+
+  <script>
+    document.getElementById('origin').textContent = window.location.origin;
+
+    const els = {
+      me: document.getElementById('me'),
+      lt: document.getElementById('lt'),
+      out: document.getElementById('out'),
+      choices: document.getElementById('choices'),
+      inhabit: document.getElementById('inhabit'),
+      lambdaLabel: document.getElementById('lambdaLabel'),
+      lambdaDown: document.getElementById('lambdaDown'),
+      lambdaUp: document.getElementById('lambdaUp'),
+      beaute: document.getElementById('beaute'),
+    };
+
+    function show(x){ els.out.textContent = JSON.stringify(x, null, 2); }
+
+    async function j(url, opts) {
+      const res = await fetch(url, Object.assign({ credentials: 'include' }, opts || {}));
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      return { ok: res.ok, status: res.status, data };
+    }
+
+    let CSRF = '';
+    let lambdaVal = 0.45;
+    let saveTimer = 0;
+
+    function clamp(n, lo, hi){ return Math.min(hi, Math.max(lo, n)); }
+
+    function lambdaLabel(v){
+      if (v <= 0.32) return 'calme';
+      if (v >= 0.68) return 'tension';
+      return 'oscillation';
+    }
+
+    function applyLambda(v){
+      lambdaVal = clamp(v, 0, 1);
+      document.documentElement.style.setProperty('--lambda', String(lambdaVal));
+      els.lambdaLabel.textContent = lambdaLabel(lambdaVal);
+    }
+
+    async function loadLandState(){
+      const s = await j('/api/land/state');
+      if (!s.ok) return;
+      if (typeof s.data?.lambda === 'number') applyLambda(s.data.lambda);
+      if (typeof s.data?.beaute_text === 'string') els.beaute.value = s.data.beaute_text;
+    }
+
+    function scheduleSave(){
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveLandState, 600);
+    }
+
+    async function saveLandState(){
+      if (!CSRF) return;
+      const payload = { lambda: lambdaVal, beaute_text: els.beaute.value };
+      const r = await j('/api/land/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify(payload),
+      });
+      show(r);
+    }
+
+    async function sync() {
+      const me = await j('/api/me');
+      if (!me.ok) {
+        els.me.textContent = 'guest';
+        els.lt.textContent = '—';
+        show({ error: 'guest', hint: 'connecte-toi via /login.html' });
+        Array.from(els.choices.querySelectorAll('[data-type]')).forEach((a) => a.setAttribute('aria-disabled', 'true'));
+        return;
+      }
+      const u = me.data?.user || {};
+      CSRF = String(me.data?.csrf || '');
+      els.me.textContent = u.handle || ('o.' + (u.id || '?'));
+
+      const land = await j('/api/land');
+      const lt = land.data?.land?.land_type || null;
+      els.lt.textContent = lt ? String(lt) : '—';
+
+      const locked = Boolean(lt);
+      Array.from(els.choices.querySelectorAll('[data-type]')).forEach((a) => a.setAttribute('aria-disabled', locked ? 'true' : 'false'));
+      els.inhabit.style.display = locked ? 'block' : 'none';
+      if (locked) await loadLandState();
+      show({ me, land });
+    }
+
+    async function createLand(type) {
+      if (!CSRF) return;
+      const r = await j('/api/land/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF': CSRF },
+        body: JSON.stringify({ land_type: String(type || '') }),
+      });
+      show(r);
+      if (r.ok) {
+        // Let bicolor.js re-sync land palette, then return.
+        setTimeout(() => { window.location.href = '/sh0re.html'; }, 320);
+      }
+      await sync();
+    }
+
+    document.addEventListener('click', (e) => {
+      const a = e.target && e.target.closest ? e.target.closest('[data-type]') : null;
+      if (!a) return;
+      e.preventDefault();
+      if (a.getAttribute('aria-disabled') === 'true') return;
+      const type = a.getAttribute('data-type') || '';
+      createLand(type).catch(() => {});
+    });
+
+    els.lambdaDown.addEventListener('click', () => {
+      applyLambda(lambdaVal - 0.08);
+      scheduleSave();
+    });
+    els.lambdaUp.addEventListener('click', () => {
+      applyLambda(lambdaVal + 0.08);
+      scheduleSave();
+    });
+    els.beaute.addEventListener('input', scheduleSave);
+
+    sync();
+  </script>
+
+  <script src="/assets/js/bicolor.js" defer></script>
+</body>
+</html>

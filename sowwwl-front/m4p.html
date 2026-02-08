@@ -61,15 +61,16 @@
       const green = cssVar('--accent-green', '#56ffa6');
       const amber = cssVar('--accent-amber', '#ffe7c7');
       const line = cssVar('--line', 'rgba(255,231,199,.22)');
-      return { green, amber, line };
+      const lock = cssVar('--lock-line', 'rgba(255,231,199,.22)');
+      return { green, amber, line, lock };
     }
 
     function statusColor(s) {
-      const { green, amber, line } = palette();
+      const { green, amber, line, lock } = palette();
       if (s === 'ok') return green;
       if (s === 'off') return line;
       if (s === 'soon') return amber;
-      if (s === 'locked') return 'rgba(255,231,199,.45)';
+      if (s === 'locked') return lock;
       return amber;
     }
 

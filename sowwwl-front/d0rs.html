@@ -81,6 +81,7 @@
         green: cssVar('--accent-green', '#56ffa6'),
         amber: cssVar('--accent-amber', '#ffe7c7'),
         line: cssVar('--line', 'rgba(255,231,199,.22)'),
+        lock: cssVar('--lock-line', 'rgba(255,231,199,.22)'),
         fg: getComputedStyle(document.body).color || '#fff',
       };
     }
@@ -185,12 +186,12 @@
     }
 
     function linkColor(doorId, relMap, meDoor) {
-      const { green, amber, line } = palette();
+      const { green, amber, line, lock } = palette();
       if (doorId && meDoor && doorId === meDoor) return amber;
       const link = doorId ? relMap.get(doorId) : null;
       if (!link) return line;
       if (link.status === 'accepted') return green;
-      if (link.status === 'blocked') return 'rgba(255,231,199,.35)';
+      if (link.status === 'blocked') return lock;
       return amber; // pending
     }
 

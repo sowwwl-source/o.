@@ -8,3 +8,7 @@ backups/
 
 # OS junk
 .DS_Store
+
+# Node / bundlers
+**/node_modules/
+**/dist/

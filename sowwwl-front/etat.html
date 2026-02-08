@@ -21,6 +21,8 @@
 
       <div class="row" style="margin-top:14px">
         <button id="btnMe" class="btn" type="button">/me</button>
+        <button id="btnBonuze" class="btn" type="button">b0n uZe</button>
+        <button id="btnBonuzeAccept" class="btn" type="button">accepter charte</button>
         <button id="btnThreshold" class="btn" type="button">seuil</button>
         <button id="btnLogout" class="btn" type="button">logout</button>
         <a class="btn" href="/login.html">login</a>
@@ -53,6 +55,20 @@
     }
 
     document.getElementById("btnMe").addEventListener("click", refresh);
+    document.getElementById("btnBonuze").addEventListener("click", async () => {
+      const r = await api("/bonuze/letter");
+      document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+    });
+    document.getElementById("btnBonuzeAccept").addEventListener("click", async () => {
+      const me = await api("/me");
+      const csrf = me.data?.csrf || "";
+      const r = await api("/bonuze/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF": csrf },
+        body: JSON.stringify({}),
+      });
+      document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+    });
     document.getElementById("btnThreshold").addEventListener("click", async (e) => {
       if (!window.O || typeof window.O.threshold !== "function") return;
       const origin = { x: e?.clientX ?? window.innerWidth / 2, y: e?.clientY ?? window.innerHeight / 2 };

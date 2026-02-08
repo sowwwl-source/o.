@@ -95,6 +95,10 @@ INSERT IGNORE INTO qu3st (id, content) VALUES (1, '');
 -- Land (personal space metadata)
 CREATE TABLE IF NOT EXISTS land (
   user_id INT UNSIGNED PRIMARY KEY,
+  land_type ENUM('A','B','C') NULL,
+  lambda_val DECIMAL(5,3) NULL,
+  beaute_text MEDIUMTEXT NULL,
+  beaute_updated_at TIMESTAMP NULL,
   glyph VARCHAR(8) NULL,
   o_seed_line VARCHAR(512) NULL,
   seal VARCHAR(64) NULL,
@@ -158,6 +162,32 @@ CREATE TABLE IF NOT EXISTS bote_entries (
   archetype VARCHAR(32) NULL,
   seed_path VARCHAR(255) NULL,
   first_line VARCHAR(512) NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- b0n uZe (behavioral charter; alphabetic equilibrium state)
+CREATE TABLE IF NOT EXISTS bonuze_state (
+  user_id INT UNSIGNED PRIMARY KEY,
+  version INT NOT NULL DEFAULT 1,
+  consented_at DATETIME NULL,
+  ok BOOLEAN NOT NULL DEFAULT FALSE,
+  locked BOOLEAN NOT NULL DEFAULT FALSE,
+  state_index TINYINT UNSIGNED NOT NULL DEFAULT 14,
+  state_letter CHAR(1) NOT NULL DEFAULT 'O',
+  flags_json TEXT NULL,
+  last_eval_at DATETIME NULL,
+  last_event_at DATETIME NULL,
+  last_change_at DATETIME NULL,
+  osc_dir TINYINT NOT NULL DEFAULT 1,
+  actions_5m DECIMAL(7,2) NOT NULL DEFAULT 0,
+  actions_1h DECIMAL(7,2) NOT NULL DEFAULT 0,
+  edits_1m DECIMAL(7,2) NOT NULL DEFAULT 0,
+  repeats_1h DECIMAL(7,2) NOT NULL DEFAULT 0,
+  noise_1h DECIMAL(7,2) NOT NULL DEFAULT 0,
+  threats_30d INT NOT NULL DEFAULT 0,
+  threat_last_at DATETIME NULL,
+  last_sig VARCHAR(64) NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -72,7 +72,7 @@
       const password = document.getElementById('r_pass').value;
       const r = await api('/auth/register', {email, password});
       if (r.ok) {
-        window.location.href = '/sh0re.html';
+        window.location.href = '/l4nd.html';
         return;
       }
       show({ register: r, me: await me() });
