@@ -106,3 +106,22 @@ export async function apiLandCreate(land_type: "A" | "B" | "C"): Promise<ApiResu
   return apiRequest("/land/create", { method: "POST", json: { land_type }, csrf: true });
 }
 
+export type LandStateGetResponse = {
+  land_type: "A" | "B" | "C" | null;
+  lambda: number | null;
+  beaute_text: string | null;
+  beaute_updated_at: string | null;
+};
+
+export async function apiLandStateGet(): Promise<ApiResult<LandStateGetResponse>> {
+  return apiRequest("/land/state", { method: "GET" });
+}
+
+export type LandStateSavePayload = {
+  lambda?: number;
+  beaute_text?: string;
+};
+
+export async function apiLandStateSave(payload: LandStateSavePayload): Promise<ApiResult<any>> {
+  return apiRequest("/land/state", { method: "POST", json: payload, csrf: true });
+}

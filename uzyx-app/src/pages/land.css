@@ -10,14 +10,86 @@
   overflow:hidden;
 }
 
-.landHint{
+.oC3{
   position:absolute;
-  left:var(--space-lg);
-  bottom:var(--space-lg);
-  bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
-  font-size:12px;
-  letter-spacing:.2em;
-  opacity:.6;
-  text-transform:uppercase;
+  left:calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  bottom:calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  display:grid;
+  gap:12px;
+  max-width:min(72ch, calc(100vw - 2 * var(--space-xl)));
 }
 
+.oC3Title{
+  font-size:12px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+
+.oC3Row{
+  display:grid;
+  grid-template-columns: 10ch 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.oC3Key{
+  font-size:12px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.62;
+  padding-top: 6px;
+}
+
+.oC3Lambda{
+  font: inherit;
+  font-size:12px;
+  letter-spacing:.14em;
+  line-height:1.25;
+  padding:6px 0;
+  border:0;
+  border-bottom:1px solid color-mix(in srgb, var(--fg) 28%, transparent);
+  user-select:none;
+  outline:none;
+  opacity:.86;
+}
+.oC3Lambda:hover{ opacity:1; text-decoration: underline; text-underline-offset: .35em; }
+.oC3Lambda:focus-visible{ outline:2px solid var(--fg); outline-offset:6px; text-decoration:none; }
+
+.oC3Textarea{
+  width:100%;
+  max-width:100%;
+  min-height:18vh;
+  font: inherit;
+  font-size:12px;
+  letter-spacing:.12em;
+  line-height:1.6;
+  color:inherit;
+  background: transparent;
+  border:0;
+  border-bottom:1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+  padding:6px 0 10px;
+  outline:none;
+  resize:none;
+}
+.oC3Textarea::placeholder{ opacity:.45; }
+.oC3Textarea:focus-visible{ outline:2px solid var(--fg); outline-offset:6px; }
+
+.oC3Status{
+  font-size:12px;
+  letter-spacing:.12em;
+  opacity:.62;
+}
+
+@media (max-width: 640px){
+  .oC3{
+    left:calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+    bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 2 * var(--space-lg));
+  }
+  .oC3Row{
+    grid-template-columns: 1fr;
+    gap:6px;
+  }
+  .oC3Key{ padding-top: 0; }
+}
