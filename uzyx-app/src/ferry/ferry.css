@@ -1,0 +1,93 @@
+.ferry {
+  min-height: 100vh;
+  padding: var(--space-xl);
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.ferryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ferryTitle {
+  font-size: 20px;
+  letter-spacing: 0.3em;
+}
+
+.ferryMeta {
+  opacity: 0.7;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+
+.ferryPanel {
+  padding: var(--space-md);
+  border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
+  background: color-mix(in srgb, var(--bg) 90%, var(--fg) 10%);
+}
+
+.ferryInput {
+  background: transparent;
+  border: 1px solid var(--fg);
+  color: var(--fg);
+  padding: 6px 10px;
+  font: inherit;
+  min-width: 140px;
+}
+
+.ferryPresence {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--fg);
+  opacity: 0.6;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.pulse:nth-child(2) { animation-delay: 0.2s; }
+.pulse:nth-child(3) { animation-delay: 0.4s; }
+.pulse:nth-child(4) { animation-delay: 0.6s; }
+.pulse:nth-child(5) { animation-delay: 0.8s; }
+.pulse:nth-child(6) { animation-delay: 1s; }
+
+.ferryCount {
+  margin-left: 6px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.ferryList {
+  margin-top: var(--space-sm);
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.ferryUser {
+  letter-spacing: 0.08em;
+}
+
+.ferry.is-boarding {
+  filter: saturate(0.9);
+}
+
+.ferryInvite {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.35; }
+  50% { transform: scale(1.2); opacity: 0.85; }
+  100% { transform: scale(0.9); opacity: 0.35; }
+}
