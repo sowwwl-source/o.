@@ -18,14 +18,15 @@ Notes de sécurité
 
 1. Appeler l’envoi (depuis le domaine cible, ex `https://0.user.o.sowwwl.cloud`):
    - `curl -sS -X POST -H 'content-type: application/json' -d '{\"email\":\"0wlslw0@protonmail.com\"}' https://0.user.o.sowwwl.cloud/api/auth/admin/magic/send`
+   - Attendu: HTTP `200` + JSON `{"status":"ok"}` (anti-énumération)
 2. Vérifier la réception du mail et cliquer le lien (une seule fois).
 3. Après redirection, vérifier la session:
    - `curl -sS -c cookies.txt -b cookies.txt https://0.user.o.sowwwl.cloud/api/me`
-   - Attendu: `user.network_admin: true` (si `O_NETWORK_ADMINS` est correct).
+    - Attendu: `user.network_admin: true` (si `O_NETWORK_ADMINS` est correct).
 
 ## 2) Lien expiré → refus + message texte
 
-1. Demander un magic link.
+1. Demander un magic link (réponse 200 même si l’envoi échoue; vérifier l’outbox/logs si besoin).
 2. Attendre ≥ 15 minutes (TTL clamp 10..15).
 3. Cliquer le lien.
 4. Attendu: HTTP `410` + JSON `{"error":"expired","message":"Lien expiré."}`.
@@ -43,4 +44,3 @@ Notes de sécurité
 2. Copier le token depuis l’URL du mail, puis tenter de l’utiliser sur un autre domaine (ex `sowwwl.com`):
    - `https://sowwwl.com/api/auth/admin/magic/verify?token=...`
 3. Attendu: HTTP `403` + JSON `{"error":"wrong_domain","message":"Mauvais domaine."}`.
-

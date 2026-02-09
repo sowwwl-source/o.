@@ -630,27 +630,20 @@ if ($path === '/auth/admin/magic/send') {
     require_method('POST');
     $in = json_input();
 
+    // Anti-enumeration: always respond OK to requests (even for non-admin / invalid emails).
     $email = strtolower(trim((string)($in['email'] ?? '')));
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(422, ['error' => 'invalid_email']);
-
     $email = normalize_email($email);
-    if (!is_network_admin_email($email)) out(403, ['error' => 'network_admin_required']);
 
     $host = (string)(env('O_ADMIN_MAGIC_PUBLIC_HOST', '') ?? '');
     if (trim($host) === '') $host = request_public_host();
     $host = canonical_host($host);
-    if ($host === '') out(400, ['error' => 'invalid_host']);
-
-    $pdo = db();
-    [$ok, $err] = admin_magic_issue($pdo, $email, $host);
-    if (!$ok) {
-        $e = (string)$err;
-        if ($e === 'rate_limited') out(429, ['error' => 'rate_limited', 'message' => 'Attends.']);
-        if ($e === 'send_failed') out(500, ['error' => 'email_not_sent', 'message' => 'Email non envoyé.']);
-        out(500, ['error' => 'magic_send_failed']);
+    if ($host !== '' && $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && is_network_admin_email($email)) {
+        $pdo = db();
+        // Ignore errors for anti-enumeration; logs are kept in admin_magic_links.
+        admin_magic_issue($pdo, $email, $host);
     }
 
-    out(200, ['status' => 'sent']);
+    out(200, ['status' => 'ok']);
 }
 
 if ($path === '/auth/admin/magic/verify') {
