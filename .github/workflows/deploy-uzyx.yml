@@ -28,7 +28,10 @@ jobs:
           set -euo pipefail
           cd uzyx-app
           npm ci
+          export VITE_BUILD_ID="${GITHUB_SHA::7}"
+          export VITE_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           npm run build
+          printf '{"id":"%s","time":"%s"}\n' "$VITE_BUILD_ID" "$VITE_BUILD_TIME" > dist/o.build.json
 
       - name: Deploy to DigitalOcean (rsync over ssh)
         env:
@@ -55,5 +58,4 @@ jobs:
           rsync -az --delete --exclude "signals/" -e "ssh -i ~/.ssh/id_deploy" uzyx-app/dist/ "${DO_USER}@${DO_HOST}:/var/www/o/"
 
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
-            'set -euo pipefail; sudo chmod -R a+rX /var/www/o; sudo chown -R www-data:www-data /var/www/o/signals || true'
-
+            'set -euo pipefail; sudo chmod -R a+rX /var/www/o; sudo chown -R www-data:www-data /var/www/o/signals || true; echo "o.build:"; cat /var/www/o/o.build.json 2>/dev/null || echo "{}"; ls -la /var/www/o/index.html 2>/dev/null || true'
