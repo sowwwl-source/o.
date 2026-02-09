@@ -61,6 +61,35 @@ function admin_magic_token_hash(string $token): string {
 
 function ensure_admin_magic_schema(PDO $pdo): void {
     try {
+        $driver = '';
+        try {
+            $driver = (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        } catch (Throwable) {
+            $driver = '';
+        }
+
+        if ($driver === 'sqlite') {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS admin_magic_links (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  user_id INTEGER NOT NULL,
+                  email_hash TEXT NOT NULL,
+                  token_hash TEXT NOT NULL,
+                  issued_host TEXT NOT NULL,
+                  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                  expires_at TEXT NOT NULL,
+                  used_at TEXT NULL,
+                  send_ok INTEGER NOT NULL DEFAULT 0,
+                  send_error TEXT NULL,
+                  used_ip TEXT NULL,
+                  used_ua TEXT NULL
+                )
+            ");
+            $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uniq_token_hash ON admin_magic_links(token_hash)");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_user_created ON admin_magic_links(user_id, created_at)");
+            return;
+        }
+
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS admin_magic_links (
               id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -168,7 +197,7 @@ function admin_magic_send_email(string $to, string $link, int $ttl_min): array {
                 'link' => $link,
                 'body' => $body,
             ];
-            $ok = file_put_contents($file, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $ok = @file_put_contents($file, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
             if ($ok === false) return [false, 'outbox_write_failed'];
             return [true, null];
         } catch (Throwable) {
@@ -254,7 +283,7 @@ function admin_magic_issue(PDO $pdo, string $email_norm, string $issued_host): a
             $pdo->prepare("UPDATE admin_magic_links SET send_ok = 1, send_error = NULL WHERE id = :id")->execute([':id' => $id]);
         } else {
             // Invalidate token immediately if we couldn't send it.
-            $pdo->prepare("UPDATE admin_magic_links SET send_ok = 0, send_error = :e, used_at = NOW() WHERE id = :id")
+            $pdo->prepare("UPDATE admin_magic_links SET send_ok = 0, send_error = :e, used_at = CURRENT_TIMESTAMP WHERE id = :id")
                 ->execute([':id' => $id, ':e' => $send_err ?: 'send_failed']);
         }
     } catch (Throwable) {
@@ -317,7 +346,7 @@ function admin_magic_consume(PDO $pdo, string $token, string $host): array {
     try {
         $stmt = $pdo->prepare("
             UPDATE admin_magic_links
-            SET used_at = NOW(), used_ip = :ip, used_ua = :ua
+            SET used_at = CURRENT_TIMESTAMP, used_ip = :ip, used_ua = :ua
             WHERE id = :id AND used_at IS NULL
         ");
         $stmt->execute([':id' => $id, ':ip' => $ip, ':ua' => $ua]);
