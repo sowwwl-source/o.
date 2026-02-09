@@ -43,6 +43,25 @@ CREATE TABLE IF NOT EXISTS ux_state (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Admin magic-link auth (email, one-time, expiring)
+CREATE TABLE IF NOT EXISTS admin_magic_links (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  email_hash CHAR(64) NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  issued_host VARCHAR(190) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  send_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  send_error VARCHAR(64) NULL,
+  used_ip VARCHAR(64) NULL,
+  used_ua VARCHAR(190) NULL,
+  UNIQUE KEY uniq_token_hash (token_hash),
+  INDEX idx_user_created (user_id, created_at),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Links between people (minimal social graph)
 CREATE TABLE IF NOT EXISTS connections (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

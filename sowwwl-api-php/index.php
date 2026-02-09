@@ -52,6 +52,7 @@ load_env(__DIR__ . '/.env');
 // Modules
 require_once __DIR__ . '/lib/land-theme.php';
 require_once __DIR__ . '/lib/bonuze.php';
+require_once __DIR__ . '/lib/admin-magic.php';
 
 // ====== Sessions ======
 function is_https_request(): bool {
@@ -622,6 +623,80 @@ if ($path === '/auth/register') {
         if (str_contains($e->getMessage(), 'Duplicate')) out(409, ['error' => 'email_exists']);
         out(500, ['error' => 'register_failed']);
     }
+}
+
+// ====== Admin magic-link (email) ======
+if ($path === '/auth/admin/magic/send') {
+    require_method('POST');
+    $in = json_input();
+
+    $email = strtolower(trim((string)($in['email'] ?? '')));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(422, ['error' => 'invalid_email']);
+
+    $email = normalize_email($email);
+    if (!is_network_admin_email($email)) out(403, ['error' => 'network_admin_required']);
+
+    $host = (string)(env('O_ADMIN_MAGIC_PUBLIC_HOST', '') ?? '');
+    if (trim($host) === '') $host = request_public_host();
+    $host = canonical_host($host);
+    if ($host === '') out(400, ['error' => 'invalid_host']);
+
+    $pdo = db();
+    [$ok, $err] = admin_magic_issue($pdo, $email, $host);
+    if (!$ok) {
+        $e = (string)$err;
+        if ($e === 'rate_limited') out(429, ['error' => 'rate_limited', 'message' => 'Attends.']);
+        if ($e === 'send_failed') out(500, ['error' => 'email_not_sent', 'message' => 'Email non envoyé.']);
+        out(500, ['error' => 'magic_send_failed']);
+    }
+
+    out(200, ['status' => 'sent']);
+}
+
+if ($path === '/auth/admin/magic/verify') {
+    require_method('GET');
+    $token = (string)($_GET['token'] ?? '');
+    if (trim($token) === '') out(400, ['error' => 'invalid_token']);
+
+    $pdo = db();
+    $host = request_public_host();
+    [$ok, $err, $meta] = admin_magic_consume($pdo, $token, $host);
+    if (!$ok) {
+        $e = (string)$err;
+        if ($e === 'wrong_domain') out(403, ['error' => 'wrong_domain', 'message' => 'Mauvais domaine.']);
+        if ($e === 'expired') out(410, ['error' => 'expired', 'message' => 'Lien expiré.']);
+        if ($e === 'used') out(410, ['error' => 'used', 'message' => 'Lien déjà utilisé.']);
+        out(404, ['error' => 'invalid_link']);
+    }
+
+    $uid = (int)(is_array($meta) ? ($meta['user_id'] ?? 0) : 0);
+    if ($uid <= 0) out(401, ['error' => 'denied']);
+
+    // Re-check admin role at click-time (allows revocation by config).
+    try {
+        $stmt = $pdo->prepare("SELECT email, status FROM users WHERE id = :u LIMIT 1");
+        $stmt->execute([':u' => $uid]);
+        $row = $stmt->fetch();
+        $email = $row ? normalize_email((string)($row['email'] ?? '')) : '';
+        $status = $row ? (string)($row['status'] ?? 'active') : '';
+        if ($status !== 'active' || !is_network_admin_email($email)) {
+            out(403, ['error' => 'network_admin_required']);
+        }
+    } catch (Throwable) {
+        out(403, ['error' => 'network_admin_required']);
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['uid'] = $uid;
+
+    $to = (string)(env('O_ADMIN_MAGIC_REDIRECT', '/#/HAUT') ?? '/#/HAUT');
+    if (trim($to) === '') $to = '/#/HAUT';
+
+    // Avoid JSON for the redirect response (browsers follow Location anyway).
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Location: ' . $to, true, 302);
+    echo "ok\n";
+    exit;
 }
 
 if ($path === '/auth/login') {
