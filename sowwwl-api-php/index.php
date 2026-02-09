@@ -634,9 +634,17 @@ if ($path === '/auth/admin/magic/send') {
     $email = strtolower(trim((string)($in['email'] ?? '')));
     $email = normalize_email($email);
 
-    $host = (string)(env('O_ADMIN_MAGIC_PUBLIC_HOST', '') ?? '');
-    if (trim($host) === '') $host = request_public_host();
-    $host = canonical_host($host);
+    $expected = canonical_host((string)(env('O_ADMIN_MAGIC_PUBLIC_HOST', '') ?? ''));
+
+    // For send, accept only from the expected host (prevents cross-domain spam).
+    $reqHost = canonical_host((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if (trim($reqHost) === '') $reqHost = request_public_host();
+    if ($expected !== '') {
+        if ($reqHost === '' || $reqHost !== $expected) out(200, ['status' => 'ok']);
+    }
+
+    $host = $expected !== '' ? $expected : canonical_host($reqHost);
+
     if ($host !== '' && $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && is_network_admin_email($email)) {
         $pdo = db();
         // Ignore errors for anti-enumeration; logs are kept in admin_magic_links.
