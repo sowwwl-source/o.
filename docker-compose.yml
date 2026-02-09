@@ -33,6 +33,13 @@ services:
       DB_PASS: ${DB_PASS:-sowwwlpass}
       SEED_ROOT: /data
       O_NETWORK_ADMINS: ${O_NETWORK_ADMINS:-}
+      # Admin magic-link (optional)
+      O_ADMIN_MAGIC_TTL_MIN: ${O_ADMIN_MAGIC_TTL_MIN:-}
+      O_ADMIN_MAGIC_MAIL_MODE: ${O_ADMIN_MAGIC_MAIL_MODE:-}
+      O_ADMIN_MAGIC_OUTBOX_DIR: ${O_ADMIN_MAGIC_OUTBOX_DIR:-}
+      O_ADMIN_MAGIC_PUBLIC_HOST: ${O_ADMIN_MAGIC_PUBLIC_HOST:-}
+      O_ADMIN_MAGIC_REDIRECT: ${O_ADMIN_MAGIC_REDIRECT:-}
+      O_EMAIL_HASH_SALT: ${O_EMAIL_HASH_SALT:-}
     depends_on:
       db:
         condition: service_healthy

@@ -40,6 +40,14 @@ API_IMAGE=ghcr.io/sowwwl-source/o-api:latest
 
 # Optional: comma/space-separated list of network-admin emails (e.g. to allow POST /qu3st)
 O_NETWORK_ADMINS=you@example.com
+
+# Optional: admin magic-link (email)
+# - Recommended to force the domain used in links (avoid Host/XFH variations):
+# O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud
+# - Redirect after successful verification:
+# O_ADMIN_MAGIC_REDIRECT=/#/admin
+# - Salt for email_hash logs (privacy):
+# O_EMAIL_HASH_SALT=<random>
 ```
 
 ### 2. Frontend Setup (Static)
