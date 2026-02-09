@@ -213,6 +213,11 @@ Le Haut Point devient perceptible uniquement lors :
 
 Le point est un lien. Mais rien ne l’indique.
 
+### 6.3 Helm (molette)
+
+Le centre peut ouvrir une molette pleine page (rotation + commit) et déclencher une inversion bicolore.  
+La molette n’est pas un menu classique : c’est une rosace typographique, sans boutons/boîtes.
+
 ## 7. 1n1tc(o)ntact — répertoire
 
 ### 7.1 Nature
@@ -277,3 +282,19 @@ Conventions concrètes (pour éviter toute dérive) :
 - Seed : `zeroisoSeed.ts`
 - Route (optionnelle) : `/u/:handle/0iso` (module intégré par défaut au profil)
 
+## 11. Admin — Magic Link (validation)
+
+Objectif : authentification admin via email magic link, usage unique, expirant (10–15 min), token jamais affiché.
+
+- Endpoints
+  - `POST /api/auth/admin/magic/send` `{ "email": "…" }` (anti-énumération : réponse uniforme)
+  - `GET /api/auth/admin/magic/verify?token=…` (redirige ensuite vers `O_ADMIN_MAGIC_REDIRECT`, défaut `/#/admin`)
+- Sécurité
+  - token stocké **hashé uniquement** (sha256), invalidé si envoi échoue
+  - lien lié au domaine d’émission (refus sur mauvais host)
+  - session admin créée uniquement après clic valide
+  - logs : `email_hash`, timestamp, `used_ip`, `used_ua`
+- Références code
+  - impl : `sowwwl-api-php/lib/admin-magic.php`
+  - routes : `sowwwl-api-php/index.php` (section “Admin magic-link”)
+  - tests : `sowwwl-api-php/tests/ADMIN_MAGIC_LINK_FLOW.md` + `sowwwl-api-php/tests/admin_magic_integration_test.php`
