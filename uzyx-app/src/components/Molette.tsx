@@ -8,6 +8,7 @@ import { useUzyxState } from "@/uzyx/useUzyxState";
 import { contactsStore } from "@/contacts/contactsStore";
 import { getLastFerryCode } from "@/ferry/ferrySession";
 import { getPresences } from "@/stream/streamEngine";
+import { setInvert } from "@/theme/invert";
 
 function hrefFor(id: string) {
   return `#/${id}`;
@@ -223,6 +224,7 @@ export function Molette(props: { current: NodeId }) {
 
       e.preventDefault();
       e.stopPropagation();
+      setInvert(true);
       helmAPI.toggle(true);
     };
 
