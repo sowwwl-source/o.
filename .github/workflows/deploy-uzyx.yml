@@ -57,5 +57,10 @@ jobs:
           # Deploy uzyx-app build output to /var/www/o (do not touch signals/)
           rsync -az --delete --exclude "signals/" -e "ssh -i ~/.ssh/id_deploy" uzyx-app/dist/ "${DO_USER}@${DO_HOST}:/var/www/o/"
 
+          # Ensure Apache serves /var/www/o and proxies /api/* (avoids "site never changes" due to wrong docroot).
+          scp -i ~/.ssh/id_deploy scripts/ensure-apache-o-site.sh "${DO_USER}@${DO_HOST}:/tmp/ensure-apache-o-site.sh"
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            'set -euo pipefail; sudo bash /tmp/ensure-apache-o-site.sh'
+
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
             'set -euo pipefail; sudo chmod -R a+rX /var/www/o; sudo chown -R www-data:www-data /var/www/o/signals || true; echo "o.build:"; cat /var/www/o/o.build.json 2>/dev/null || echo "{}"; ls -la /var/www/o/index.html 2>/dev/null || true'
