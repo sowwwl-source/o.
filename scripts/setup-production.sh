@@ -62,6 +62,25 @@ DB_PASS=CHANGE_THIS_PASSWORD
 
 MYSQL_ROOT_PASSWORD=CHANGE_THIS_ROOT_PASSWORD
 API_IMAGE=ghcr.io/sowwwl-source/o-api:latest
+
+# Optional: comma/space-separated list of network-admin emails
+# Example:
+# O_NETWORK_ADMINS=0wlslw0@protonmail.com
+O_NETWORK_ADMINS=
+
+# Optional: admin magic-link (email)
+# - Send endpoint: POST /api/auth/admin/magic/send { email }
+# - Verify endpoint: GET  /api/auth/admin/magic/verify?token=... (302 redirect)
+# Recommended: force the public domain used in links (avoid Host/XFH variations)
+O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud
+# Redirect after successful verification:
+O_ADMIN_MAGIC_REDIRECT=/#/admin
+# TTL clamped 10..15 minutes (default 15)
+O_ADMIN_MAGIC_TTL_MIN=15
+# "mail" (default) or "outbox" (dev)
+O_ADMIN_MAGIC_MAIL_MODE=mail
+# Salt for email_hash logs (privacy)
+O_EMAIL_HASH_SALT=CHANGE_THIS_RANDOM
 EOF
 
 echo ""
