@@ -338,6 +338,7 @@ export function LandPage() {
     <main
       ref={rootRef}
       className="landRoot"
+      data-o-allow-images="true"
       aria-label="LAND"
       onPointerDown={onRootPointerDown}
       onPointerMove={onRootPointerMove}

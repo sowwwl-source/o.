@@ -134,7 +134,8 @@ export function App() {
     if (!import.meta.env.DEV) return;
     queueMicrotask(() => {
       assertBicolorVars();
-      assertNoImagesInDOM(document);
+      // Global UI must remain image-less. Land interior can host media later.
+      assertNoImagesInDOM(document, { allowIn: "[data-o-allow-images='true']" });
     });
   }, []);
 
