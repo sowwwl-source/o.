@@ -6,6 +6,7 @@ on:
     paths:
       - 'uzyx-app/**'
       - '.github/workflows/deploy-uzyx.yml'
+      - 'scripts/ensure-apache-o-site.sh'
   workflow_dispatch:
 
 jobs:
@@ -61,6 +62,10 @@ jobs:
           scp -i ~/.ssh/id_deploy scripts/ensure-apache-o-site.sh "${DO_USER}@${DO_HOST}:/tmp/ensure-apache-o-site.sh"
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
             'set -euo pipefail; sudo bash /tmp/ensure-apache-o-site.sh'
+
+          # Debug (visible in Actions logs): vhost mapping + API reachability.
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            'set -euo pipefail; echo "apache vhosts:"; sudo apache2ctl -S | sed -n "1,140p"; echo; echo "api health:"; curl -sS http://127.0.0.1:8000/health | head -c 180; echo'
 
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
             'set -euo pipefail; sudo chmod -R a+rX /var/www/o; sudo chown -R www-data:www-data /var/www/o/signals || true; echo "o.build:"; cat /var/www/o/o.build.json 2>/dev/null || echo "{}"; ls -la /var/www/o/index.html 2>/dev/null || true'
