@@ -110,6 +110,7 @@ export function Molette(props: { current: NodeId }) {
   const [phase, setPhase] = useState<"idle" | "deploy" | "traverse">("idle");
   const [flash, setFlash] = useState(false);
   const flashTimerRef = useRef<number | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const wheelRef = useRef<HTMLDivElement | null>(null);
   const islandRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -310,6 +311,53 @@ export function Molette(props: { current: NodeId }) {
     };
   }, [open]);
 
+  // Subtle "alive" drift for the ring/halo (keeps selection stable; only surface moves).
+  useEffect(() => {
+    if (!open) return;
+    const el = overlayRef.current;
+    if (!el) return;
+
+    const reduced = store.getReducedMotion();
+    let raf: number | null = null;
+    let interval: number | null = null;
+
+    const step = (now: number) => {
+      const t = now / 1000;
+      const f = store.getFrame();
+      const blend = f.stateBlend;
+      const speedK = clamp01(f.pointer.speed / 900);
+      const k = (0.25 + 0.75 * blend) * (reduced ? 0.18 : 1);
+
+      const wobble =
+        (Math.sin(t * 0.7) * 1.6 + Math.sin(t * 0.23 + 1.7) * 0.8 + Math.sin(t * 1.9 + 0.2) * 0.35 * speedK) * k;
+
+      el.style.setProperty("--ring-wobble", `${wobble.toFixed(2)}deg`);
+      el.style.setProperty("--halo-breathe", String((0.88 + 0.12 * Math.sin(t * 0.38 + 0.9)).toFixed(3)));
+    };
+
+    if (reduced) {
+      step(performance.now());
+      interval = window.setInterval(() => step(performance.now()), 900);
+      return () => {
+        if (interval !== null) window.clearInterval(interval);
+        el.style.removeProperty("--ring-wobble");
+        el.style.removeProperty("--halo-breathe");
+      };
+    }
+
+    const loop = (now: number) => {
+      step(now);
+      raf = window.requestAnimationFrame(loop);
+    };
+    raf = window.requestAnimationFrame(loop);
+
+    return () => {
+      if (raf !== null) window.cancelAnimationFrame(raf);
+      el.style.removeProperty("--ring-wobble");
+      el.style.removeProperty("--halo-breathe");
+    };
+  }, [open, store]);
+
   // "Island" matter (no images): a dynamic coastline around the ring, drawn in Canvas.
   useEffect(() => {
     if (!open) return;
@@ -377,7 +425,7 @@ export function Molette(props: { current: NodeId }) {
       const cx = w / 2;
       const cy = h / 2;
       const baseR = min * 0.315;
-      const amp = min * (0.012 + 0.032 * wild + 0.03 * frame.stateBlend);
+      const amp = min * (0.012 + 0.032 * wild + 0.03 * frame.stateBlend) * (reduced ? 0.52 : 1);
       const bulgeAmp = min * (0.01 + 0.05 * (0.25 + 0.75 * frame.stateBlend));
       const bulgeSigma = 0.62;
 
@@ -450,15 +498,18 @@ export function Molette(props: { current: NodeId }) {
     };
 
     let raf: number | null = null;
+    let interval: number | null = null;
     const tick = (now: number) => {
       draw(now);
       if (!reduced) raf = window.requestAnimationFrame(tick);
     };
 
     tick(performance.now());
+    if (reduced) interval = window.setInterval(() => draw(performance.now()), 980);
 
     return () => {
       if (raf !== null) window.cancelAnimationFrame(raf);
+      if (interval !== null) window.clearInterval(interval);
       ro?.disconnect();
       obs.disconnect();
     };
@@ -646,6 +697,7 @@ export function Molette(props: { current: NodeId }) {
 
   return (
     <div
+      ref={overlayRef}
       className={`helmOverlay ${phase === "deploy" ? "is-deploy" : ""} ${phase === "traverse" ? "is-traversing" : ""} ${flash ? "is-flash" : ""}`}
       role="dialog"
       aria-label="helm"

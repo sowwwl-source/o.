@@ -133,7 +133,7 @@
   pointer-events:none;
   background:
     repeating-conic-gradient(
-      from var(--ring-rot, 0deg),
+      from calc(var(--ring-rot, 0deg) + var(--ring-wobble, 0deg)),
       transparent 0 9deg,
       color-mix(in srgb, currentColor 42%, transparent) 9deg 9.3deg
     );
@@ -150,7 +150,7 @@
   background:currentColor;
   opacity:.9;
   transform:translate(-50%,-50%) rotate(var(--theta,0rad)) translateX(var(--helm-ring-r));
-  box-shadow:0 0 26px var(--helm-halo);
+  box-shadow:0 0 calc(26px * var(--halo-breathe, 1)) var(--helm-halo);
 }
 
 .helmBirdField{
