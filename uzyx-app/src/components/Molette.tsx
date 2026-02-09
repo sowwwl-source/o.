@@ -359,12 +359,15 @@ export function Molette(props: { current: NodeId }) {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      if (!reduced && frame.stateBlend > 0.15) {
+      if (!reduced) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = 0.08 + 0.12 * frame.stateBlend;
+        // Always present (subtle), stronger in ΔZ′ / instability.
+        const baseGlow = 0.06 + 0.08 * (0.25 + 0.75 * wild);
+        const dzGlow = 0.06 * frame.stateBlend;
+        ctx.globalAlpha = clamp01(baseGlow + dzGlow);
         ctx.strokeStyle = colors.halo;
-        ctx.filter = `blur(${Math.min(4, 0.6 + frame.stateBlend * 2.2)}px)`;
+        ctx.filter = `blur(${Math.min(5, 0.9 + frame.stateBlend * 2.6)}px)`;
         ctx.stroke();
         ctx.restore();
       }

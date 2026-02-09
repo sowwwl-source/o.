@@ -29,7 +29,8 @@
 @supports (color: color-mix(in srgb, #000 50%, #fff)){
   :root{
     --accent:color-mix(in srgb, var(--fg) 86%, var(--bg));
-    --halo:color-mix(in srgb, var(--fg) 28%, transparent);
+    /* Halo stays on the warm pole (c2) so it remains "orangé" even under inversion. */
+    --halo:color-mix(in srgb, var(--c2) 28%, transparent);
   }
 }
 
@@ -46,7 +47,7 @@
 @supports (color: color-mix(in srgb, #000 50%, #fff)){
   :root[data-signal="true"]:not([data-failsafe="true"]){
     --accent:color-mix(in srgb, var(--fg) 94%, var(--bg));
-    --halo:color-mix(in srgb, var(--fg) 46%, transparent);
+    --halo:color-mix(in srgb, var(--c2) 46%, transparent);
   }
 }
 
