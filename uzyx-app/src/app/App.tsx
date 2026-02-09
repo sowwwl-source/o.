@@ -10,6 +10,7 @@ import { LandPage } from "@/pages/LandPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { StreamPage } from "@/pages/StreamPage";
 import { CloudGatePage } from "@/pages/CloudGatePage";
+import { AdminBoardPage } from "@/pages/AdminBoardPage";
 import type { NodeId } from "@/graph/graph";
 import { PerceptionProvider } from "@/perception/PerceptionProvider";
 import { Molette } from "@/components/Molette";
@@ -40,6 +41,7 @@ type Route =
   | { kind: "entry" }
   | { kind: "anchored" }
   | { kind: "lande_new" }
+  | { kind: "admin" }
   | { kind: "app"; id: NodeId }
   | { kind: "profile"; handle: string }
   | { kind: "cloud" };
@@ -53,6 +55,7 @@ function parseRouteFromHash(hash: string): Route {
   if (head === "entry") return { kind: "entry" };
   if (head === "anchored") return { kind: "anchored" };
   if (head === "lande" && (parts[1] ?? "").toLowerCase() === "new") return { kind: "lande_new" };
+  if (head === "admin") return { kind: "admin" };
 
   if (head === "u" && parts[1]) {
     const handle = decodeURIComponent(parts[1]).replace(/^@+/, "");
@@ -92,6 +95,7 @@ function minOForRoute(route: Route): OScore {
   if (route.kind === "entry") return 7;
   if (route.kind === "anchored") return 4;
   if (route.kind === "lande_new") return 5;
+  if (route.kind === "admin") return 2;
   if (route.kind === "app") return route.id === "LAND" ? 6 : route.id === "FERRY" ? 4 : route.id === "CONTACT" ? 4 : route.id === "STR3M" ? 3 : 2;
   return 0;
 }
@@ -144,6 +148,10 @@ export function App() {
         <AnchoredPage />
       ) : route.kind === "lande_new" ? (
         <LandNewPage />
+      ) : route.kind === "admin" ? (
+        <PerceptionProvider>
+          <AdminBoardPage />
+        </PerceptionProvider>
       ) : route.kind === "profile" ? (
         <PerceptionProvider>
           <ProfilePage handle={route.handle} />
@@ -156,7 +164,7 @@ export function App() {
         <AppGate id={route.id} />
       )}
 
-      <ONoteLine muted align={route.kind === "app" ? "right" : "left"} min_o={min_o} />
+      <ONoteLine muted align={route.kind === "app" || route.kind === "admin" ? "right" : "left"} min_o={min_o} />
       <UzyxImplicitAssist />
       <ONoteContextBridge />
       <LandThemeHydrator />

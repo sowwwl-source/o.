@@ -60,6 +60,7 @@ export type MeResponse = {
     email: string;
     handle: string;
     comm_address: string;
+    network_admin?: boolean;
     state_o?: string;
     flip_seq?: number;
   };
