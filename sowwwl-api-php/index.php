@@ -652,7 +652,13 @@ if ($path === '/auth/admin/magic/verify') {
     if (trim($token) === '') out(400, ['error' => 'invalid_token']);
 
     $pdo = db();
-    $host = request_public_host();
+    $expected = canonical_host((string)(env('O_ADMIN_MAGIC_PUBLIC_HOST', '') ?? ''));
+    // For verification, prefer the actual Host header to avoid trusting forwarded host values.
+    $host = canonical_host((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if (trim($host) === '') $host = request_public_host();
+    if ($expected !== '' && $host !== '' && $host !== $expected) {
+        out(403, ['error' => 'wrong_domain', 'message' => 'Mauvais domaine.']);
+    }
     [$ok, $err, $meta] = admin_magic_consume($pdo, $token, $host);
     if (!$ok) {
         $e = (string)$err;
