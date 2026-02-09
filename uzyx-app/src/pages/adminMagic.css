@@ -1,0 +1,114 @@
+.adminMagicRoot{
+  min-height:100vh;
+  padding:calc(var(--space-xl) + env(safe-area-inset-top, 0px));
+  display:flex;
+  flex-direction:column;
+  gap:var(--space-xl);
+}
+
+.adminMagicTop{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:var(--space-md);
+}
+
+.adminMagicTitle{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  font-size:14px;
+  opacity:.88;
+}
+
+.adminMagicMeta{
+  letter-spacing:.28em;
+  opacity:.56;
+}
+
+.adminMagicBlock{
+  max-width:720px;
+  display:flex;
+  flex-direction:column;
+  gap:var(--space-md);
+}
+
+.adminMagicLine{
+  letter-spacing:.24em;
+  opacity:.52;
+  font-size:12px;
+}
+
+.adminMagicRow{
+  display:grid;
+  grid-template-columns:200px 1fr;
+  gap:var(--space-sm);
+  align-items:baseline;
+}
+
+.adminMagicKey{
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.62;
+  font-size:12px;
+}
+
+.adminMagicInput{
+  background:transparent;
+  color:var(--fg);
+  border:0;
+  border-bottom:1px solid color-mix(in srgb, var(--fg) 24%, transparent);
+  padding:10px 0;
+  letter-spacing:.08em;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  outline:none;
+}
+
+.adminMagicInput:focus-visible{
+  outline:2px solid var(--fg);
+  outline-offset:8px;
+}
+
+.adminMagicCmds{
+  display:flex;
+  gap:var(--space-md);
+  align-items:baseline;
+  flex-wrap:wrap;
+}
+
+.adminMagicCmd{
+  text-decoration:none;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  font-size:12px;
+  opacity:.8;
+}
+
+.adminMagicCmd:hover{ opacity:1; }
+.adminMagicCmd:focus-visible{
+  outline:2px solid var(--fg);
+  outline-offset:8px;
+}
+
+.adminMagicCmd[data-disabled="1"]{
+  opacity:.28;
+  pointer-events:none;
+}
+
+.adminMagicNote{
+  letter-spacing:.14em;
+  opacity:.86;
+}
+
+.adminMagicHint{
+  letter-spacing:.18em;
+  opacity:.44;
+  font-size:12px;
+}
+
+@media (max-width: 720px){
+  .adminMagicRow{
+    grid-template-columns:1fr;
+  }
+}
+
