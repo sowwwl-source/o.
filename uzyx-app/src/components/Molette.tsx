@@ -204,7 +204,8 @@ export function Molette(props: { current: NodeId }) {
       const cy = window.innerHeight / 2;
       const dx = x - cx;
       const dy = y - cy;
-      const r = 62;
+      // Slightly forgiving hit radius: center is intentionally empty.
+      const r = Math.max(84, Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.12));
       return dx * dx + dy * dy <= r * r;
     };
 
@@ -225,8 +226,8 @@ export function Molette(props: { current: NodeId }) {
       helmAPI.toggle(true);
     };
 
-    window.addEventListener("click", onClick);
-    return () => window.removeEventListener("click", onClick);
+    window.addEventListener("click", onClick, { capture: true });
+    return () => window.removeEventListener("click", onClick, true);
   }, []);
 
   useEffect(() => {
