@@ -22,11 +22,24 @@
 - POST /auth/login     {email, password}
 - POST /auth/logout    {}
 - GET  /me
+- POST /auth/admin/magic/send   {email}  (anti-enumeration: always 200)
+- GET  /auth/admin/magic/verify?token=... (302 → `O_ADMIN_MAGIC_REDIRECT`)
 - GET  /soul/token
 - POST /soul/token     {token, config?} (requires X-CSRF)
 - POST /soul/upload    multipart: archive (.zip) + manifest_json? (requires X-CSRF)
 
 Uploads are stored under `SEED_ROOT` (default `/data`) in `soul.cloud/<uid>/uploads/`.
+
+## Admin magic-link (email)
+- One-time, expiring token (TTL clamped 10..15 minutes via `O_ADMIN_MAGIC_TTL_MIN`).
+- Token is never stored in plaintext (only `sha256(token)` is stored).
+- `send` endpoint always returns `{ "status": "ok" }` (anti-enumeration); delivery is logged server-side.
+- Domain is bound to the token (`issued_host`) and must match on verify.
+
+Recommended env:
+- `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` (forces link host + strict verify host)
+- `O_ADMIN_MAGIC_REDIRECT=/#/admin`
+- `O_EMAIL_HASH_SALT=<random>` (privacy for email_hash logs)
 
 ## Frontend integration (recommended)
 Serve the frontend and proxy API calls through the same origin:
