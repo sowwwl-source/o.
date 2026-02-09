@@ -16,6 +16,14 @@ function clamp(n: number, a: number, b: number) {
 
 const LS_KEY = "uzyx_helm_dock_v1";
 
+function snapToEdge(n: number, min: number, max: number, t: number): number {
+  const a = Math.min(min, max);
+  const b = Math.max(min, max);
+  if (Math.abs(n - a) <= t) return a;
+  if (Math.abs(n - b) <= t) return b;
+  return n;
+}
+
 function readStoredPos(): Point | null {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -35,7 +43,12 @@ function setRootVar(key: string, value: string) {
   } catch {}
 }
 
-function clampPosToPanel(p: Point, opts: { size: number; panelWidth: number; panelHeight: number }): Point {
+function panelBounds(opts: { size: number; panelWidth: number; panelHeight: number }): {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+} {
   const pad = 10;
   const vw = typeof window !== "undefined" ? window.innerWidth : opts.panelWidth;
   const vh = typeof window !== "undefined" ? window.innerHeight : opts.panelHeight;
@@ -45,9 +58,22 @@ function clampPosToPanel(p: Point, opts: { size: number; panelWidth: number; pan
   const maxX = vw - pad - w / 2 - opts.size / 2;
   const minY = pad + h / 2 - opts.size / 2;
   const maxY = vh - pad - h / 2 - opts.size / 2;
+  return { minX, maxX, minY, maxY };
+}
+
+function clampPosToPanel(p: Point, opts: { size: number; panelWidth: number; panelHeight: number }): Point {
+  const b = panelBounds(opts);
+  return { x: clamp(p.x, b.minX, b.maxX), y: clamp(p.y, b.minY, b.maxY) };
+}
+
+function magnetizeToPanelEdges(p: Point, opts: { size: number; panelWidth: number; panelHeight: number }): Point {
+  const b = panelBounds(opts);
+  const clamped = { x: clamp(p.x, b.minX, b.maxX), y: clamp(p.y, b.minY, b.maxY) };
+  // "Magnetic" threshold scales with dock size (feels consistent on mobile).
+  const t = Math.max(14, Math.round(opts.size * 0.34));
   return {
-    x: clamp(p.x, minX, maxX),
-    y: clamp(p.y, minY, maxY),
+    x: snapToEdge(clamped.x, b.minX, b.maxX, t),
+    y: snapToEdge(clamped.y, b.minY, b.maxY, t),
   };
 }
 
@@ -170,7 +196,7 @@ export function HelmDock({ size = 56, panelWidth = 560, panelHeight = 560 }: Pro
         if (Math.hypot(dx, dy) > 6) d.moved = true;
 
         setPos(
-          clampPosToPanel(
+          magnetizeToPanelEdges(
             { x: d.startPos.x + dx, y: d.startPos.y + dy },
             { size, panelWidth, panelHeight }
           )
@@ -180,6 +206,9 @@ export function HelmDock({ size = 56, panelWidth = 560, panelHeight = 560 }: Pro
         const d = dragRef.current;
         if (d.pointerId === e.pointerId) d.pointerId = null;
         d.active = false;
+        if (d.moved) {
+          setPos((p) => magnetizeToPanelEdges(p, { size, panelWidth, panelHeight }));
+        }
         // Keep moved flag for the synthetic click; reset shortly after.
         if (d.moved) window.setTimeout(() => (dragRef.current.moved = false), 60);
       }}

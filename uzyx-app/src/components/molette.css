@@ -44,6 +44,20 @@
   filter:blur(var(--dz-soft-blur, 0px));
 }
 
+.helmIsland{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  opacity:.42;
+  filter:blur(calc(var(--dz-soft-blur, 0px) * .65));
+}
+
+.helmOverlay[data-mode="failsafe-hard"] .helmIsland{
+  opacity:.14;
+}
+
 .helmHalo{
   position:fixed;
   left:var(--uzyx-helm-left, calc(50vw - 280px));
@@ -118,7 +132,7 @@
   pointer-events:none;
   background:
     repeating-conic-gradient(
-      from 0deg,
+      from var(--ring-rot, 0deg),
       transparent 0 9deg,
       color-mix(in srgb, currentColor 42%, transparent) 9deg 9.3deg
     );
@@ -177,7 +191,8 @@
     translate(-50%,-50%)
     rotate(var(--a, 0deg))
     translateX(var(--helm-label-r))
-    rotate(calc(-1 * var(--a, 0deg)));
+    rotate(calc(-1 * var(--a, 0deg)))
+    translate(var(--warp-x, 0px), var(--warp-y, 0px));
   display:inline-flex;
   align-items:baseline;
   font-size:12px;

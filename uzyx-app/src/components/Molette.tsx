@@ -17,6 +17,19 @@ function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
 }
 
+function fnv1a32(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function angleDiff(a: number, b: number) {
+  return normalizeAngle(a - b);
+}
+
 function isInteractiveTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
   return Boolean(t.closest("a,button,input,textarea,select,[role='link'],[contenteditable='true']"));
@@ -85,9 +98,15 @@ export function Molette(props: { current: NodeId }) {
 
   const open = helm.open;
   const [theta, setTheta] = useState(0);
+  const thetaRef = useRef(0);
+  useEffect(() => {
+    thetaRef.current = theta;
+  }, [theta]);
   const [phase, setPhase] = useState<"idle" | "deploy" | "traverse">("idle");
   const [flash, setFlash] = useState(false);
   const flashTimerRef = useRef<number | null>(null);
+  const wheelRef = useRef<HTMLDivElement | null>(null);
+  const islandRef = useRef<HTMLCanvasElement | null>(null);
 
   const triggerFlash = () => {
     if (store.getReducedMotion()) return;
@@ -239,6 +258,157 @@ export function Molette(props: { current: NodeId }) {
     }, store.getReducedMotion() ? 0 : 90);
     return () => window.clearTimeout(t);
   }, [open, store]);
+
+  // "Island" matter (no images): a dynamic coastline around the ring, drawn in Canvas.
+  useEffect(() => {
+    if (!open) return;
+    const canvas = islandRef.current;
+    const wheelEl = wheelRef.current;
+    if (!canvas || !wheelEl) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const reduced = store.getReducedMotion();
+    const seed = fnv1a32(`${current}:${adjacent.join(",")}`);
+    const tau = Math.PI * 2;
+
+    let w = 0;
+    let h = 0;
+    let dpr = 1;
+
+    const resize = () => {
+      const r = wheelEl.getBoundingClientRect();
+      w = Math.max(1, Math.round(r.width));
+      h = Math.max(1, Math.round(r.height));
+      dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+    };
+
+    resize();
+    const ro = "ResizeObserver" in window ? new ResizeObserver(() => resize()) : null;
+    ro?.observe(wheelEl);
+
+    const readColors = () => {
+      const cs = getComputedStyle(document.documentElement);
+      const fg = cs.getPropertyValue("--fg").trim() || "#e7e7e7";
+      const halo = cs.getPropertyValue("--halo").trim() || "rgba(255,180,90,.25)";
+      return { fg, halo };
+    };
+
+    let colors = readColors();
+    const obs = new MutationObserver(() => {
+      colors = readColors();
+    });
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-invert"] });
+
+    const phase0 = ((seed % 997) / 997) * tau;
+    const phase1 = (((seed >>> 11) % 991) / 991) * tau;
+    const phase2 = (((seed >>> 19) % 983) / 983) * tau;
+    const f1 = 3 + (seed % 3); // 3..5
+    const f2 = 7 + ((seed >>> 3) % 5); // 7..11
+    const f3 = 4 + ((seed >>> 7) % 4); // 4..7
+
+    const draw = (nowMs: number) => {
+      const t = nowMs / 1000;
+      const frame = store.getFrame();
+      const phi = phiAngleFromFrame(frame);
+      const th = thetaRef.current;
+
+      const mis = Math.min(1, Math.abs(angleDiff(th, phi)) / Math.PI);
+      const calm = clamp01((1 - mis) * (0.35 + 0.65 * frame.focus.weight));
+      const wild = 1 - calm;
+
+      const min = Math.max(1, Math.min(w, h));
+      const cx = w / 2;
+      const cy = h / 2;
+      const baseR = min * 0.315;
+      const amp = min * (0.012 + 0.032 * wild + 0.03 * frame.stateBlend);
+      const bulgeAmp = min * (0.01 + 0.05 * (0.25 + 0.75 * frame.stateBlend));
+      const bulgeSigma = 0.62;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const segments = reduced ? 72 : 112;
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const a = (i / segments) * tau;
+        const n =
+          Math.sin(a * f1 + t * 0.55 + phase0) * 0.62 +
+          Math.sin(a * f2 - t * 0.35 + phase1) * 0.28 +
+          Math.cos((a - th) * f3 + t * 0.22 + phase2) * 0.24;
+
+        const d = angleDiff(a, th);
+        const bulge = Math.exp(-(d * d) / (bulgeSigma * bulgeSigma)) * bulgeAmp;
+
+        const r = baseR + n * amp + bulge;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+
+      // Coastline (bicolore): fg + a small halo at ΔZ′ peaks.
+      ctx.globalAlpha = 0.22 + 0.22 * (0.55 + 0.45 * wild);
+      ctx.strokeStyle = colors.fg;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      if (!reduced && frame.stateBlend > 0.15) {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.08 + 0.12 * frame.stateBlend;
+        ctx.strokeStyle = colors.halo;
+        ctx.filter = `blur(${Math.min(4, 0.6 + frame.stateBlend * 2.2)}px)`;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Shoals / soundings: points & slashes (no icons).
+      const soundings = reduced ? 78 : 138;
+      ctx.globalAlpha = 0.06 + 0.14 * wild;
+      ctx.fillStyle = colors.fg;
+      ctx.strokeStyle = colors.fg;
+      for (let i = 0; i < soundings; i++) {
+        const a = (((i * 97) ^ seed) % 2048) / 2048 * tau + (i % 3) * 0.003;
+        const tide = Math.sin(t * 0.45 + a * 3.2 + phase1);
+        const rr = baseR + amp * 0.35 + (0.12 + 0.2 * wild) * min + tide * (0.008 + 0.012 * wild) * min;
+        const x = cx + Math.cos(a) * rr;
+        const y = cy + Math.sin(a) * rr;
+
+        if (i % 5 === 0) {
+          const len = 6 + (i % 7);
+          ctx.beginPath();
+          ctx.moveTo(x - len * 0.45, y + len * 0.45);
+          ctx.lineTo(x + len * 0.45, y - len * 0.45);
+          ctx.stroke();
+        } else {
+          ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
+        }
+      }
+
+      ctx.globalAlpha = 1;
+    };
+
+    let raf: number | null = null;
+    const tick = (now: number) => {
+      draw(now);
+      if (!reduced) raf = window.requestAnimationFrame(tick);
+    };
+
+    tick(performance.now());
+
+    return () => {
+      if (raf !== null) window.cancelAnimationFrame(raf);
+      ro?.disconnect();
+      obs.disconnect();
+    };
+  }, [open, store, current, adjacent]);
 
   useEffect(() => {
     helmAPI.setActive(current);
@@ -423,6 +593,7 @@ export function Molette(props: { current: NodeId }) {
       style={
         {
           ["--theta" as any]: `${theta.toFixed(4)}rad`,
+          ["--ring-rot" as any]: `${thetaDeg}deg`,
           ["--dz-soft-blur" as any]: `${(blend * 0.35).toFixed(2)}px`,
           ["--dz-blur" as any]: `${(blend * 0.9).toFixed(2)}px`,
           ["--birds-dur" as any]: `${uzyx.towardO ? 44 : 32}s`,
@@ -442,7 +613,8 @@ export function Molette(props: { current: NodeId }) {
       }}
     >
       <div className="helmHalo" aria-hidden="true" />
-      <div className="helmWheel" aria-hidden="true">
+      <div ref={wheelRef} className="helmWheel" aria-hidden="true">
+        <canvas ref={islandRef} className="helmIsland" aria-hidden="true" />
         <div className="helmRing" />
         <div className="helmPoint" aria-hidden="true" />
         <div className="helmBirdField" aria-hidden="true">
