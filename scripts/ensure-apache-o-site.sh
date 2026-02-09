@@ -8,10 +8,8 @@ set -euo pipefail
 # It is idempotent and will disable conflicting vhosts for the same hostnames.
 #
 # Hosts:
-# - o.sowwwl.cloud (primary)
-# - sowwwl.cloud, www.sowwwl.cloud (aliases)
-#
-# NOTE: 0.user.o.sowwwl.cloud currently requires an additional DNS record + TLS cert.
+# - 0.user.o.sowwwl.cloud (primary)
+# - o.sowwwl.cloud, sowwwl.cloud, www.sowwwl.cloud (aliases)
 
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   echo "[ensure-apache-o-site] must run as root" >&2
@@ -27,8 +25,8 @@ SITE_NAME="o-sowwwl-cloud"
 DOCROOT="/var/www/o"
 API_UPSTREAM="http://127.0.0.1:8000/"
 
-PRIMARY_HOST="o.sowwwl.cloud"
-ALIASES=("sowwwl.cloud" "www.sowwwl.cloud")
+PRIMARY_HOST="0.user.o.sowwwl.cloud"
+ALIASES=("o.sowwwl.cloud" "sowwwl.cloud" "www.sowwwl.cloud")
 
 find_le_cert_dir_for_host() {
   local host="$1"
@@ -45,10 +43,10 @@ find_le_cert_dir_for_host() {
   return 1
 }
 
-CERT_DIR="$(find_le_cert_dir_for_host "sowwwl.cloud" || true)"
+CERT_DIR="$(find_le_cert_dir_for_host "${PRIMARY_HOST}" || true)"
 if [ -z "${CERT_DIR}" ]; then
-  # Fallback: try the primary host.
-  CERT_DIR="$(find_le_cert_dir_for_host "${PRIMARY_HOST}" || true)"
+  # Fallback: common shared cert.
+  CERT_DIR="$(find_le_cert_dir_for_host "sowwwl.cloud" || true)"
 fi
 
 if [ -z "${CERT_DIR}" ]; then
@@ -120,8 +118,15 @@ cat > "${TMP}" <<EOF
     Options -Indexes
     AllowOverride None
     Require all granted
-    FallbackResource /index.html
   </Directory>
+
+  # SPA fallback without breaking /api
+  RewriteEngine On
+  RewriteRule ^api/ - [L]
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ /index.html [L]
 
   <Files "index.html">
     Header set Cache-Control "no-store"
