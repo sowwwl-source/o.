@@ -7,6 +7,7 @@ import { useONoteAPI } from "@/oNote/oNote.store";
 import { apiLandStateGet, apiLandStateSave, getCsrf } from "@/api/apiClient";
 import { useOEvent } from "@/oNote/oNote.hooks";
 import { useSession } from "@/api/sessionStore";
+import { QuestDeltaPanel } from "@/quest/QuestDeltaPanel";
 
 function clamp01(x: number): number {
   if (!Number.isFinite(x)) return 0;
@@ -46,6 +47,7 @@ export function LandPage() {
 
   const [lambda, setLambda] = useState(0.45);
   const [beaute, setBeaute] = useState("");
+  const [landType, setLandType] = useState<"A" | "B" | "C" | null>(null);
   const lambdaRef = useRef(lambda);
   const beauteRef = useRef(beaute);
 
@@ -75,6 +77,8 @@ export function LandPage() {
       const r = await apiLandStateGet();
       if (!alive) return;
       if (r.ok) {
+        const lt = r.data.land_type === "A" || r.data.land_type === "B" || r.data.land_type === "C" ? r.data.land_type : null;
+        setLandType(lt);
         const l = typeof r.data.lambda === "number" ? clamp01(r.data.lambda) : 0.45;
         const b = typeof r.data.beaute_text === "string" ? r.data.beaute_text : "";
         lambdaRef.current = l;
@@ -332,6 +336,7 @@ export function LandPage() {
           </div>
         ) : null}
       </section>
+      <QuestDeltaPanel landType={landType} refreshSession={() => void session.api.refresh()} />
     </main>
   );
 }

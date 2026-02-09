@@ -125,3 +125,37 @@ export type LandStateSavePayload = {
 export async function apiLandStateSave(payload: LandStateSavePayload): Promise<ApiResult<any>> {
   return apiRequest("/land/state", { method: "POST", json: payload, csrf: true });
 }
+
+export type QuestDeltaState = "IDLE" | "RUNNING" | "ENDED";
+
+export type QuestDeltaAnswers = {
+  beauty_text?: string | null;
+  coherence_score?: number | null;
+  passage_choice?: string | null;
+  land_glyph?: string | null;
+  o_seed_line?: string | null;
+  seal?: string | null;
+};
+
+export type QuestDeltaGetResponse = {
+  state: QuestDeltaState;
+  step: number;
+  answers: QuestDeltaAnswers;
+  updated_at?: string | null;
+};
+
+export async function apiQuestDeltaGet(): Promise<ApiResult<QuestDeltaGetResponse>> {
+  return apiRequest("/quest/delta", { method: "GET" });
+}
+
+export async function apiQuestDeltaStart(): Promise<ApiResult<any>> {
+  return apiRequest("/quest/delta/start", { method: "POST", json: {}, csrf: true });
+}
+
+export async function apiQuestDeltaAnswer(answer: string): Promise<ApiResult<any>> {
+  return apiRequest("/quest/delta/answer", { method: "POST", json: { answer }, csrf: true });
+}
+
+export async function apiQuestDeltaEnd(): Promise<ApiResult<any>> {
+  return apiRequest("/quest/delta/end", { method: "POST", json: {}, csrf: true });
+}

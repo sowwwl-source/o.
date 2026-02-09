@@ -1,0 +1,101 @@
+.qDeltaRoot{
+  position:absolute;
+  right:calc(var(--space-xl) + env(safe-area-inset-right, 0px));
+  bottom:calc(var(--space-xl) + env(safe-area-inset-bottom, 0px));
+  display:grid;
+  gap:12px;
+  max-width:min(64ch, calc(100vw - 2 * var(--space-xl)));
+  text-align:right;
+}
+
+.qDeltaTitle{
+  font-size:12px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+
+.qDeltaMeta{
+  font-size:12px;
+  letter-spacing:.14em;
+  opacity:.56;
+}
+
+.qDeltaHint{
+  font-size:12px;
+  letter-spacing:.14em;
+  opacity:.62;
+}
+
+.qDeltaRow{
+  display:grid;
+  grid-template-columns: 10ch 1fr;
+  gap:12px;
+  align-items:baseline;
+}
+.qDeltaKey{
+  font-size:12px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.62;
+}
+.qDeltaInput{
+  font: inherit;
+  font-size:12px;
+  letter-spacing:.12em;
+  background: transparent;
+  border:0;
+  border-bottom:1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+  color:inherit;
+  padding:6px 0 6px;
+  outline:none;
+  min-width:0;
+  text-align:right;
+}
+.qDeltaInput::placeholder{ opacity:.45; }
+.qDeltaInput:focus-visible{
+  outline:2px solid var(--fg);
+  outline-offset:6px;
+  border-bottom-color: transparent;
+}
+
+.qDeltaCmds{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.qDeltaCmd{
+  display:inline-block;
+  font: inherit;
+  font-size:12px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.86;
+  user-select:none;
+}
+.qDeltaCmd[data-disabled="1"]{ opacity:.32; pointer-events:none; }
+.qDeltaCmd:hover{ opacity:1; text-decoration: underline; text-underline-offset: .35em; }
+.qDeltaCmd:focus-visible{ outline:2px solid var(--fg); outline-offset:4px; }
+
+.qDeltaStatus{
+  font-size:12px;
+  letter-spacing:.12em;
+  opacity:.62;
+}
+
+@media (max-width: 640px){
+  .qDeltaRoot{
+    right:calc(var(--space-lg) + env(safe-area-inset-right, 0px));
+    bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 2 * var(--space-lg));
+  }
+  .qDeltaRow{
+    grid-template-columns: 1fr;
+    gap:6px;
+  }
+  .qDeltaInput{ text-align:left; }
+  .qDeltaRoot{ text-align:left; }
+  .qDeltaCmds{ justify-content:flex-start; }
+}
+
