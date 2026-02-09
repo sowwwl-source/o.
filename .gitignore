@@ -12,4 +12,11 @@ backups/
 # Node / bundlers
 **/node_modules/
 **/dist/
+**/.next/
 **/*.tsbuildinfo
+
+# SSH CA / local state (new system)
+backend/data/
+infra/ca/
+infra/bastion/revoked.krl
+infra/bastion/revoked.krl-spec

@@ -1,0 +1,30 @@
+# o-sshca bastion config (snippet)
+#
+# Goal: accept ONLY OpenSSH user certificates signed by the CA.
+#
+# 1) Copy the CA public key to the bastion:
+#    /etc/ssh/o_ca.pub
+#
+# 2) (Optional) Copy the revoked KRL:
+#    /etc/ssh/o_revoked.krl
+
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+ChallengeResponseAuthentication no
+PermitRootLogin no
+
+PubkeyAuthentication yes
+
+# Do not use per-user authorized_keys; CA-only.
+AuthorizedKeysFile none
+
+# Trust only this CA for *user* certs:
+TrustedUserCAKeys /etc/ssh/o_ca.pub
+
+# Optional immediate revocation (KRL):
+# RevokedKeys /etc/ssh/o_revoked.krl
+
+# Optional principals hook (see infra/bastion/authorized_principals.sh):
+# AuthorizedPrincipalsCommand /usr/local/bin/o-authorized-principals
+# AuthorizedPrincipalsCommandUser nobody
+

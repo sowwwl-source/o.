@@ -25,6 +25,10 @@ Complete CI/CD pipeline with Docker, GitHub Actions, and production deployment.
 - **Caddyfile.example** for HTTPS reverse proxy (recommended)
 - **nginx.conf.example** for nginx reverse proxy (alternative)
 
+### SSH CA System (new)
+- `backend/` + `agent/` + `admin/` + `infra/` — OpenSSH CA certificates + local agent + admin provisioning UI
+- Setup guide: `README_SSHCA.md`
+
 ## 🚀 Quick Start (Local Development)
 
 ```bash

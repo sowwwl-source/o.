@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>o-agent</title>
+    <style>
+      :root {
+        --bg: #0b0d0f;
+        --fg: #e7e7e7;
+        --halo: rgba(255, 180, 90, 0.25);
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+      }
+      .wrap {
+        padding: 24px;
+        max-width: 980px;
+      }
+      pre {
+        margin: 0 0 16px 0;
+        white-space: pre;
+        color: var(--fg);
+      }
+      .line {
+        opacity: 0.9;
+      }
+      .muted {
+        opacity: 0.72;
+      }
+      .ok {
+        opacity: 0.95;
+      }
+      .warn {
+        color: var(--fg);
+        text-shadow: 0 0 24px var(--halo);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 10px;
+        margin: 8px 0;
+      }
+      .k {
+        opacity: 0.66;
+      }
+      .v {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <pre aria-hidden="true">
+ .   O
+   .    .
+     .      .
+   .    .      .
+       .   o-agent
+      </pre>
+
+      <div class="line muted">Short-lived SSH certificates. Local keys only. Server never decrypts.</div>
+      <div class="line muted">If this is a fresh device: set env vars, then run: <span class="warn">o-agent verify</span></div>
+
+      <div id="status" style="margin-top: 18px"></div>
+    </div>
+
+    <script>
+      const el = document.getElementById("status");
+      function row(k, v) {
+        const div = document.createElement("div");
+        div.className = "row";
+        const kk = document.createElement("div");
+        kk.className = "k";
+        kk.textContent = k;
+        const vv = document.createElement("div");
+        vv.className = "v";
+        vv.textContent = v;
+        div.appendChild(kk);
+        div.appendChild(vv);
+        el.appendChild(div);
+      }
+
+      fetch("/api/status")
+        .then((r) => r.json())
+        .then((s) => {
+          row("home", s.home);
+          row("configured", s.hasConfig ? "yes" : "no");
+          if (s.tokenId) row("tokenId", s.tokenId);
+          if (s.backendUrl) row("backend", s.backendUrl);
+          row("ssh key", s.hasKey ? "ok" : "missing");
+          row("cert", s.hasCert ? "present" : "none");
+          row("ca pub", s.hasCa ? "present" : "none");
+        })
+        .catch(() => row("status", "unavailable"));
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,88 @@
+:root {
+  --bg: #0b0d0f;
+  --fg: #e7e7e7;
+  --halo: rgba(255, 180, 90, 0.25);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+a {
+  color: inherit;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--fg), transparent 80%);
+  padding: 8px 10px;
+  outline: none;
+}
+
+input:focus,
+textarea:focus {
+  border-color: color-mix(in srgb, var(--fg), transparent 55%);
+  box-shadow: 0 0 0 1px var(--fg), 0 0 28px var(--halo);
+}
+
+.wrap {
+  padding: 24px;
+  max-width: 1040px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.muted {
+  opacity: 0.7;
+}
+
+.line {
+  white-space: pre-wrap;
+}
+
+pre {
+  margin: 0;
+}
+
+.mono {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cmd {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--fg), transparent 78%);
+  text-decoration: none;
+}
+
+.cmd:focus {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
