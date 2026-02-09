@@ -1,7 +1,11 @@
 :root{
-  /* Bicolor tokens (O. socle) */
-  --bg:#04120b;
-  --fg:#ffe7c7;
+  /* Bicolor tokens (O. socle) — themeable */
+  --t1:#04120b;
+  --t2:#ffe7c7;
+  --c1:var(--t1);
+  --c2:var(--t2);
+  --bg:var(--c1);
+  --fg:var(--c2);
   /* Optional accents MUST remain derived from bg/fg (no 3rd hue). */
   --accent:var(--fg);
   --halo:transparent;
@@ -18,8 +22,8 @@
 
 [data-invert="false"]{
   /* explicit default for mutation-observed UIs */
-  --bg:#04120b;
-  --fg:#ffe7c7;
+  --bg:var(--c1);
+  --fg:var(--c2);
 }
 
 @supports (color: color-mix(in srgb, #000 50%, #fff)){
@@ -30,13 +34,27 @@
 }
 
 [data-invert="true"]{
-  --bg:#ffe7c7;
-  --fg:#04120b;
+  --bg:var(--c2);
+  --fg:var(--c1);
+}
+
+/* Third category (shake): item-primary emphasis (still derived from bg/fg). */
+:root[data-signal="true"]:not([data-failsafe="true"]){
+  --accent:var(--fg);
+}
+
+@supports (color: color-mix(in srgb, #000 50%, #fff)){
+  :root[data-signal="true"]:not([data-failsafe="true"]){
+    --accent:color-mix(in srgb, var(--fg) 94%, var(--bg));
+    --halo:color-mix(in srgb, var(--fg) 46%, transparent);
+  }
 }
 
 [data-failsafe="true"]{
-  --bg:#000000;
-  --fg:#060606;
+  --c1:#000000;
+  --c2:#060606;
+  --bg:var(--c1);
+  --fg:var(--c2);
   --accent:var(--fg);
   --halo:transparent;
 }

@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./questDelta.css";
 import { apiQuestDeltaAnswer, apiQuestDeltaEnd, apiQuestDeltaGet, apiQuestDeltaStart, getCsrf } from "@/api/apiClient";
 import { useOEvent } from "@/oNote/oNote.hooks";
+import { applyLandTheme } from "@/theme/landTheme";
+import type { LandTheme } from "@/api/apiClient";
 
 type LandType = "A" | "B" | "C" | null;
 
@@ -190,6 +192,11 @@ export function QuestDeltaPanel(props: {
         }
         dispatch(r.status === 0 ? "network_error" : "form_validation_error");
         return;
+      }
+
+      const maybeTheme = (r.data as any)?.theme as LandTheme | null | undefined;
+      if (maybeTheme && typeof maybeTheme === "object" && typeof (maybeTheme as any).glyph === "string") {
+        applyLandTheme(maybeTheme);
       }
       const seal = String((r.data as any)?.seal || "");
       setNote(seal ? `seal:${seal}` : "ended");

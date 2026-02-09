@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BoardPage } from "@/pages/BoardPage";
 import { HomePage } from "@/pages/HomePage";
 import { EntryPage } from "@/pages/EntryPage";
@@ -26,6 +26,9 @@ import type { OScore } from "@/oNote/oNote.types";
 import { useOEvent } from "@/oNote/oNote.hooks";
 import { HelmDock } from "@/uzyx/HelmDock";
 import { apiLandGet } from "@/api/apiClient";
+import { apiLandThemeGet } from "@/api/apiClient";
+import { applyLandTheme, clearLandTheme } from "@/theme/landTheme";
+import { installShakeSignal } from "@/theme/shakeSignal";
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
@@ -100,6 +103,8 @@ export function App() {
   useUzyxSignals();
   useUzyxFailSafe();
 
+  useEffect(() => installShakeSignal(), []);
+
   useEffect(() => {
     const onHash = () => setRoute(parseRouteFromHash(window.location.hash));
     window.addEventListener("hashchange", onHash);
@@ -154,6 +159,7 @@ export function App() {
       <ONoteLine muted align={route.kind === "app" ? "right" : "left"} min_o={min_o} />
       <UzyxImplicitAssist />
       <ONoteContextBridge />
+      <LandThemeHydrator />
     </ONoteProvider>
   );
 }
@@ -281,6 +287,37 @@ function ONoteContextBridge() {
     const hasSession = session.state.phase === "authed";
     setContext({ hasSession });
   }, [session.state.phase, setContext]);
+
+  return null;
+}
+
+function LandThemeHydrator() {
+  const session = useSession();
+  const lastUidRef = useRef<number | null>(null);
+
+  const phase = session.state.phase;
+  const uid = phase === "authed" ? session.state.me.user.id : null;
+
+  useEffect(() => {
+    if (phase !== "authed" || uid === null) {
+      lastUidRef.current = null;
+      clearLandTheme();
+      return;
+    }
+    if (lastUidRef.current === uid) return;
+    lastUidRef.current = uid;
+
+    let alive = true;
+    void (async () => {
+      const r = await apiLandThemeGet();
+      if (!alive) return;
+      if (r.ok) applyLandTheme(r.data.theme);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [phase, uid]);
 
   return null;
 }

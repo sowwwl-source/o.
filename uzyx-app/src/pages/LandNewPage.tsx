@@ -41,7 +41,7 @@ export function LandNewPage() {
       if (!alive) return;
       if (r.ok && r.data.created) {
         setContext({ hasLand: true });
-        window.location.hash = "#/app";
+        window.location.hash = "#/LAND";
         return;
       }
       if (!r.ok) {
@@ -88,7 +88,7 @@ export function LandNewPage() {
       if (r.ok) {
         setContext({ hasLand: true });
         dispatch("land_created");
-        window.location.hash = "#/app";
+        window.location.hash = "#/LAND";
         return;
       }
       const tag = String((r.data as any)?.error || r.status || "");

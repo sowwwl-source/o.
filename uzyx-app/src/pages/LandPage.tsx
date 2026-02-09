@@ -20,6 +20,11 @@ function lambdaLabel(v: number): string {
   return "oscillation";
 }
 
+function isInteractiveTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof Element)) return false;
+  return Boolean(t.closest("a,input,textarea,select,[role='slider']"));
+}
+
 const SAVE_DEBOUNCE_MS = 650;
 const NOTE_TTL_MS = 2400;
 
@@ -44,6 +49,53 @@ export function LandPage() {
     setInvert(true);
     return () => setInvert(prev);
   }, []);
+
+  const invertTapRef = useRef<{
+    pointerId: number | null;
+    t0: number;
+    x0: number;
+    y0: number;
+    moved: boolean;
+  }>({ pointerId: null, t0: 0, x0: 0, y0: 0, moved: false });
+
+  const canInvertOnClick = () => document.documentElement.dataset.landInvertOnClick !== "false";
+
+  const onRootPointerDown = (e: React.PointerEvent<HTMLElement>) => {
+    if (e.defaultPrevented) return;
+    if (e.button !== 0) return;
+    if (!canInvertOnClick()) return;
+    if (isInteractiveTarget(e.target)) return;
+    invertTapRef.current.pointerId = e.pointerId;
+    invertTapRef.current.t0 = performance.now();
+    invertTapRef.current.x0 = e.clientX;
+    invertTapRef.current.y0 = e.clientY;
+    invertTapRef.current.moved = false;
+  };
+
+  const onRootPointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    const d = invertTapRef.current;
+    if (d.pointerId === null || d.pointerId !== e.pointerId) return;
+    const dx = e.clientX - d.x0;
+    const dy = e.clientY - d.y0;
+    if (Math.hypot(dx, dy) > 10) d.moved = true;
+  };
+
+  const onRootPointerUp = (e: React.PointerEvent<HTMLElement>) => {
+    const d = invertTapRef.current;
+    if (d.pointerId === null || d.pointerId !== e.pointerId) return;
+    d.pointerId = null;
+    if (d.moved) return;
+    const dt = performance.now() - d.t0;
+    if (dt > 420) return;
+    setInvert(!isInverted());
+  };
+
+  const onRootPointerCancel = (e: React.PointerEvent<HTMLElement>) => {
+    const d = invertTapRef.current;
+    if (d.pointerId === null || d.pointerId !== e.pointerId) return;
+    d.pointerId = null;
+    d.moved = false;
+  };
 
   const [lambda, setLambda] = useState(0.45);
   const [beaute, setBeaute] = useState("");
@@ -283,7 +335,15 @@ export function LandPage() {
   const status = note ? note : saving ? "sync: …" : !loaded ? "state: …" : null;
 
   return (
-    <main ref={rootRef} className="landRoot" aria-label="LAND">
+    <main
+      ref={rootRef}
+      className="landRoot"
+      aria-label="LAND"
+      onPointerDown={onRootPointerDown}
+      onPointerMove={onRootPointerMove}
+      onPointerUp={onRootPointerUp}
+      onPointerCancel={onRootPointerCancel}
+    >
       <HautPoint href="#/HAUT" label="Haut Point" onHoldStill={onHautHoldStill} />
       <section className="oC3" aria-label="0C3">
         <div className="oC3Title" aria-hidden="true">

@@ -106,6 +106,24 @@ export async function apiLandCreate(land_type: "A" | "B" | "C"): Promise<ApiResu
   return apiRequest("/land/create", { method: "POST", json: { land_type }, csrf: true });
 }
 
+export type LandTheme = {
+  glyph: string;
+  hue: number;
+  sat: number;
+  lum: number;
+  contrast: number;
+  invertOnClick: boolean;
+  theme_updated_at?: string | null;
+};
+
+export type LandThemeGetResponse = {
+  theme: LandTheme | null;
+};
+
+export async function apiLandThemeGet(): Promise<ApiResult<LandThemeGetResponse>> {
+  return apiRequest("/land/theme", { method: "GET" });
+}
+
 export type LandStateGetResponse = {
   land_type: "A" | "B" | "C" | null;
   lambda: number | null;
