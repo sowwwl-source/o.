@@ -69,22 +69,25 @@ function ghostFor(id: string | null) {
   return "—";
 }
 
-function readRootPxVar(key: string, fallback: number): number {
-  if (typeof document === "undefined") return fallback;
-  const raw = document.documentElement.style.getPropertyValue(key);
-  const t = String(raw || "").trim();
-  if (!t) return fallback;
-  const n = t.endsWith("px") ? Number(t.slice(0, -2)) : Number(t);
-  return Number.isFinite(n) ? n : fallback;
-}
+type PanelPx = { left: number; top: number; w: number; h: number; cx: number; cy: number };
 
-function helmCenterPx(): { x: number; y: number } {
-  const fx = typeof window !== "undefined" ? window.innerWidth / 2 : 0;
-  const fy = typeof window !== "undefined" ? window.innerHeight / 2 : 0;
-  return {
-    x: readRootPxVar("--uzyx-helm-cx", fx),
-    y: readRootPxVar("--uzyx-helm-cy", fy),
-  };
+function computeFullscreenPanelPx(opts?: { pad?: number; min?: number }): PanelPx {
+  const pad = opts?.pad ?? 14;
+  const minSize = opts?.min ?? 240;
+  if (typeof window === "undefined") {
+    const w = 560;
+    const h = 560;
+    return { left: 0, top: 0, w, h, cx: w / 2, cy: h / 2 };
+  }
+  const vv = window.visualViewport;
+  const vw = Math.max(1, Math.round(vv?.width ?? window.innerWidth));
+  const vh = Math.max(1, Math.round(vv?.height ?? window.innerHeight));
+  const ox = Math.round(vv?.offsetLeft ?? 0);
+  const oy = Math.round(vv?.offsetTop ?? 0);
+  const size = Math.max(minSize, Math.min(vw - pad * 2, vh - pad * 2));
+  const left = ox + (vw - size) / 2;
+  const top = oy + (vh - size) / 2;
+  return { left, top, w: size, h: size, cx: left + size / 2, cy: top + size / 2 };
 }
 
 export function Molette(props: { current: NodeId }) {
@@ -97,6 +100,7 @@ export function Molette(props: { current: NodeId }) {
   const helm = useHelmState();
 
   const open = helm.open;
+  const [panel, setPanel] = useState<PanelPx>(() => computeFullscreenPanelPx());
   const [theta, setTheta] = useState(0);
   const thetaRef = useRef(0);
   useEffect(() => {
@@ -195,6 +199,37 @@ export function Molette(props: { current: NodeId }) {
   }, []);
 
   useEffect(() => {
+    const inCenter = (x: number, y: number) => {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      const r = 62;
+      return dx * dx + dy * dy <= r * r;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const s = helmAPI.getState();
+      if (s.open) return;
+      if (e.button !== 0) return;
+      if (!inCenter(e.clientX, e.clientY)) return;
+
+      if (isInteractiveTarget(e.target)) {
+        const hp = e.target instanceof Element ? e.target.closest(".hautPoint") : null;
+        if (!hp) return;
+        if (hp.getAttribute("data-revealed") === "1") return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+      helmAPI.toggle(true);
+    };
+
+    window.addEventListener("click", onClick);
+    return () => window.removeEventListener("click", onClick);
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
       const k = String(e.key || "").toLowerCase();
@@ -248,6 +283,7 @@ export function Molette(props: { current: NodeId }) {
     if (!open) return;
     // Seed theta from Φ when opening (molette anchors on focus without reticle).
     const frame = store.getFrame();
+    setPanel(computeFullscreenPanelPx());
     setTheta(phiAngleFromFrame(frame));
     setPhase("deploy");
     const t = window.setTimeout(() => setPhase("idle"), store.getReducedMotion() ? 0 : 460);
@@ -258,6 +294,18 @@ export function Molette(props: { current: NodeId }) {
     }, store.getReducedMotion() ? 0 : 90);
     return () => window.clearTimeout(t);
   }, [open, store]);
+
+  useEffect(() => {
+    if (!open) return;
+    const apply = () => setPanel(computeFullscreenPanelPx());
+    apply();
+    window.addEventListener("resize", apply, { passive: true });
+    window.visualViewport?.addEventListener("resize", apply, { passive: true } as any);
+    return () => {
+      window.removeEventListener("resize", apply);
+      window.visualViewport?.removeEventListener("resize", apply as any);
+    };
+  }, [open]);
 
   // "Island" matter (no images): a dynamic coastline around the ring, drawn in Canvas.
   useEffect(() => {
@@ -508,8 +556,14 @@ export function Molette(props: { current: NodeId }) {
   };
 
   const angleOf = (clientX: number, clientY: number) => {
-    const c = helmCenterPx();
-    return Math.atan2(clientY - c.y, clientX - c.x);
+    const el = wheelRef.current;
+    const fx = window.innerWidth / 2;
+    const fy = window.innerHeight / 2;
+    if (!el) return Math.atan2(clientY - fy, clientX - fx);
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    return Math.atan2(clientY - cy, clientX - cx);
   };
 
   const onPointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
@@ -595,6 +649,12 @@ export function Molette(props: { current: NodeId }) {
       data-mode={helm.mode}
       style={
         {
+          ["--uzyx-helm-cx" as any]: `${Math.round(panel.cx)}px`,
+          ["--uzyx-helm-cy" as any]: `${Math.round(panel.cy)}px`,
+          ["--uzyx-helm-left" as any]: `${Math.round(panel.left)}px`,
+          ["--uzyx-helm-top" as any]: `${Math.round(panel.top)}px`,
+          ["--uzyx-helm-w" as any]: `${Math.round(panel.w)}px`,
+          ["--uzyx-helm-h" as any]: `${Math.round(panel.h)}px`,
           ["--theta" as any]: `${theta.toFixed(4)}rad`,
           ["--ring-rot" as any]: `${thetaDeg}deg`,
           ["--dz-soft-blur" as any]: `${(blend * 0.35).toFixed(2)}px`,

@@ -30,7 +30,8 @@
 }
 
 .helmWheel{
-  --helm-size:min(78vmin, 560px, var(--uzyx-helm-w, 560px), var(--uzyx-helm-h, 560px));
+  /* Fullscreen-capable: size follows available panel rect (vars) and vmin. */
+  --helm-size:min(92vmin, var(--uzyx-helm-w, 560px), var(--uzyx-helm-h, 560px));
   --helm-ring-r:calc(var(--helm-size) * 0.315);
   --helm-label-r:calc(var(--helm-size) * 0.36);
   --helm-bird-r:calc(var(--helm-size) * 0.48);
