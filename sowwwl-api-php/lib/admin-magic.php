@@ -13,7 +13,7 @@ declare(strict_types=1);
  * - O_ADMIN_MAGIC_MAIL_MODE = "mail" | "outbox" (default "mail")
  * - O_ADMIN_MAGIC_OUTBOX_DIR (default /data/magic_outbox)
  * - O_ADMIN_MAGIC_PUBLIC_HOST (optional; forces link host)
- * - O_ADMIN_MAGIC_REDIRECT (default "/#/HAUT")
+ * - O_ADMIN_MAGIC_REDIRECT (default "/#/admin")
  * - O_EMAIL_HASH_SALT (optional; salts email_hash logs)
  */
 
@@ -40,6 +40,16 @@ function request_public_scheme(): string {
     // index.php defines is_https_request(); reuse if present.
     if (function_exists('is_https_request') && is_https_request()) return 'https';
     return 'http';
+}
+
+function admin_magic_public_host(string $fallbackHost): string {
+    $forced = '';
+    if (function_exists('env')) {
+        $forced = (string)(env('O_ADMIN_MAGIC_PUBLIC_HOST', '') ?? '');
+    }
+    $forced = canonical_host($forced);
+    if ($forced !== '') return $forced;
+    return canonical_host($fallbackHost);
 }
 
 function email_hash_for_log(string $email_norm): string {
@@ -232,7 +242,7 @@ function admin_magic_issue(PDO $pdo, string $email_norm, string $issued_host): a
     $token = admin_magic_token();
     $token_hash = admin_magic_token_hash($token);
     $email_hash = email_hash_for_log($email_norm);
-    $host = canonical_host($issued_host);
+    $host = admin_magic_public_host($issued_host);
     if ($host === '') return [false, 'invalid_host', null];
 
     // Soft rate-limit: avoid repeated sends (per user).

@@ -145,6 +145,8 @@ installSchema($pdo);
 $email = '0wlslw0@protonmail.com';
 $hostGood = '0.user.o.sowwwl.cloud';
 $hostBad = 'sowwwl.com';
+// Used to validate forced host behavior.
+$hostForced = '0.user.o.sowwwl.cloud';
 
 // 1) Envoi réussi → mail (outbox) → clic (consume) → OK
 clearOutbox($outbox);
@@ -208,5 +210,31 @@ putenv('O_ADMIN_MAGIC_OUTBOX_DIR=' . $badPath);
 [$okS, $errS] = admin_magic_issue($pdo, $email, $hostGood);
 assert_eq($okS, false, 'send fail ok=false');
 assert_eq($errS, 'send_failed', 'send fail err');
+
+// Forced public host (mitigates host header injection; stable links).
+touchOlder($pdo);
+$_ENV['O_ADMIN_MAGIC_OUTBOX_DIR'] = $outbox;
+putenv('O_ADMIN_MAGIC_OUTBOX_DIR=' . $outbox);
+$_ENV['O_ADMIN_MAGIC_PUBLIC_HOST'] = $hostForced;
+putenv('O_ADMIN_MAGIC_PUBLIC_HOST=' . $hostForced);
+
+clearOutbox($outbox);
+[$okF, $errF] = admin_magic_issue($pdo, $email, $hostBad);
+assert_eq($okF, true, 'issue forced ok');
+assert_eq($errF, null, 'issue forced err null');
+
+$linkF = readOutboxLink($outbox);
+assert_true(strpos($linkF, $hostForced) !== false, 'link uses forced host');
+$tokenF = tokenFromLink($linkF);
+
+// Wrong domain should refuse (even if token exists).
+[$okF0, $errF0] = admin_magic_consume($pdo, $tokenF, $hostBad);
+assert_eq($okF0, false, 'forced wrong domain ok=false');
+assert_eq($errF0, 'wrong_domain', 'forced wrong domain err');
+
+// Correct domain should succeed.
+[$okF2, $errF2] = admin_magic_consume($pdo, $tokenF, $hostForced);
+assert_eq($okF2, true, 'forced consume ok');
+assert_eq($errF2, null, 'forced consume err null');
 
 echo "ok\n";

@@ -3,6 +3,7 @@
 Pré-requis (prod / staging)
 - `O_NETWORK_ADMINS` contient `0wlslw0@protonmail.com`.
 - Reverse proxy same-origin actif (le `/api/*` **strip** `/api`).
+- (recommandé) `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` pour forcer le domaine des liens (évite les variations de Host).
 
 Endpoints
 - Envoi: `POST /api/auth/admin/magic/send` `{ "email": "0wlslw0@protonmail.com" }`
