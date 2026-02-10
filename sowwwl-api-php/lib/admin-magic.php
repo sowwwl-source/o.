@@ -207,8 +207,17 @@ function admin_magic_send_email(string $to, string $link, int $ttl_min): array {
                 'link' => $link,
                 'body' => $body,
             ];
-            $ok = @file_put_contents($file, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            // Write atomically and keep file private (contains the one-time token).
+            $tmp = $file . '.tmp';
+            $raw = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $ok = $raw !== false ? @file_put_contents($tmp, $raw) : false;
             if ($ok === false) return [false, 'outbox_write_failed'];
+            @chmod($tmp, 0600);
+            if (!@rename($tmp, $file)) {
+                @unlink($tmp);
+                return [false, 'outbox_write_failed'];
+            }
+            @chmod($file, 0600);
             return [true, null];
         } catch (Throwable) {
             return [false, 'outbox_write_failed'];
