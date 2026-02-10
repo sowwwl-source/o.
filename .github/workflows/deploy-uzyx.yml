@@ -33,6 +33,14 @@ jobs:
           export VITE_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           npm run build
           printf '{"id":"%s","time":"%s"}\n' "$VITE_BUILD_ID" "$VITE_BUILD_TIME" > dist/o.build.json
+          # Expose built asset names for post-deploy verification on the droplet.
+          JS="$(ls -1 dist/assets/*.js | head -n 1 | xargs -n1 basename)"
+          CSS="$(ls -1 dist/assets/*.css | head -n 1 | xargs -n1 basename)"
+          test -n "${JS}" && test -n "${CSS}"
+          {
+            echo "O_UZYX_ASSET_JS=${JS}"
+            echo "O_UZYX_ASSET_CSS=${CSS}"
+          } >> "${GITHUB_ENV}"
 
       - name: Deploy to DigitalOcean (rsync over ssh)
         env:
@@ -105,3 +113,21 @@ jobs:
              echo "o.build:"
              cat /var/www/o/o.build.json 2>/dev/null || echo "{}"
              ls -la /var/www/o/index.html 2>/dev/null || true'
+
+          # Verify that Apache serves real static assets (not SPA HTML fallback).
+          PRIMARY_HOST="0.user.o.sowwwl.cloud"
+          JS="${O_UZYX_ASSET_JS}"
+          CSS="${O_UZYX_ASSET_CSS}"
+          echo "verifying assets on droplet: ${JS} / ${CSS}"
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            "set -euo pipefail
+             test -f /var/www/o/o.build.json
+             grep -q '\"id\":\"${GITHUB_SHA::7}\"' /var/www/o/o.build.json
+             H=\$(curl -fsSI --resolve '${PRIMARY_HOST}:443:127.0.0.1' \"https://${PRIMARY_HOST}/assets/${JS}\" | tr -d '\\r')
+             echo \"\$H\" | head -n 1 | grep -q ' 200 '
+             echo \"\$H\" | grep -qi '^content-type:'
+             echo \"\$H\" | grep -qi '^content-type:.*javascript' || { echo 'BAD_JS_MIME' >&2; echo \"\$H\"; exit 1; }
+             H=\$(curl -fsSI --resolve '${PRIMARY_HOST}:443:127.0.0.1' \"https://${PRIMARY_HOST}/assets/${CSS}\" | tr -d '\\r')
+             echo \"\$H\" | head -n 1 | grep -q ' 200 '
+             echo \"\$H\" | grep -qi '^content-type:'
+             echo \"\$H\" | grep -qi '^content-type:.*text/css' || { echo 'BAD_CSS_MIME' >&2; echo \"\$H\"; exit 1; }"

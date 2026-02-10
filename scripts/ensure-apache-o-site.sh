@@ -59,7 +59,7 @@ echo "[ensure-apache-o-site] using cert dir: ${CERT_DIR}"
 mkdir -p "${DOCROOT}"
 
 echo "[ensure-apache-o-site] enabling apache modules"
-a2enmod ssl headers proxy proxy_http rewrite >/dev/null || true
+a2enmod ssl headers proxy proxy_http rewrite mime >/dev/null || true
 
 disable_conflicts_for_host() {
   local host="$1"
@@ -125,6 +125,7 @@ cat > "${TMP}" <<EOF
   # Never rewrite API or build stamp.
   # NOTE: %{REQUEST_URI} always starts with "/" (more robust than RewriteRule path matching).
   RewriteCond %{REQUEST_URI} ^/api/ [OR]
+  RewriteCond %{REQUEST_URI} ^/assets/ [OR]
   RewriteCond %{REQUEST_URI} =/o.build.json
   RewriteRule ^ - [L]
 
