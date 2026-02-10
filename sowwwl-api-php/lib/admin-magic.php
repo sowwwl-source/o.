@@ -179,6 +179,7 @@ function admin_magic_mail_mode(): string {
     $m = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_MAIL_MODE', 'mail') : 'mail');
     $m = mb_strtolower(trim($m));
     if ($m === 'outbox') return 'outbox';
+    if ($m === 'smtp') return 'smtp';
     return 'mail';
 }
 
@@ -186,6 +187,213 @@ function admin_magic_outbox_dir(): string {
     $d = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_OUTBOX_DIR', '/data/magic_outbox') : '/data/magic_outbox');
     $d = trim($d);
     return $d !== '' ? $d : '/data/magic_outbox';
+}
+
+function admin_magic_smtp_host(): string {
+    $h = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_HOST', '') : '');
+    return trim($h);
+}
+
+function admin_magic_smtp_port(): int {
+    $raw = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_PORT', '587') : '587');
+    $n = (int)trim($raw);
+    if ($n <= 0) $n = 587;
+    return $n;
+}
+
+function admin_magic_smtp_secure(): string {
+    // "starttls" (default), "tls" (implicit), "none"
+    $raw = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_SECURE', 'starttls') : 'starttls');
+    $m = mb_strtolower(trim($raw));
+    if ($m === 'tls') return 'tls';
+    if ($m === 'none') return 'none';
+    return 'starttls';
+}
+
+function admin_magic_smtp_timeout_sec(): int {
+    $raw = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_TIMEOUT_SEC', '8') : '8');
+    $n = (int)trim($raw);
+    if ($n < 3) $n = 3;
+    if ($n > 30) $n = 30;
+    return $n;
+}
+
+function admin_magic_smtp_user(): string {
+    $u = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_USER', '') : '');
+    return trim($u);
+}
+
+function admin_magic_smtp_pass(): string {
+    $p = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_PASS', '') : '');
+    return (string)$p;
+}
+
+function admin_magic_smtp_from(): string {
+    // Prefer SMTP-specific "from" if set.
+    $from = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_SMTP_FROM', '') : '');
+    $from = trim($from);
+    if ($from !== '') return $from;
+    $from = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_MAIL_FROM', 'no-reply@sowwwl.com') : 'no-reply@sowwwl.com');
+    $from = trim($from);
+    return $from !== '' ? $from : 'no-reply@sowwwl.com';
+}
+
+function smtp_read_response($fp): array {
+    $lines = [];
+    while (!feof($fp)) {
+        $line = fgets($fp, 1024);
+        if ($line === false) break;
+        $line = rtrim($line, "\r\n");
+        $lines[] = $line;
+        if (mb_strlen($line) >= 4 && $line[3] !== '-') break; // multi-line ends when 4th char is space
+    }
+    $first = (string)($lines[0] ?? '');
+    if (preg_match('/^(\\d{3})[\\s-]/', $first, $m)) {
+        return [(int)$m[1], $lines];
+    }
+    return [0, $lines];
+}
+
+function smtp_cmd($fp, string $cmd): bool {
+    $out = $cmd . "\r\n";
+    $n = @fwrite($fp, $out);
+    return $n !== false && $n === strlen($out);
+}
+
+function smtp_expect($fp, array $codes): bool {
+    [$code] = smtp_read_response($fp);
+    return in_array((int)$code, $codes, true);
+}
+
+function smtp_dot_stuff(string $s): string {
+    // Escape lines beginning with "." (SMTP transparency).
+    $s = str_replace(["\r\n", "\r"], "\n", $s);
+    $lines = explode("\n", $s);
+    foreach ($lines as &$line) {
+        if ($line !== '' && $line[0] === '.') $line = '.' . $line;
+        // SMTP DATA lines should not exceed 1000 chars including CRLF; we keep it simple.
+    }
+    unset($line);
+    return implode("\r\n", $lines);
+}
+
+function admin_magic_send_email_smtp(string $to, string $subject, string $body, string $from): array {
+    $host = admin_magic_smtp_host();
+    if ($host === '') return [false, 'smtp_not_configured'];
+
+    $port = admin_magic_smtp_port();
+    $secure = admin_magic_smtp_secure();
+    $timeout = admin_magic_smtp_timeout_sec();
+
+    $errno = 0;
+    $errstr = '';
+    $addr = $secure === 'tls' ? "tls://{$host}:{$port}" : "{$host}:{$port}";
+    $fp = @stream_socket_client($addr, $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT);
+    if (!$fp) return [false, 'smtp_connect_failed'];
+    @stream_set_timeout($fp, $timeout);
+
+    // Greeting
+    if (!smtp_expect($fp, [220])) {
+        @fclose($fp);
+        return [false, 'smtp_greeting_failed'];
+    }
+
+    $helo = 'o.sowwwl';
+    if (!smtp_cmd($fp, "EHLO {$helo}") || !smtp_expect($fp, [250])) {
+        // Try HELO as a fallback.
+        if (!smtp_cmd($fp, "HELO {$helo}") || !smtp_expect($fp, [250])) {
+            @fclose($fp);
+            return [false, 'smtp_ehlo_failed'];
+        }
+    }
+
+    if ($secure === 'starttls') {
+        if (!smtp_cmd($fp, "STARTTLS") || !smtp_expect($fp, [220])) {
+            @fclose($fp);
+            return [false, 'smtp_starttls_failed'];
+        }
+        $okTls = @stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+        if ($okTls !== true) {
+            @fclose($fp);
+            return [false, 'smtp_tls_failed'];
+        }
+        // Re-EHLO after TLS
+        if (!smtp_cmd($fp, "EHLO {$helo}") || !smtp_expect($fp, [250])) {
+            @fclose($fp);
+            return [false, 'smtp_ehlo_failed'];
+        }
+    }
+
+    $user = admin_magic_smtp_user();
+    $pass = admin_magic_smtp_pass();
+    if ($user !== '' || $pass !== '') {
+        // AUTH PLAIN
+        $plain = base64_encode("\0" . $user . "\0" . $pass);
+        if (!smtp_cmd($fp, "AUTH PLAIN {$plain}") || !smtp_expect($fp, [235])) {
+            // AUTH LOGIN fallback
+            if (!smtp_cmd($fp, "AUTH LOGIN") || !smtp_expect($fp, [334])) {
+                @fclose($fp);
+                return [false, 'smtp_auth_failed'];
+            }
+            if (!smtp_cmd($fp, base64_encode($user)) || !smtp_expect($fp, [334])) {
+                @fclose($fp);
+                return [false, 'smtp_auth_failed'];
+            }
+            if (!smtp_cmd($fp, base64_encode($pass)) || !smtp_expect($fp, [235])) {
+                @fclose($fp);
+                return [false, 'smtp_auth_failed'];
+            }
+        }
+    }
+
+    $from = trim($from);
+    $to = trim($to);
+    if ($from === '' || $to === '') {
+        @fclose($fp);
+        return [false, 'smtp_not_configured'];
+    }
+
+    if (!smtp_cmd($fp, "MAIL FROM:<{$from}>") || !smtp_expect($fp, [250, 251])) {
+        @fclose($fp);
+        return [false, 'smtp_mailfrom_failed'];
+    }
+    if (!smtp_cmd($fp, "RCPT TO:<{$to}>") || !smtp_expect($fp, [250, 251])) {
+        @fclose($fp);
+        return [false, 'smtp_rcpt_failed'];
+    }
+    if (!smtp_cmd($fp, "DATA") || !smtp_expect($fp, [354])) {
+        @fclose($fp);
+        return [false, 'smtp_data_failed'];
+    }
+
+    $date = gmdate('D, d M Y H:i:s +0000');
+    $msgId = '<' . bin2hex(random_bytes(12)) . '@sowwwl>';
+
+    $headers = [
+        "From: {$from}",
+        "To: {$to}",
+        "Subject: {$subject}",
+        "Date: {$date}",
+        "Message-ID: {$msgId}",
+        "MIME-Version: 1.0",
+        "Content-Type: text/plain; charset=UTF-8",
+        "Content-Transfer-Encoding: 8bit",
+    ];
+    $data = implode("\r\n", $headers) . "\r\n\r\n" . smtp_dot_stuff($body) . "\r\n.\r\n";
+    $n = @fwrite($fp, $data);
+    if ($n === false) {
+        @fclose($fp);
+        return [false, 'smtp_body_failed'];
+    }
+
+    if (!smtp_expect($fp, [250])) {
+        @fclose($fp);
+        return [false, 'smtp_send_failed'];
+    }
+
+    @smtp_cmd($fp, "QUIT");
+    @fclose($fp);
+    return [true, null];
 }
 
 function admin_magic_send_email(string $to, string $link, int $ttl_min): array {
@@ -223,6 +431,11 @@ function admin_magic_send_email(string $to, string $link, int $ttl_min): array {
         } catch (Throwable) {
             return [false, 'outbox_write_failed'];
         }
+    }
+
+    if ($mode === 'smtp') {
+        $from = admin_magic_smtp_from();
+        return admin_magic_send_email_smtp($to, $subject, $body, $from);
     }
 
     $from = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_MAIL_FROM', 'no-reply@sowwwl.com') : 'no-reply@sowwwl.com');

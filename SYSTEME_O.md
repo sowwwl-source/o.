@@ -295,6 +295,9 @@ Objectif : authentification admin via email magic link, usage unique, expirant (
   - lien lié au domaine d’émission (refus sur mauvais host)
   - session admin créée uniquement après clic valide
   - logs : `email_hash`, timestamp, `used_ip`, `used_ua`
+- Opérationnel
+  - le token vit dans le hash `/#/...` (pas dans les logs serveur)
+  - en prod (Docker), privilégier `O_ADMIN_MAGIC_MAIL_MODE=smtp` (pas de MTA pour `mail()`)
 - Références code
   - impl : `sowwwl-api-php/lib/admin-magic.php`
   - routes : `sowwwl-api-php/index.php` (section “Admin magic-link”)

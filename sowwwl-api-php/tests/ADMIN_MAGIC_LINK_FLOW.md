@@ -4,6 +4,9 @@ Pré-requis (prod / staging)
 - `O_NETWORK_ADMINS` contient `0wlslw0@protonmail.com`.
 - Reverse proxy same-origin actif (le `/api/*` **strip** `/api`).
 - (recommandé) `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` pour forcer le domaine des liens (évite les variations de Host).
+- Envoi email :
+  - prod (Docker) : `O_ADMIN_MAGIC_MAIL_MODE=smtp` + variables SMTP (recommandé)
+  - dev : `O_ADMIN_MAGIC_MAIL_MODE=outbox` écrit un JSON dans `O_ADMIN_MAGIC_OUTBOX_DIR`
 
 Endpoints
 - Envoi: `POST /api/auth/admin/magic/send` `{ "email": "0wlslw0@protonmail.com" }`

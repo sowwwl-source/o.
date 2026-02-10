@@ -42,6 +42,12 @@ Recommended env:
 - `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` (forces link host + strict verify host)
 - `O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard`
 - `O_EMAIL_HASH_SALT=<random>` (privacy for email_hash logs)
+- `O_ADMIN_MAGIC_MAIL_MODE=smtp` (recommended in Docker; PHP `mail()` usually has no MTA)
+- SMTP vars:
+  - `O_ADMIN_MAGIC_SMTP_HOST`, `O_ADMIN_MAGIC_SMTP_PORT`
+  - `O_ADMIN_MAGIC_SMTP_SECURE=starttls|tls|none`
+  - `O_ADMIN_MAGIC_SMTP_USER`, `O_ADMIN_MAGIC_SMTP_PASS`
+  - `O_ADMIN_MAGIC_SMTP_FROM`
 
 ## Frontend integration (recommended)
 Serve the frontend and proxy API calls through the same origin:
