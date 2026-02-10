@@ -13,8 +13,10 @@ WORKDIR /var/www/html
 FROM base AS production
 
 COPY --chmod=644 index.php schema.sql ./
+COPY --chmod=644 lib ./lib
 
 # Use PHP built-in server for simplicity (or nginx-unit for production)
 EXPOSE 8000
 
-CMD ["php", "-S", "0.0.0.0:8000", "-t", "/var/www/html"]
+# Route *all* requests through index.php so paths like /health, /me, ... work.
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "/var/www/html", "index.php"]
