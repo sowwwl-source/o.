@@ -70,7 +70,8 @@ O_NETWORK_ADMINS=
 
 # Optional: admin magic-link (email)
 # - Send endpoint: POST /api/auth/admin/magic/send { email }
-# - Verify endpoint: GET  /api/auth/admin/magic/verify?token=... (302 redirect)
+# - Verify (recommended): UI link /#/admin/magic/verify?token=... → POST /api/auth/admin/magic/verify {token}
+# - Verify (legacy):      GET /api/auth/admin/magic/verify?token=... (302 redirect)
 # Recommended: force the public domain used in links (avoid Host/XFH variations)
 O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud
 # Redirect after successful verification:

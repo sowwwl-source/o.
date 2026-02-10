@@ -7,7 +7,8 @@ Pré-requis (prod / staging)
 
 Endpoints
 - Envoi: `POST /api/auth/admin/magic/send` `{ "email": "0wlslw0@protonmail.com" }`
-- Vérif: lien e-mail → `GET /api/auth/admin/magic/verify?token=...` (redirige ensuite vers `/#/admin/b0ard`)
+- Vérif (recommandé): lien e-mail → UI `/#/admin/magic/verify?token=...` → POST `/api/auth/admin/magic/verify` (session) → `/#/admin/b0ard`
+- Vérif (legacy): `GET /api/auth/admin/magic/verify?token=...` (302 → `/#/admin/b0ard`)
 
 Notes de sécurité
 - Le token n’est jamais renvoyé par l’API “send”, ni affiché dans l’UI.
@@ -42,6 +43,6 @@ Notes de sécurité
 ## 4) Tentative sur mauvais domaine → refus
 
 1. Demander un magic link sur le bon domaine (ex `0.user.o.sowwwl.cloud`).
-2. Copier le token depuis l’URL du mail, puis tenter de l’utiliser sur un autre domaine (ex `sowwwl.com`):
-   - `https://sowwwl.com/api/auth/admin/magic/verify?token=...`
+2. Prendre le lien reçu et remplacer uniquement le host (ex `sowwwl.com`) en gardant le hash:
+   - `https://sowwwl.com/#/admin/magic/verify?token=...`
 3. Attendu: HTTP `403` + JSON `{"error":"wrong_domain","message":"Mauvais domaine."}`.

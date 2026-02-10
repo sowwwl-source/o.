@@ -24,18 +24,81 @@ export function AdminMagicPage() {
   const dispatch = useOEvent();
   const session = useSession();
 
+  const [email, setEmail] = useState(() => localStorage.getItem("sowwwl:admin_email") || "");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
   useEffect(() => {
     void session.api.refresh();
   }, [session.api]);
+
+  // Verify flow: token is carried in the URL hash (not sent to the server by default).
+  // Example: https://0.user.o.sowwwl.cloud/#/admin/magic/verify?token=...
+  useEffect(() => {
+    const h = String(window.location.hash || "");
+    const path = h.split("?", 2)[0] || "";
+    if (path !== "#/admin/magic/verify" && path !== "#/admin/magic/verify/") return;
+
+    setBusy(true);
+    setNote("…");
+
+    const q = h.includes("?") ? h.split("?", 2)[1] : "";
+    const token = new URLSearchParams(q).get("token") || "";
+    const cleanUrl = `${window.location.pathname}${window.location.search}#/admin/magic`;
+
+    const cleanup = () => {
+      try {
+        window.history.replaceState(null, "", cleanUrl);
+      } catch {
+        window.location.hash = "#/admin/magic";
+      }
+    };
+
+    if (!token.trim()) {
+      cleanup();
+      dispatch("form_validation_error");
+      setNote("lien: absent");
+      setBusy(false);
+      return;
+    }
+
+    let alive = true;
+    void (async () => {
+      const r = await apiRequest<{ status: "ok"; redirect?: string }>("/auth/admin/magic/verify", {
+        method: "POST",
+        json: { token },
+      });
+
+      cleanup();
+      if (!alive) return;
+
+      if (!r.ok) {
+        const err = String((r.data as any)?.error || "");
+        if (r.status === 0) dispatch("network_error");
+        else dispatch("form_validation_error");
+        // Keep text-only, no tokens.
+        if (err === "expired") setNote("lien: expiré");
+        else if (err === "used") setNote("lien: déjà utilisé");
+        else if (err === "wrong_domain") setNote("domaine: refus");
+        else setNote(r.status === 0 ? "réseau: fragile" : "lien: invalide");
+        setBusy(false);
+        return;
+      }
+
+      // Session cookie is set by the API response; refresh local session and move to b0ard.
+      await session.api.refresh();
+      window.location.hash = "#/admin/b0ard";
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [dispatch, session.api]);
 
   const authedAdmin = session.state.phase === "authed" && Boolean(session.state.me.user.network_admin);
   useEffect(() => {
     if (authedAdmin) window.location.hash = "#/admin/b0ard";
   }, [authedAdmin]);
-
-  const [email, setEmail] = useState(() => localStorage.getItem("sowwwl:admin_email") || "");
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!note) return;

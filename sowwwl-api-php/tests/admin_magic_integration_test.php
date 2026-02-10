@@ -72,7 +72,14 @@ function clearOutbox(string $dir): void {
 
 function tokenFromLink(string $url): string {
     $parts = parse_url($url);
-    $q = $parts['query'] ?? '';
+    $q = (string)($parts['query'] ?? '');
+    // New links carry the token in the URL fragment:
+    //   https://host/#/admin/magic/verify?token=...
+    if ($q === '' && isset($parts['fragment'])) {
+        $frag = (string)$parts['fragment'];
+        $pos = strpos($frag, '?');
+        if ($pos !== false) $q = substr($frag, $pos + 1);
+    }
     parse_str((string)$q, $params);
     $t = (string)($params['token'] ?? '');
     assert_true($t !== '', 'token in link');

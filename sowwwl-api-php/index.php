@@ -655,8 +655,16 @@ if ($path === '/auth/admin/magic/send') {
 }
 
 if ($path === '/auth/admin/magic/verify') {
-    require_method('GET');
-    $token = (string)($_GET['token'] ?? '');
+    $wants_json = false;
+    $token = '';
+    if ($method === 'POST') {
+        $wants_json = true;
+        $in = json_input();
+        $token = (string)($in['token'] ?? '');
+    } else {
+        require_method('GET');
+        $token = (string)($_GET['token'] ?? '');
+    }
     if (trim($token) === '') out(400, ['error' => 'invalid_token']);
 
     $pdo = db();
@@ -712,6 +720,8 @@ if ($path === '/auth/admin/magic/verify') {
     if (!str_starts_with($to, '/')) $to = '/#/admin/b0ard';
     // Back-compat: treat the old default as an alias of the b0ard.
     if ($to === '/#/admin' || $to === '/#/admin/') $to = '/#/admin/b0ard';
+
+    if ($wants_json) out(200, ['status' => 'ok', 'redirect' => $to]);
 
     // Avoid JSON for the redirect response (browsers follow Location anyway).
     header('Content-Type: text/plain; charset=utf-8');

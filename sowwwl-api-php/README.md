@@ -23,7 +23,8 @@
 - POST /auth/logout    {}
 - GET  /me
 - POST /auth/admin/magic/send   {email}  (anti-enumeration: always 200)
-- GET  /auth/admin/magic/verify?token=... (302 → `O_ADMIN_MAGIC_REDIRECT`)
+- POST /auth/admin/magic/verify {token}  (200 JSON; sets session)
+- GET  /auth/admin/magic/verify?token=... (302 → `O_ADMIN_MAGIC_REDIRECT`, legacy)
 - GET  /soul/token
 - POST /soul/token     {token, config?} (requires X-CSRF)
 - POST /soul/upload    multipart: archive (.zip) + manifest_json? (requires X-CSRF)
@@ -35,6 +36,7 @@ Uploads are stored under `SEED_ROOT` (default `/data`) in `soul.cloud/<uid>/uplo
 - Token is never stored in plaintext (only `sha256(token)` is stored).
 - `send` endpoint always returns `{ "status": "ok" }` (anti-enumeration); delivery is logged server-side.
 - Domain is bound to the token (`issued_host`) and must match on verify.
+- Link carries the token in the URL hash (fragment), so it never hits server logs.
 
 Recommended env:
 - `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` (forces link host + strict verify host)

@@ -32,9 +32,8 @@ assert_true((bool)preg_match('/^[a-f0-9]{64}$/', $th), 'token hash is hex sha256
 $eh = email_hash_for_log('0wlslw0@protonmail.com');
 assert_true((bool)preg_match('/^[a-f0-9]{64}$/', $eh), 'email hash is hex sha256');
 
-// link contains /api + verify
+// link keeps token in hash (not in server logs)
 $link = admin_magic_build_link('0.user.o.sowwwl.cloud', $t);
-assert_true(strpos($link, '/api/auth/admin/magic/verify?token=') !== false, 'link path');
+assert_true(strpos($link, '/#/admin/magic/verify?token=') !== false, 'link path');
 
 echo "ok\n";
-

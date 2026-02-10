@@ -170,8 +170,9 @@ function admin_magic_build_link(string $host, string $token): string {
     $scheme = request_public_scheme();
     $h = canonical_host($host);
     $q = rawurlencode($token);
-    // Public path is /api/* (reverse proxy strips /api to API container).
-    return "{$scheme}://{$h}/api/auth/admin/magic/verify?token={$q}";
+    // IMPORTANT: token stays in the URL fragment (hash) so it never hits server logs.
+    // The UI will POST it to /api/auth/admin/magic/verify to create the session.
+    return "{$scheme}://{$h}/#/admin/magic/verify?token={$q}";
 }
 
 function admin_magic_mail_mode(): string {

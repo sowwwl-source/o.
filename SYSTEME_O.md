@@ -288,7 +288,8 @@ Objectif : authentification admin via email magic link, usage unique, expirant (
 
 - Endpoints
   - `POST /api/auth/admin/magic/send` `{ "email": "…" }` (anti-énumération : réponse uniforme)
-  - `GET /api/auth/admin/magic/verify?token=…` (redirige ensuite vers `O_ADMIN_MAGIC_REDIRECT`, défaut `/#/admin/b0ard`)
+  - (recommandé) lien UI `/#/admin/magic/verify?token=…` → `POST /api/auth/admin/magic/verify` `{ "token": "…" }` (session) → `/#/admin/b0ard`
+  - (legacy) `GET /api/auth/admin/magic/verify?token=…` (redirige ensuite vers `O_ADMIN_MAGIC_REDIRECT`, défaut `/#/admin/b0ard`)
 - Sécurité
   - token stocké **hashé uniquement** (sha256), invalidé si envoi échoue
   - lien lié au domaine d’émission (refus sur mauvais host)
