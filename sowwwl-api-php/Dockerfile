@@ -12,8 +12,8 @@ WORKDIR /var/www/html
 
 FROM base AS production
 
-COPY --chmod=644 index.php schema.sql ./
-COPY --chmod=644 lib ./lib
+COPY index.php schema.sql ./
+COPY lib ./lib
 
 # Use PHP built-in server for simplicity (or nginx-unit for production)
 EXPOSE 8000
