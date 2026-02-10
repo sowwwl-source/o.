@@ -14,6 +14,11 @@ export function AdminBoardPage() {
   }, [session.api]);
 
   useEffect(() => {
+    const h = String(window.location.hash || "");
+    if (h === "#/admin" || h === "#/admin/") window.location.hash = "#/admin/b0ard";
+  }, []);
+
+  useEffect(() => {
     if (session.state.phase === "authed") dispatch("session_restored");
     if (session.state.phase === "error") dispatch("network_error");
   }, [session.state.phase, dispatch]);
@@ -65,4 +70,3 @@ export function AdminBoardPage() {
     </>
   );
 }
-

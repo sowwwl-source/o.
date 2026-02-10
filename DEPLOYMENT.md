@@ -45,7 +45,7 @@ O_NETWORK_ADMINS=you@example.com
 # - Recommended to force the domain used in links (avoid Host/XFH variations):
 # O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud
 # - Redirect after successful verification:
-# O_ADMIN_MAGIC_REDIRECT=/#/admin
+# O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard
 # - Salt for email_hash logs (privacy):
 # O_EMAIL_HASH_SALT=<random>
 ```

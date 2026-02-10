@@ -696,8 +696,8 @@ if ($path === '/auth/admin/magic/verify') {
     session_regenerate_id(true);
     $_SESSION['uid'] = $uid;
 
-    $to = (string)(env('O_ADMIN_MAGIC_REDIRECT', '/#/admin') ?? '/#/admin');
-    if (trim($to) === '') $to = '/#/admin';
+    $to = (string)(env('O_ADMIN_MAGIC_REDIRECT', '/#/admin/b0ard') ?? '/#/admin/b0ard');
+    if (trim($to) === '') $to = '/#/admin/b0ard';
 
     // Avoid JSON for the redirect response (browsers follow Location anyway).
     header('Content-Type: text/plain; charset=utf-8');

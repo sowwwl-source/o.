@@ -30,7 +30,7 @@ export function AdminMagicPage() {
 
   const authedAdmin = session.state.phase === "authed" && Boolean(session.state.me.user.network_admin);
   useEffect(() => {
-    if (authedAdmin) window.location.hash = "#/admin";
+    if (authedAdmin) window.location.hash = "#/admin/b0ard";
   }, [authedAdmin]);
 
   const [email, setEmail] = useState(() => localStorage.getItem("sowwwl:admin_email") || "");
@@ -156,4 +156,3 @@ export function AdminMagicPage() {
     </main>
   );
 }
-

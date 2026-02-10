@@ -7,7 +7,7 @@ Pré-requis (prod / staging)
 
 Endpoints
 - Envoi: `POST /api/auth/admin/magic/send` `{ "email": "0wlslw0@protonmail.com" }`
-- Vérif: lien e-mail → `GET /api/auth/admin/magic/verify?token=...` (redirige ensuite vers `/#/admin`)
+- Vérif: lien e-mail → `GET /api/auth/admin/magic/verify?token=...` (redirige ensuite vers `/#/admin/b0ard`)
 
 Notes de sécurité
 - Le token n’est jamais renvoyé par l’API “send”, ni affiché dans l’UI.

@@ -74,7 +74,7 @@ O_NETWORK_ADMINS=
 # Recommended: force the public domain used in links (avoid Host/XFH variations)
 O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud
 # Redirect after successful verification:
-O_ADMIN_MAGIC_REDIRECT=/#/admin
+O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard
 # TTL clamped 10..15 minutes (default 15)
 O_ADMIN_MAGIC_TTL_MIN=15
 # "mail" (default) or "outbox" (dev)

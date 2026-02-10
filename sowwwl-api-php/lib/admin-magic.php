@@ -13,7 +13,7 @@ declare(strict_types=1);
  * - O_ADMIN_MAGIC_MAIL_MODE = "mail" | "outbox" (default "mail")
  * - O_ADMIN_MAGIC_OUTBOX_DIR (default /data/magic_outbox)
  * - O_ADMIN_MAGIC_PUBLIC_HOST (optional; forces link host)
- * - O_ADMIN_MAGIC_REDIRECT (default "/#/admin")
+ * - O_ADMIN_MAGIC_REDIRECT (default "/#/admin/b0ard")
  * - O_EMAIL_HASH_SALT (optional; salts email_hash logs)
  */
 

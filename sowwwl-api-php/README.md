@@ -38,7 +38,7 @@ Uploads are stored under `SEED_ROOT` (default `/data`) in `soul.cloud/<uid>/uplo
 
 Recommended env:
 - `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` (forces link host + strict verify host)
-- `O_ADMIN_MAGIC_REDIRECT=/#/admin`
+- `O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard`
 - `O_EMAIL_HASH_SALT=<random>` (privacy for email_hash logs)
 
 ## Frontend integration (recommended)
