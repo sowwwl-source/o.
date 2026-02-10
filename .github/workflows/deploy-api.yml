@@ -99,6 +99,11 @@ jobs:
           scp -i ~/.ssh/id_deploy docker-compose.yml "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/docker-compose.yml"
           scp -i ~/.ssh/id_deploy sowwwl-api-php/docker-compose.prod.yml "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/docker-compose.prod.yml"
           scp -i ~/.ssh/id_deploy sowwwl-api-php/schema.sql "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/schema.sql"
+          # Upload build context so the server can build locally if GHCR pull is unavailable.
+          scp -i ~/.ssh/id_deploy sowwwl-api-php/Dockerfile "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/Dockerfile"
+          scp -i ~/.ssh/id_deploy sowwwl-api-php/index.php "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/index.php"
+          scp -i ~/.ssh/id_deploy sowwwl-api-php/.dockerignore "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/.dockerignore"
+          scp -i ~/.ssh/id_deploy -r sowwwl-api-php/lib "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/sowwwl-api-php/lib"
           scp -i ~/.ssh/id_deploy .env.example "${DO_USER}@${DO_HOST}:/opt/sowwwl/app/.env.example"
 
           # Deploy (pull + compose up)
@@ -122,12 +127,25 @@ jobs:
              }
              GHCR_TOKEN='${GHCR_TOKEN}'
              if [ -z \"\$GHCR_TOKEN\" ]; then GHCR_TOKEN='${GHCR_FALLBACK_TOKEN}'; fi
-             echo \"\$GHCR_TOKEN\" | docker login ${REGISTRY} -u '${GHCR_USER}' --password-stdin
              IMAGE_BASE='${REGISTRY}/${IMAGE_NAME}'
              if [ \"\$REF\" = 'main' ]; then TAG='latest'; else TAG=\"\$REF\"; fi
              FULL_IMAGE=\"\$IMAGE_BASE:\$TAG\"
-             docker pull \"\$FULL_IMAGE\"
-             API_IMAGE=\"\$FULL_IMAGE\" compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
+             pulled=0
+             if [ -n \"\$GHCR_TOKEN\" ]; then
+               (echo \"\$GHCR_TOKEN\" | docker login ${REGISTRY} -u '${GHCR_USER}' --password-stdin) || true
+             fi
+             if docker pull \"\$FULL_IMAGE\"; then
+               pulled=1
+             fi
+
+             if [ \"\$pulled\" = '1' ]; then
+               # Prefer the signed/pushed image when available.
+               API_IMAGE=\"\$FULL_IMAGE\" compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
+             else
+               # Fallback: build locally from uploaded source (keeps deploy unblocked if GHCR is private/unavailable).
+               API_IMAGE='o-api:local' compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml build api
+               API_IMAGE='o-api:local' compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d
+             fi
 
              # Apply schema migrations (idempotent: CREATE TABLE IF NOT EXISTS ...)
              compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml exec -T db sh -lc \
