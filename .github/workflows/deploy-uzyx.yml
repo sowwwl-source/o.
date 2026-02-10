@@ -52,8 +52,16 @@ jobs:
           ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
           # Ensure directories exist (and keep /var/www/o/signals reserved for server-side drops).
+          # NOTE: Some deploy users don't have passwordless sudo. Avoid failing the deploy just for that.
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
-            'set -euo pipefail; sudo mkdir -p /var/www/o; sudo mkdir -p /var/www/o/signals; sudo chown -R www-data:www-data /var/www/o/signals || true'
+            'set -euo pipefail
+             if [ "$(id -u)" -eq 0 ]; then SUDO=""; elif sudo -n true 2>/dev/null; then SUDO="sudo -n"; else SUDO=""; fi
+             if [ -n "$SUDO" ] || [ "$(id -u)" -eq 0 ]; then
+               $SUDO mkdir -p /var/www/o /var/www/o/signals
+               $SUDO chown -R www-data:www-data /var/www/o/signals || true
+             else
+               mkdir -p /var/www/o /var/www/o/signals 2>/dev/null || true
+             fi'
 
           # Deploy uzyx-app build output to /var/www/o (do not touch signals/)
           rsync -az --delete --exclude "signals/" -e "ssh -i ~/.ssh/id_deploy" uzyx-app/dist/ "${DO_USER}@${DO_HOST}:/var/www/o/"
@@ -61,11 +69,39 @@ jobs:
           # Ensure Apache serves /var/www/o and proxies /api/* (avoids "site never changes" due to wrong docroot).
           scp -i ~/.ssh/id_deploy scripts/ensure-apache-o-site.sh "${DO_USER}@${DO_HOST}:/tmp/ensure-apache-o-site.sh"
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
-            'set -euo pipefail; sudo bash /tmp/ensure-apache-o-site.sh'
+            'set -euo pipefail
+             if [ "$(id -u)" -eq 0 ]; then
+               bash /tmp/ensure-apache-o-site.sh
+             elif sudo -n true 2>/dev/null; then
+               sudo -n bash /tmp/ensure-apache-o-site.sh
+             else
+               echo "SKIP ensure-apache-o-site.sh (no sudo)"
+             fi'
 
           # Debug (visible in Actions logs): vhost mapping + API reachability.
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
-            'set -euo pipefail; echo "apache vhosts:"; sudo apache2ctl -S | sed -n "1,140p"; echo; echo "api health:"; (curl -fsS http://127.0.0.1:8000/health | head -c 180 || echo "API_UNREACHABLE"); echo'
+            'set -euo pipefail
+             if [ "$(id -u)" -eq 0 ]; then SUDO=""; elif sudo -n true 2>/dev/null; then SUDO="sudo -n"; else SUDO=""; fi
+             echo "apache vhosts:"
+             if [ -n "$SUDO" ] || [ "$(id -u)" -eq 0 ]; then
+               $SUDO apache2ctl -S | sed -n "1,140p"
+             else
+               echo "SKIP apache2ctl -S (no sudo)"
+             fi
+             echo
+             echo "api health:"
+             (curl -fsS http://127.0.0.1:8000/health | head -c 180 || echo "API_UNREACHABLE")
+             echo'
 
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
-            'set -euo pipefail; sudo chmod -R a+rX /var/www/o; sudo chown -R www-data:www-data /var/www/o/signals || true; echo "o.build:"; cat /var/www/o/o.build.json 2>/dev/null || echo "{}"; ls -la /var/www/o/index.html 2>/dev/null || true'
+            'set -euo pipefail
+             if [ "$(id -u)" -eq 0 ]; then SUDO=""; elif sudo -n true 2>/dev/null; then SUDO="sudo -n"; else SUDO=""; fi
+             if [ -n "$SUDO" ] || [ "$(id -u)" -eq 0 ]; then
+               $SUDO chmod -R a+rX /var/www/o
+               $SUDO chown -R www-data:www-data /var/www/o/signals || true
+             else
+               chmod -R a+rX /var/www/o 2>/dev/null || true
+             fi
+             echo "o.build:"
+             cat /var/www/o/o.build.json 2>/dev/null || echo "{}"
+             ls -la /var/www/o/index.html 2>/dev/null || true'

@@ -125,29 +125,41 @@ jobs:
                  docker-compose \"\$@\"
                fi
              }
+             compose_v2=0
+             if docker compose version >/dev/null 2>&1; then compose_v2=1; fi
+             echo \"docker: \$(docker --version 2>/dev/null || echo unknown)\"
+             echo \"compose: \$( (docker compose version 2>/dev/null || docker-compose --version 2>/dev/null || true) | head -n 1 )\"
              GHCR_TOKEN='${GHCR_TOKEN}'
              if [ -z \"\$GHCR_TOKEN\" ]; then GHCR_TOKEN='${GHCR_FALLBACK_TOKEN}'; fi
              IMAGE_BASE='${REGISTRY}/${IMAGE_NAME}'
              if [ \"\$REF\" = 'main' ]; then TAG='latest'; else TAG=\"\$REF\"; fi
              FULL_IMAGE=\"\$IMAGE_BASE:\$TAG\"
              pulled=0
-             if [ -n \"\$GHCR_TOKEN\" ]; then
-               (echo \"\$GHCR_TOKEN\" | docker login ${REGISTRY} -u '${GHCR_USER}' --password-stdin) || true
-             fi
-             if docker pull \"\$FULL_IMAGE\"; then
-               pulled=1
+             # NOTE: docker-compose v1 can crash with Buildx-built images (missing ContainerConfig).
+             # If the server doesn't have compose v2, prefer a local build for stability.
+             if [ \"\$compose_v2\" = '1' ]; then
+               if [ -n \"\$GHCR_TOKEN\" ]; then
+                 (echo \"\$GHCR_TOKEN\" | docker login ${REGISTRY} -u '${GHCR_USER}' --password-stdin) || true
+               fi
+               if docker pull \"\$FULL_IMAGE\"; then
+                 pulled=1
+               fi
              fi
 
+             # Ensure DB is up first (avoid docker-compose v1 trying to recreate DB during API updates).
+             compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d db
+
              if [ \"\$pulled\" = '1' ]; then
-               # Prefer the signed/pushed image when available.
-               API_IMAGE=\"\$FULL_IMAGE\" compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build
+               # Prefer the signed/pushed image when available (compose v2 only).
+               API_IMAGE=\"\$FULL_IMAGE\" compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-build --no-deps api
              else
-               # Fallback: build locally from uploaded source (keeps deploy unblocked if GHCR is private/unavailable).
+               # Build locally from uploaded source (keeps deploy unblocked if GHCR is private/unavailable,
+               # and works with docker-compose v1 without BuildKit/ContainerConfig issues).
                API_IMAGE='o-api:local' compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml build api
-               API_IMAGE='o-api:local' compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d
+               API_IMAGE='o-api:local' compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml up -d --no-deps api
              fi
 
              # Apply schema migrations (idempotent: CREATE TABLE IF NOT EXISTS ...)
              compose -f docker-compose.yml -f sowwwl-api-php/docker-compose.prod.yml exec -T db sh -lc \
-               'mysql -uroot -p\$MYSQL_ROOT_PASSWORD \$MYSQL_DATABASE < /docker-entrypoint-initdb.d/schema.sql'
+               'MYSQL_PWD=\"\$MYSQL_ROOT_PASSWORD\" mysql -uroot \"\$MYSQL_DATABASE\" < /docker-entrypoint-initdb.d/schema.sql'
              docker system prune -f"
