@@ -122,13 +122,21 @@ cat > "${TMP}" <<EOF
 
   # SPA fallback without breaking /api
   RewriteEngine On
-  RewriteRule ^api/ - [L]
+  # Never rewrite API or build stamp.
+  # NOTE: %{REQUEST_URI} always starts with "/" (more robust than RewriteRule path matching).
+  RewriteCond %{REQUEST_URI} ^/api/ [OR]
+  RewriteCond %{REQUEST_URI} =/o.build.json
+  RewriteRule ^ - [L]
+
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
   RewriteRule ^ /index.html [L]
 
   <Files "index.html">
+    Header set Cache-Control "no-store"
+  </Files>
+  <Files "o.build.json">
     Header set Cache-Control "no-store"
   </Files>
 
