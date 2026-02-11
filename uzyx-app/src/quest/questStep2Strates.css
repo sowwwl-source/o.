@@ -1,0 +1,91 @@
+.qS2Root{
+  position: fixed;
+  left: calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  top: calc(var(--space-xl) + env(safe-area-inset-top, 0px));
+  max-width: min(72ch, calc(100vw - 2 * var(--space-xl)));
+  max-height: calc(100vh - 2 * var(--space-xl));
+  display: grid;
+  gap: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  pointer-events: auto;
+  overflow: auto;
+  padding:
+    0
+    0
+    0
+    0;
+}
+
+.qS2Top{
+  display: grid;
+  gap: 6px;
+}
+
+.qS2Title{
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  opacity: .84;
+}
+
+.qS2Hint{
+  font-size: 12px;
+  letter-spacing: .12em;
+  opacity: .56;
+}
+
+.qS2Cmds{
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.qS2Cmd{
+  display: inline-block;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  opacity: .78;
+  user-select: none;
+}
+.qS2Cmd[data-active="1"]{ opacity: 1; text-decoration: underline; text-underline-offset: .35em; }
+.qS2Cmd:hover{ opacity: 1; text-decoration: underline; text-underline-offset: .35em; }
+.qS2Cmd:focus-visible{ outline: 2px solid var(--fg); outline-offset: 4px; }
+
+.qS2Note{
+  font-size: 12px;
+  letter-spacing: .12em;
+  opacity: .62;
+}
+
+.qS2Text{
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+  letter-spacing: .04em;
+  white-space: pre-wrap;
+  opacity: .92;
+}
+
+.qS2Meta{
+  font-size: 12px;
+  letter-spacing: .1em;
+  opacity: .52;
+}
+
+.qS2Root[data-mystery="on"] .qS2Text{
+  filter: blur(.28px);
+  text-shadow: 0 0 18px var(--halo);
+  opacity: .86;
+}
+
+@media (max-width: 640px){
+  .qS2Root{
+    left: calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+    top: calc(var(--space-lg) + env(safe-area-inset-top, 0px));
+    max-width: calc(100vw - 2 * var(--space-lg));
+    max-height: calc(100vh - 2 * var(--space-lg));
+  }
+}

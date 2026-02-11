@@ -4,6 +4,8 @@ import { apiQuestDeltaAnswer, apiQuestDeltaEnd, apiQuestDeltaGet, apiQuestDeltaS
 import { useOEvent } from "@/oNote/oNote.hooks";
 import { applyLandTheme } from "@/theme/landTheme";
 import type { LandTheme } from "@/api/apiClient";
+import { QuestStep2Strates } from "@/quest/QuestStep2Strates";
+import { useQuestVoiceAgent } from "@/quest/questVoiceAgent";
 
 type LandType = "A" | "B" | "C" | null;
 
@@ -58,6 +60,8 @@ export function QuestDeltaPanel(props: {
   const [busy, setBusy] = useState<null | "sync" | "start" | "answer" | "end">(null);
   const [note, setNote] = useState<string | null>(null);
   const [answer, setAnswer] = useState("");
+  const [fails, setFails] = useState(0);
+  const lastStepRef = useRef<{ phase: QuestState["state"] | null; step: number }>({ phase: null, step: 0 });
 
   const noteTimerRef = useRef<number | null>(null);
   useEffect(() => {
@@ -85,6 +89,7 @@ export function QuestDeltaPanel(props: {
         return;
       }
       dispatch(r.status === 0 ? "network_error" : "form_validation_error");
+      setFails((x) => Math.min(9, x + 1));
       setNote(r.status === 0 ? "réseau: fragile" : `err:${String((r.data as any)?.error || r.status)}`);
     } finally {
     }
@@ -120,11 +125,13 @@ export function QuestDeltaPanel(props: {
       const r = await apiQuestDeltaStart();
       if (!r.ok) {
         dispatch(r.status === 0 ? "network_error" : "form_validation_error");
+        setFails((x) => Math.min(9, x + 1));
         setNote(r.status === 0 ? "réseau: fragile" : `err:${String((r.data as any)?.error || r.status)}`);
         return;
       }
       setNote("Δ: …");
       setAnswer("");
+      setFails(0);
       await sync();
     } finally {
       setBusy(null);
@@ -153,6 +160,7 @@ export function QuestDeltaPanel(props: {
           setNote(r.status === 0 ? "réseau: fragile" : `err:${tag || "http"}`);
         }
         dispatch(r.status === 0 ? "network_error" : "form_validation_error");
+        setFails((x) => Math.min(9, x + 1));
         return;
       }
 
@@ -161,10 +169,12 @@ export function QuestDeltaPanel(props: {
       const step = Number((r.data as any)?.step);
       if (!ok) {
         const hint = String((r.data as any)?.hint || (r.data as any)?.error || "—");
+        setFails((x) => Math.min(9, x + 1));
         setNote(clampLen(hint, 72));
       } else {
         setAnswer("");
         setNote(null);
+        setFails(0);
       }
 
       // Optimistic step update; then sync for answers.
@@ -191,6 +201,7 @@ export function QuestDeltaPanel(props: {
           setNote(r.status === 0 ? "réseau: fragile" : `err:${tag || "http"}`);
         }
         dispatch(r.status === 0 ? "network_error" : "form_validation_error");
+        setFails((x) => Math.min(9, x + 1));
         return;
       }
 
@@ -200,11 +211,22 @@ export function QuestDeltaPanel(props: {
       }
       const seal = String((r.data as any)?.seal || "");
       setNote(seal ? `seal:${seal}` : "ended");
+      setFails(0);
       await sync();
     } finally {
       setBusy(null);
     }
   };
+
+  useEffect(() => {
+    const phase = q?.state ?? null;
+    const step = phase === "RUNNING" ? Math.max(0, Math.floor(q?.step || 0)) : 0;
+    const prev = lastStepRef.current;
+    if (phase !== prev.phase || step !== prev.step) {
+      lastStepRef.current = { phase, step };
+      setFails(0);
+    }
+  }, [q?.state, q?.step]);
 
   const step = q?.state === "RUNNING" ? q.step : 0;
   const hint = useMemo(() => pickStepHint(step), [step]);
@@ -216,6 +238,7 @@ export function QuestDeltaPanel(props: {
   const showAnswerInput = q?.state === "RUNNING" && (step === 1 || step === 2 || step === 4 || step === 5);
   const showPassage = q?.state === "RUNNING" && step === 3;
   const canEnd = q?.state === "RUNNING" && step === 5 && hasSeed;
+  const showStep2 = q?.state === "RUNNING" && step === 2;
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.defaultPrevented) return;
@@ -233,9 +256,24 @@ export function QuestDeltaPanel(props: {
         ? `${q.state.toLowerCase()} · ${q.state === "RUNNING" ? `step:${q.step}` : "—"}`
         : "Δ: …";
 
+  const voice = useQuestVoiceAgent({
+    phase: q?.state ?? "IDLE",
+    step,
+    fails,
+    hint,
+    status,
+  });
+
   return (
     <section className="qDeltaRoot" aria-label="quest delta">
-      <div className="qDeltaTitle" aria-hidden="true">
+      <div
+        className="qDeltaTitle"
+        aria-hidden="true"
+        onPointerDown={voice.holdHandlers.onPointerDown}
+        onPointerMove={voice.holdHandlers.onPointerMove}
+        onPointerUp={voice.holdHandlers.onPointerUp}
+        onPointerCancel={voice.holdHandlers.onPointerCancel}
+      >
         [ Δ ]
       </div>
 
@@ -276,6 +314,8 @@ export function QuestDeltaPanel(props: {
 
       {q?.state === "RUNNING" ? (
         <>
+          {showStep2 ? <QuestStep2Strates /> : null}
+
           <div className="qDeltaHint" aria-hidden="true">
             {hint}
           </div>

@@ -13,6 +13,8 @@
   letter-spacing:.22em;
   text-transform:uppercase;
   opacity:.72;
+  user-select:none;
+  -webkit-user-select:none;
 }
 
 .qDeltaMeta{
@@ -98,4 +100,3 @@
   .qDeltaRoot{ text-align:left; }
   .qDeltaCmds{ justify-content:flex-start; }
 }
-
