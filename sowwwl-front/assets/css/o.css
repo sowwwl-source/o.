@@ -507,7 +507,7 @@ html.is-inverted .o-c0ntr0l-btn{
   display:flex;
   flex-direction:column;
   align-items:flex-start;
-  gap:8px;
+  gap:10px;
   pointer-events:auto;
 }
 .o-petals-ring{
@@ -602,12 +602,6 @@ html.is-inverted .o-petals-ring{
 .o-petals-actions{
   display:flex;
   gap:8px;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .18s ease;
-}
-.o-petals:hover .o-petals-actions,
-.o-petals:focus-within .o-petals-actions{
   opacity:1;
   pointer-events:auto;
 }
@@ -630,7 +624,49 @@ html.is-inverted .o-petals-ring{
 .o-petals-hint{
   font-size:11px;
   letter-spacing:.12em;
-  max-width:220px;
+  max-width:280px;
+}
+
+.o-petals-tree{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:6px;
+  width:min(320px, 86vw);
+}
+
+.o-petals-tree-btn{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  min-height:28px;
+  padding:4px 8px;
+  border:1px solid var(--line);
+  background:rgba(0,0,0,.14);
+  color:inherit;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  text-align:left;
+}
+html.is-inverted .o-petals-tree-btn{
+  background:rgba(255,255,255,.2);
+}
+.o-petals-tree-btn.is-cursor{
+  border-color:var(--accent-green);
+}
+.o-petals-tree-btn.is-active{
+  border-color:var(--ok-line);
+}
+.o-petals-tree-key{
+  width:16px;
+  text-align:center;
+  opacity:.76;
+}
+.o-petals-tree-text{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 @media (pointer: coarse){
@@ -646,9 +682,12 @@ html.is-inverted .o-petals-ring{
   }
   .o-petal-core{width:40px;height:40px}
   .o-petals-btn{width:40px;height:40px}
-  .o-petals-actions{
-    opacity:1;
-    pointer-events:auto;
+  .o-petals-tree{
+    width:min(340px, calc(100vw - 24px));
+  }
+  .o-petals-tree-btn{
+    min-height:32px;
+    font-size:12px;
   }
 }
 
