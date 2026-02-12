@@ -327,10 +327,25 @@
     return r;
   }
 
+  async function triggerInvert(origin) {
+    let r = null;
+    try {
+      r = await threshold("invert", origin);
+      if (r?.ok) return r;
+    } catch {}
+
+    // Fallback local if server threshold is unavailable (guest/offline).
+    const depth = Math.max(0, toInt(storage.get(STORE_DEPTH), 0));
+    const next = stateFromSeq(depth + 1);
+    await irisCommit(() => applyVisualState(next), origin || bestOrigin(window.innerWidth / 2, window.innerHeight / 2));
+    return r || { ok: false, status: 0, data: { error: "local_fallback" } };
+  }
+
   // Public helpers for pages: O.threshold("quest") and O.sync()
   window.O = window.O || {};
   window.O.threshold = threshold;
   window.O.sync = syncFromServer;
+  window.O.invert = triggerInvert;
 
   // Initial sync (no animation) + resync on focus (multi-device).
   syncFromServer({ animate: false }).catch(() => {});
@@ -339,6 +354,20 @@
     syncFromServer({ animate: true }).catch(() => {});
   });
   window.addEventListener("focus", () => syncFromServer({ animate: true }).catch(() => {}));
+
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.defaultPrevented) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const k = String(e.key || "").toLowerCase();
+      if (k !== "i") return;
+      if (isInteractive(e.target instanceof Element ? e.target : null)) return;
+      e.preventDefault();
+      triggerInvert(bestOrigin(window.innerWidth / 2, window.innerHeight / 2)).catch(() => {});
+    },
+    { capture: true },
+  );
 
   // Optional: mark specific links/buttons as thresholds via data-threshold="name".
   document.addEventListener(
@@ -919,6 +948,15 @@
         applyShellView("page");
       });
 
+      const introInvert = document.createElement("a");
+      introInvert.className = "btn";
+      introInvert.href = "#";
+      introInvert.textContent = "inverser (i)";
+      introInvert.addEventListener("click", (e) => {
+        e.preventDefault();
+        triggerInvert(bestOrigin(window.innerWidth / 2, window.innerHeight / 2)).catch(() => {});
+      });
+
       const introHub = document.createElement("a");
       introHub.className = "btn";
       introHub.href = "/0.html";
@@ -926,6 +964,7 @@
 
       introCmds.appendChild(introMenu);
       introCmds.appendChild(introPage);
+      introCmds.appendChild(introInvert);
       introCmds.appendChild(introHub);
 
       const introHint = document.createElement("div");
