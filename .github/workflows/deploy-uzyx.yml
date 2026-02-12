@@ -74,27 +74,47 @@ jobs:
           # Deploy uzyx-app build output to /var/www/o (do not touch signals/)
           rsync -az --delete --exclude "signals/" -e "ssh -i ~/.ssh/id_deploy" uzyx-app/dist/ "${DO_USER}@${DO_HOST}:/var/www/o/"
 
-          # Ensure Apache serves /var/www/o and proxies /api/* (avoids "site never changes" due to wrong docroot).
+          # If Apache is actively serving this host, keep its vhost in sync.
+          # On Caddy-only droplets, skip this step to avoid false deploy failures.
           scp -i ~/.ssh/id_deploy scripts/ensure-apache-o-site.sh "${DO_USER}@${DO_HOST}:/tmp/ensure-apache-o-site.sh"
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
             'set -euo pipefail
-             if [ "$(id -u)" -eq 0 ]; then
-               bash /tmp/ensure-apache-o-site.sh
-             elif sudo -n true 2>/dev/null; then
-               sudo -n bash /tmp/ensure-apache-o-site.sh
+             run_apache_fix=0
+             if command -v apache2ctl >/dev/null 2>&1; then
+               if systemctl is-active --quiet apache2; then
+                 run_apache_fix=1
+               elif [ "$(id -u)" -ne 0 ] && sudo -n systemctl is-active --quiet apache2 2>/dev/null; then
+                 run_apache_fix=1
+               fi
+             fi
+             if [ "$run_apache_fix" = "1" ]; then
+               if [ "$(id -u)" -eq 0 ]; then
+                 bash /tmp/ensure-apache-o-site.sh
+               elif sudo -n true 2>/dev/null; then
+                 sudo -n bash /tmp/ensure-apache-o-site.sh
+               else
+                 echo "SKIP ensure-apache-o-site.sh (no sudo)"
+               fi
              else
-               echo "SKIP ensure-apache-o-site.sh (no sudo)"
+               echo "SKIP ensure-apache-o-site.sh (apache not active)"
              fi'
 
-          # Debug (visible in Actions logs): vhost mapping + API reachability.
+          # Debug (visible in Actions logs): web stack + API reachability.
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
             'set -euo pipefail
              if [ "$(id -u)" -eq 0 ]; then SUDO=""; elif sudo -n true 2>/dev/null; then SUDO="sudo -n"; else SUDO=""; fi
-             echo "apache vhosts:"
-             if [ -n "$SUDO" ] || [ "$(id -u)" -eq 0 ]; then
-               $SUDO apache2ctl -S | sed -n "1,140p"
+             echo "web stack:"
+             if command -v caddy >/dev/null 2>&1; then
+               echo "caddy: present"
+               (systemctl is-active caddy 2>/dev/null || true)
              else
-               echo "SKIP apache2ctl -S (no sudo)"
+               echo "caddy: absent"
+             fi
+             if command -v apache2ctl >/dev/null 2>&1 && { systemctl is-active --quiet apache2 2>/dev/null || ([ -n "$SUDO" ] && $SUDO systemctl is-active --quiet apache2 2>/dev/null); }; then
+               echo "apache vhosts:"
+               ${SUDO:+$SUDO }apache2ctl -S | sed -n "1,140p"
+             else
+               echo "apache: absent or inactive"
              fi
              echo
              echo "api health:"
