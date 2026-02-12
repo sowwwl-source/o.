@@ -724,6 +724,54 @@
       return v && findById(v) ? v : null;
     })();
     let cursorId = activeId && activeId !== "core" ? activeId : remembered || PETALS[0]?.id;
+    const SHELL_NEXT_VIEW_KEY = "o:shell:view-next";
+    const pageMain = document.querySelector("main#o");
+    const shellEnabled = pageMain instanceof HTMLElement && !root.hasAttribute("data-no-shell");
+    const corePath = !activeId || activeId === "core";
+    const shellViews = ["intro", "menu", "page"];
+    let shellView = "page";
+
+    function sessionGet(key) {
+      try {
+        return sessionStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    function sessionSet(key, value) {
+      try {
+        sessionStorage.setItem(key, value);
+      } catch {}
+    }
+
+    function sessionDel(key) {
+      try {
+        sessionStorage.removeItem(key);
+      } catch {}
+    }
+
+    function normalizeShellView(v) {
+      const s = String(v || "").toLowerCase();
+      return shellViews.includes(s) ? s : "";
+    }
+
+    function applyShellView(next) {
+      if (!shellEnabled) return;
+      const v = normalizeShellView(next) || (corePath ? "intro" : "page");
+      shellView = v;
+      root.dataset.shellView = v;
+      sessionSet("o:shell:view-current", v);
+    }
+
+    function shiftShellView(delta) {
+      if (!shellEnabled) return;
+      const idx = shellViews.indexOf(shellView);
+      const base = idx >= 0 ? idx : 2;
+      const next = Math.max(0, Math.min(shellViews.length - 1, base + delta));
+      if (next === base) return;
+      applyShellView(shellViews[next]);
+    }
 
     // UI
     const nav = document.createElement("nav");
@@ -788,7 +836,7 @@
     label.setAttribute("aria-live", "polite");
     const hint = document.createElement("div");
     hint.className = "o-petals-hint muted";
-    hint.textContent = "clic direct • 1..8: ouvrir • ←/→: parcourir • ↵: ouvrir";
+    hint.textContent = "clic direct • 1..8: ouvrir • ←/→: parcourir • ↵: ouvrir • swipe: vues";
     const hintSeen = storage.get("o:petal:hint") === "1";
     if (hintSeen) hint.hidden = true;
 
@@ -829,6 +877,69 @@
     nav.appendChild(ui);
     document.body.appendChild(nav);
 
+    let intro = null;
+    if (shellEnabled) {
+      intro = document.createElement("section");
+      intro.id = "o-shell-intro";
+      intro.className = "o-shell-intro";
+      intro.setAttribute("aria-label", "premier accès");
+      intro.setAttribute("data-no-flip", "");
+      intro.setAttribute("data-no-glitch", "");
+
+      const introHead = document.createElement("div");
+      introHead.className = "o-shell-intro-head";
+      introHead.textContent = "sowwwl";
+
+      const introTitle = document.createElement("h2");
+      introTitle.className = "o-shell-intro-title";
+      introTitle.textContent = "intro / menu / page";
+
+      const introText = document.createElement("p");
+      introText.className = "o-shell-intro-text muted";
+      introText.textContent = "swipe gauche/droite pour passer entre les vues sans superposition.";
+
+      const introCmds = document.createElement("div");
+      introCmds.className = "o-shell-intro-cmds";
+
+      const introMenu = document.createElement("a");
+      introMenu.className = "btn";
+      introMenu.href = "#";
+      introMenu.textContent = "ouvrir menu";
+      introMenu.addEventListener("click", (e) => {
+        e.preventDefault();
+        applyShellView("menu");
+      });
+
+      const introPage = document.createElement("a");
+      introPage.className = "btn";
+      introPage.href = "#";
+      introPage.textContent = "ouvrir page";
+      introPage.addEventListener("click", (e) => {
+        e.preventDefault();
+        applyShellView("page");
+      });
+
+      const introHub = document.createElement("a");
+      introHub.className = "btn";
+      introHub.href = "/0.html";
+      introHub.textContent = "hub /0";
+
+      introCmds.appendChild(introMenu);
+      introCmds.appendChild(introPage);
+      introCmds.appendChild(introHub);
+
+      const introHint = document.createElement("div");
+      introHint.className = "o-shell-intro-hint muted";
+      introHint.textContent = "←/→ via swipe";
+
+      intro.appendChild(introHead);
+      intro.appendChild(introTitle);
+      intro.appendChild(introText);
+      intro.appendChild(introCmds);
+      intro.appendChild(introHint);
+      document.body.appendChild(intro);
+    }
+
     // Dock movement control into the petals cluster when present (single module on mobile).
     try {
       const ctrl = document.querySelector(".o-c0ntr0l");
@@ -841,6 +952,16 @@
       if (hint.hidden) return;
       hint.hidden = true;
       storage.set("o:petal:hint", "1");
+    }
+
+    if (shellEnabled) {
+      const nextView = normalizeShellView(sessionGet(SHELL_NEXT_VIEW_KEY));
+      if (nextView) sessionDel(SHELL_NEXT_VIEW_KEY);
+      const rememberedView = normalizeShellView(sessionGet("o:shell:view-current"));
+      const startView = nextView || (corePath ? "intro" : rememberedView || "page");
+      applyShellView(startView);
+    } else {
+      delete root.dataset.shellView;
     }
 
     function applyCursor(nextId) {
@@ -876,7 +997,11 @@
       applyCursor(PETALS[next].id);
     }
 
-    async function go(href) {
+    async function go(href, opts = {}) {
+      if (shellEnabled) {
+        const next = normalizeShellView(opts.nextView || "page") || "page";
+        sessionSet(SHELL_NEXT_VIEW_KEY, next);
+      }
       const url = new URL(href, window.location.href).toString();
       window.location.href = url;
     }
@@ -884,16 +1009,16 @@
     async function openCursor() {
       const cur = findById(cursorId);
       if (!cur) return;
-      await go(cur.href);
+      await go(cur.href, { nextView: "page" });
     }
 
     coreBtn.addEventListener("click", () => {
       markHintSeen();
-      go(CORE.href);
+      go(CORE.href, { nextView: "page" });
     });
     coreTreeBtn.addEventListener("click", () => {
       markHintSeen();
-      go(CORE.href);
+      go(CORE.href, { nextView: "page" });
     });
     prevBtn.addEventListener("click", () => {
       markHintSeen();
@@ -923,12 +1048,13 @@
         if (!cur) return;
         markHintSeen();
         applyCursor(id);
-        go(cur.href);
+        go(cur.href, { nextView: "page" });
       });
     });
 
     nav.addEventListener("keydown", (e) => {
       if (e.defaultPrevented) return;
+      if (shellEnabled && shellView !== "menu") return;
       const ae = document.activeElement;
       const editing =
         ae instanceof Element &&
@@ -952,18 +1078,79 @@
       if (e.key === "0") {
         e.preventDefault();
         markHintSeen();
-        go(CORE.href);
+        go(CORE.href, { nextView: "page" });
       }
       const n = Number.parseInt(String(e.key || ""), 10);
       if (Number.isFinite(n) && n >= 1 && n <= PETALS.length) {
         e.preventDefault();
         markHintSeen();
-        go(PETALS[n - 1].href);
+        go(PETALS[n - 1].href, { nextView: "page" });
       }
       if (e.key === "Escape") {
         (document.activeElement instanceof HTMLElement ? document.activeElement : nav).blur();
       }
     });
+
+    function shellSwipeBlocked(target) {
+      if (!(target instanceof Element)) return false;
+      if (target.closest("[data-no-shell-swipe]")) return true;
+      return Boolean(target.closest("input, textarea, select, option, button, label, a"));
+    }
+
+    if (shellEnabled) {
+      const swipe = {
+        active: false,
+        pointerId: null,
+        x0: 0,
+        y0: 0,
+        t0: 0,
+        blocked: false,
+      };
+
+      document.addEventListener(
+        "pointerdown",
+        (e) => {
+          if (e.defaultPrevented) return;
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          swipe.active = true;
+          swipe.pointerId = e.pointerId;
+          swipe.x0 = e.clientX;
+          swipe.y0 = e.clientY;
+          swipe.t0 = performance.now();
+          swipe.blocked = shellSwipeBlocked(e.target);
+        },
+        { capture: true, passive: true },
+      );
+
+      document.addEventListener(
+        "pointerup",
+        (e) => {
+          if (!swipe.active || swipe.pointerId !== e.pointerId) return;
+          swipe.active = false;
+          swipe.pointerId = null;
+          if (swipe.blocked) return;
+          const dt = performance.now() - swipe.t0;
+          const dx = e.clientX - swipe.x0;
+          const dy = e.clientY - swipe.y0;
+          if (dt > 900) return;
+          if (Math.abs(dx) < 70) return;
+          if (Math.abs(dx) < Math.abs(dy) * 1.25) return;
+          if (dx < 0) shiftShellView(1);
+          else shiftShellView(-1);
+        },
+        { capture: true, passive: true },
+      );
+
+      document.addEventListener(
+        "pointercancel",
+        (e) => {
+          if (!swipe.active || swipe.pointerId !== e.pointerId) return;
+          swipe.active = false;
+          swipe.pointerId = null;
+        },
+        { capture: true, passive: true },
+      );
+    }
 
     // Initialize (no animation on first paint).
     applyCursor(cursorId);

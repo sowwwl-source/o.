@@ -494,6 +494,100 @@ html.is-inverted .o-c0ntr0l-btn{
 }
 
 /* ===== Petals navigation (9 sections) ===== */
+.o-shell-intro{
+  position:fixed;
+  inset:0;
+  z-index:9996;
+  display:none;
+  align-content:center;
+  justify-items:center;
+  gap:14px;
+  padding:
+    calc(28px + env(safe-area-inset-top, 0px))
+    calc(14px + env(safe-area-inset-right, 0px))
+    calc(16px + env(safe-area-inset-bottom, 0px))
+    calc(14px + env(safe-area-inset-left, 0px));
+  text-align:center;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,.06), transparent 54%),
+    radial-gradient(circle at 78% 84%, rgba(255,255,255,.05), transparent 58%),
+    var(--bg);
+}
+html.is-inverted .o-shell-intro{
+  background:
+    radial-gradient(circle at 22% 18%, rgba(0,0,0,.06), transparent 54%),
+    radial-gradient(circle at 78% 84%, rgba(0,0,0,.05), transparent 58%),
+    var(--bg);
+}
+.o-shell-intro-head{
+  font-size:12px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+.o-shell-intro-title{
+  margin:0;
+  font-size:clamp(22px, 7vw, 38px);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.o-shell-intro-text{
+  max-width:min(62ch, 92vw);
+  margin:0;
+}
+.o-shell-intro-cmds{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+}
+.o-shell-intro-hint{
+  font-size:11px;
+  letter-spacing:.14em;
+}
+
+[data-shell-view="intro"] #o{
+  visibility:hidden;
+  pointer-events:none;
+}
+[data-shell-view="intro"] .o-petals{
+  display:none;
+}
+[data-shell-view="intro"] .o-shell-intro{
+  display:grid;
+}
+
+[data-shell-view="menu"] #o{
+  visibility:hidden;
+  pointer-events:none;
+}
+[data-shell-view="menu"] .o-shell-intro{
+  display:none;
+}
+[data-shell-view="menu"] .o-petals{
+  left:50%;
+  top:50%;
+  bottom:auto;
+  transform:translate(-50%,-50%);
+}
+[data-shell-view="menu"] .o-petals-ui{
+  align-items:center;
+  text-align:center;
+}
+[data-shell-view="menu"] .o-petals .o-c0ntr0l{
+  align-items:center;
+}
+[data-shell-view="menu"] .o-petals .o-c0ntr0l-msg{
+  text-align:center;
+}
+
+[data-shell-view="page"] .o-shell-intro{
+  display:none;
+}
+[data-shell-view="page"] .o-petals{
+  display:none;
+}
+
 .o-petals{
   position:fixed;
   left:12px;
