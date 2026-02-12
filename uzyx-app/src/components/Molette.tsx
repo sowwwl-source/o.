@@ -257,6 +257,13 @@ export function Molette(props: { current: NodeId }) {
         e.preventDefault();
         setTheta((t) => normalizeAngle(t + (Math.PI * 2) / Math.max(1, adjacent.length)));
       }
+      const n = Number.parseInt(k, 10);
+      if (Number.isFinite(n) && n >= 1 && n <= adjacent.length) {
+        e.preventDefault();
+        const idx = n - 1;
+        const target = normalizeAngle((idx / Math.max(1, adjacent.length)) * Math.PI * 2 - Math.PI / 2);
+        setTheta(target);
+      }
       if (k === "enter") {
         e.preventDefault();
         triggerFlash();
@@ -601,17 +608,10 @@ export function Molette(props: { current: NodeId }) {
   const frame = store.getFrame();
   const blend = frame.stateBlend;
 
+  // Wheel is intentionally disabled to keep helm navigation explicit.
   const onWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    let d = Math.abs(e.deltaY || 0) >= Math.abs(e.deltaX || 0) ? e.deltaY || 0 : e.deltaX || 0;
-    if (e.deltaMode === 1) d *= 16;
-    else if (e.deltaMode === 2) d *= Math.max(320, window.innerHeight * 0.9);
-    if (!Number.isFinite(d) || d === 0) return;
-    const cap = store.getReducedMotion() ? 180 : 240;
-    d = clamp(d, -cap, cap);
-    const k = store.getReducedMotion() ? 0.0018 : 0.0034;
-    setTheta((t) => normalizeAngle(t + d * k));
   };
 
   const angleOf = (clientX: number, clientY: number) => {
@@ -833,12 +833,9 @@ export function Molette(props: { current: NodeId }) {
       {helm.previewLevel > 0 && helm.mode !== "failsafe-hard" ? (
         <div className="helmGhost" aria-hidden="true">
           <span className="helmGhostLine">{`//// ${sel?.id ?? "—"} · ${hint} · ${thetaDeg}°`}</span>
+          <span className="helmGhostHint">drag · ←/→ · 1..4 · ↵</span>
         </div>
       ) : null}
     </div>
   );
-}
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
 }

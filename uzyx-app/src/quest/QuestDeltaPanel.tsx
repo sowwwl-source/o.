@@ -74,6 +74,7 @@ export function QuestDeltaPanel(props: {
   const [note, setNote] = useState<string | null>(null);
   const [answer, setAnswer] = useState("");
   const [fails, setFails] = useState(0);
+  const [stepFx, setStepFx] = useState<{ token: number; dir: -1 | 0 | 1 }>({ token: 0, dir: 0 });
   const lastStepRef = useRef<{ phase: QuestState["state"] | null; step: number }>({ phase: null, step: 0 });
 
   const noteTimerRef = useRef<number | null>(null);
@@ -265,6 +266,9 @@ export function QuestDeltaPanel(props: {
     const step = phase === "RUNNING" ? Math.max(0, Math.floor(q?.step || 0)) : 0;
     const prev = lastStepRef.current;
     if (phase !== prev.phase || step !== prev.step) {
+      const dir: -1 | 0 | 1 =
+        prev.phase === "RUNNING" && phase === "RUNNING" && step !== prev.step ? (step > prev.step ? 1 : -1) : 0;
+      setStepFx((s) => ({ token: s.token + 1, dir }));
       lastStepRef.current = { phase, step };
       setFails(0);
     }
@@ -298,6 +302,7 @@ export function QuestDeltaPanel(props: {
       : q
         ? `${q.state.toLowerCase()} · ${q.state === "RUNNING" ? `step:${Math.max(1, Math.min(5, q.step))}/5` : "—"}`
         : "Δ: …";
+  const stepFxClass = stepFx.dir > 0 ? "is-step-forward" : stepFx.dir < 0 ? "is-step-back" : "";
 
   const voice = useQuestVoiceAgent({
     phase: q?.state ?? "IDLE",
@@ -308,7 +313,7 @@ export function QuestDeltaPanel(props: {
   });
 
   return (
-    <section className="qDeltaRoot" aria-label="quest delta">
+    <section className={`qDeltaRoot ${stepFxClass}`.trim()} aria-label="quest delta">
       <div
         className="qDeltaTitle"
         aria-hidden="true"
@@ -357,24 +362,24 @@ export function QuestDeltaPanel(props: {
 
       {q?.state === "RUNNING" ? (
         <>
-          <div className="qDeltaProgress" aria-hidden="true">
+          <div key={`progress-${stepFx.token}`} className={`qDeltaProgress ${stepFxClass}`.trim()} aria-hidden="true">
             {[1, 2, 3, 4, 5].map((n) => (
               <span
                 key={n}
-                className={`qDeltaStep ${step > n ? "is-done" : ""} ${step === n ? "is-current" : ""}`}
+                className={`qDeltaStep ${step > n ? "is-done" : ""} ${step === n ? "is-current" : ""} ${step === n && stepFx.dir !== 0 ? "is-enter" : ""}`}
               >
                 {n}
               </span>
             ))}
           </div>
 
-          <div className="qDeltaGuide" aria-hidden="true">
+          <div key={`guide-${stepFx.token}-${step}`} className={`qDeltaGuide ${stepFxClass}`.trim()} aria-hidden="true">
             {stepGuide}
           </div>
 
           {showStep2 ? <QuestStep2Strates /> : null}
 
-          <div className="qDeltaHint" aria-hidden="true">
+          <div key={`hint-${stepFx.token}-${step}`} className={`qDeltaHint ${stepFxClass}`.trim()} aria-hidden="true">
             {hint}
           </div>
 
@@ -509,7 +514,7 @@ export function QuestDeltaPanel(props: {
         </>
       ) : null}
 
-      <div className="qDeltaStatus" aria-live={note ? "polite" : "off"}>
+      <div key={`status-${stepFx.token}-${status}`} className={`qDeltaStatus ${stepFxClass}`.trim()} aria-live={note ? "polite" : "off"}>
         {status}
       </div>
     </section>

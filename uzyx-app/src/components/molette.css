@@ -313,7 +313,9 @@
   bottom:14px;
   bottom:calc(14px + env(safe-area-inset-bottom, 0px));
   display:flex;
-  justify-content:center;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
   pointer-events:none;
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   letter-spacing:.24em;
@@ -325,6 +327,12 @@
 .helmGhostLine{
   padding:6px 10px;
   text-shadow:0 0 18px var(--halo);
+}
+
+.helmGhostHint{
+  font-size:10px;
+  letter-spacing:.18em;
+  opacity:.68;
 }
 
 .helmOverlay.is-traversing{
