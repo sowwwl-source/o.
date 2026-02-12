@@ -1,0 +1,215 @@
+.appShellRoot{
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  min-height:100svh;
+  overflow:hidden;
+  touch-action:pan-y;
+  background:var(--bg);
+}
+
+.appShellTabs{
+  position:fixed;
+  top:calc(var(--space-md) + env(safe-area-inset-top, 0px));
+  left:50%;
+  transform:translateX(-50%);
+  z-index:9000;
+  display:flex;
+  gap:8px;
+  padding:4px;
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  border:1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+.appShellTab{
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-size:11px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  padding:6px 10px;
+  opacity:.62;
+  cursor:pointer;
+}
+
+.appShellTab.is-active{
+  opacity:1;
+  text-decoration:underline;
+  text-underline-offset:.34em;
+}
+
+.appShellTrack{
+  width:300vw;
+  min-height:100vh;
+  min-height:100svh;
+  display:flex;
+  transform:translate3d(calc(var(--app-shell-index, 0) * -100vw), 0, 0);
+  transition:transform 320ms cubic-bezier(.22,.72,.2,1);
+  will-change:transform;
+}
+
+.appShellPane{
+  width:100vw;
+  min-height:100vh;
+  min-height:100svh;
+  flex:0 0 100vw;
+  position:relative;
+  overflow:hidden;
+  background:var(--bg);
+}
+
+.appShellPaneContent{
+  overflow:auto;
+  overscroll-behavior-x:contain;
+}
+
+.appIntroRoot{
+  min-height:100vh;
+  min-height:100svh;
+  display:grid;
+  grid-template-rows:auto 1fr auto auto;
+  gap:18px;
+  padding:
+    calc(var(--space-xl) + env(safe-area-inset-top, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-right, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-bottom, 0px))
+    calc(var(--space-xl) + env(safe-area-inset-left, 0px));
+  background:
+    radial-gradient(circle at 20% 18%, color-mix(in srgb, var(--fg) 7%, transparent), transparent 48%),
+    radial-gradient(circle at 86% 82%, color-mix(in srgb, var(--fg) 6%, transparent), transparent 52%);
+}
+
+.appIntroHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:12px;
+}
+
+.appIntroTag,
+.appIntroMode{
+  font-size:12px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  opacity:.66;
+}
+
+.appIntroMatter{
+  align-self:center;
+  max-width:min(64ch, 100%);
+}
+
+.appIntroTitle{
+  margin:0 0 12px;
+  font-size:clamp(24px, 4.6vw, 54px);
+  line-height:1.08;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.appIntroCopy{
+  margin:0;
+  font-size:13px;
+  letter-spacing:.11em;
+  opacity:.76;
+  max-width:58ch;
+}
+
+.appIntroCmds{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.appIntroCmd{
+  display:inline-flex;
+  align-items:center;
+  min-height:38px;
+  border:1px solid color-mix(in srgb, var(--fg) 24%, transparent);
+  padding:8px 12px;
+  font-size:12px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+}
+
+.appIntroHint{
+  font-size:11px;
+  letter-spacing:.16em;
+  opacity:.58;
+}
+
+.appShellList{
+  position:fixed;
+  left:calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+  bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  z-index:9500;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  max-width:min(92vw, 520px);
+  pointer-events:auto;
+}
+
+.appShellListItem{
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:4px 8px;
+  font-size:11px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  border:1px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  background:color-mix(in srgb, var(--bg) 78%, transparent);
+  opacity:.78;
+}
+
+.appShellListItem.is-active{
+  opacity:1;
+  border-color:color-mix(in srgb, var(--fg) 42%, transparent);
+}
+
+@media (max-width: 760px){
+  .appShellTabs{
+    width:calc(100vw - 2 * var(--space-md));
+    justify-content:space-between;
+  }
+
+  .appShellTab{
+    min-height:40px;
+    padding:8px 10px;
+  }
+
+  .appIntroRoot{
+    padding:
+      calc(var(--space-lg) + env(safe-area-inset-top, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-right, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-bottom, 0px))
+      calc(var(--space-lg) + env(safe-area-inset-left, 0px));
+  }
+
+  .appIntroCmd{
+    min-height:42px;
+    font-size:12px;
+  }
+
+  .appShellList{
+    left:calc(var(--space-md) + env(safe-area-inset-left, 0px));
+    right:calc(var(--space-md) + env(safe-area-inset-right, 0px));
+    bottom:calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+    max-width:none;
+    gap:6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .appShellTrack{
+    transition:none;
+  }
+}

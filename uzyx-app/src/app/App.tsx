@@ -31,10 +31,17 @@ import { apiLandGet } from "@/api/apiClient";
 import { apiLandThemeGet } from "@/api/apiClient";
 import { applyLandTheme, clearLandTheme } from "@/theme/landTheme";
 import { installShakeSignal } from "@/theme/shakeSignal";
+import { helmAPI } from "@/helm/helmState";
+import "./appShell.css";
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
   return Boolean(t.closest("input,textarea,select,[contenteditable='true']"));
+}
+
+function isSwipeBlockedTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof Element)) return false;
+  return Boolean(t.closest("a,button,input,textarea,select,[role='link'],[contenteditable='true']"));
 }
 
 type Route =
@@ -47,6 +54,19 @@ type Route =
   | { kind: "app"; id: NodeId }
   | { kind: "profile"; handle: string }
   | { kind: "cloud" };
+
+type AppPane = "intro" | "menu" | "content";
+
+const APP_PANES: readonly AppPane[] = ["intro", "menu", "content"];
+const APP_NODE_LIST: readonly NodeId[] = ["HAUT", "LAND", "FERRY", "STR3M", "CONTACT"];
+
+function clampPaneIndex(n: number): number {
+  return Math.max(0, Math.min(APP_PANES.length - 1, n));
+}
+
+function paneIndexForNode(id: NodeId): number {
+  return id === "HAUT" ? 1 : 2;
+}
 
 function parseRouteFromHash(hash: string): Route {
   const raw = String(hash || "").replace(/^#\/?/, "").replace(/^\/+/, "");
@@ -277,20 +297,210 @@ function AppGate(props: { id: NodeId }) {
 
   return (
     <PerceptionProvider>
-      {id === "HAUT" ? (
-        <BoardPage active="HAUT" />
-      ) : id === "STR3M" ? (
-        <StreamPage />
-      ) : id === "FERRY" ? (
-        <FerryPage />
-      ) : id === "CONTACT" ? (
-        <ContactsPage />
-      ) : (
-        <LandPage />
-      )}
-      <Molette current={id} />
-      <HelmDock />
+      <AppSwipeShell id={id} />
     </PerceptionProvider>
+  );
+}
+
+function AppContentForNode(props: { id: NodeId }) {
+  const id = props.id;
+  if (id === "HAUT") return <BoardPage active="HAUT" />;
+  if (id === "STR3M") return <StreamPage />;
+  if (id === "FERRY") return <FerryPage />;
+  if (id === "CONTACT") return <ContactsPage />;
+  return <LandPage />;
+}
+
+function AppSwipeShell(props: { id: NodeId }) {
+  const id = props.id;
+  const [paneIndex, setPaneIndex] = useState<number>(0);
+  const firstMountRef = useRef(true);
+  const swipeRef = useRef<{
+    active: boolean;
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    startedAt: number;
+    canSwipe: boolean;
+  }>({
+    active: false,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    startedAt: 0,
+    canSwipe: false,
+  });
+
+  useEffect(() => {
+    if (firstMountRef.current) {
+      firstMountRef.current = false;
+      return;
+    }
+    setPaneIndex(paneIndexForNode(id));
+  }, [id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      if (isTypingTarget(e.target)) return;
+      if (helmAPI.getState().open) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setPaneIndex((n) => clampPaneIndex(n - 1));
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setPaneIndex((n) => clampPaneIndex(n + 1));
+      }
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
+  const goToPane = (next: number) => setPaneIndex(clampPaneIndex(next));
+
+  return (
+    <div
+      className="appShellRoot"
+      aria-label="app shell"
+      onPointerDown={(e) => {
+        if (helmAPI.getState().open) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        swipeRef.current.active = true;
+        swipeRef.current.pointerId = e.pointerId;
+        swipeRef.current.startX = e.clientX;
+        swipeRef.current.startY = e.clientY;
+        swipeRef.current.startedAt = performance.now();
+        swipeRef.current.canSwipe = !isSwipeBlockedTarget(e.target);
+      }}
+      onPointerUp={(e) => {
+        const s = swipeRef.current;
+        if (!s.active || s.pointerId !== e.pointerId) return;
+        s.active = false;
+        s.pointerId = null;
+        if (!s.canSwipe) return;
+        if (helmAPI.getState().open) return;
+        const dx = e.clientX - s.startX;
+        const dy = e.clientY - s.startY;
+        const dt = performance.now() - s.startedAt;
+        if (dt > 900) return;
+        if (Math.abs(dx) < 72) return;
+        if (Math.abs(dx) < Math.abs(dy) * 1.25) return;
+        if (dx < 0) setPaneIndex((n) => clampPaneIndex(n + 1));
+        else setPaneIndex((n) => clampPaneIndex(n - 1));
+      }}
+      onPointerCancel={() => {
+        swipeRef.current.active = false;
+        swipeRef.current.pointerId = null;
+        swipeRef.current.canSwipe = false;
+      }}
+    >
+      <nav className="appShellTabs" aria-label="shell tabs">
+        <a
+          className={`appShellTab ${paneIndex === 0 ? "is-active" : ""}`}
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            goToPane(0);
+          }}
+        >
+          intro
+        </a>
+        <a
+          className={`appShellTab ${paneIndex === 1 ? "is-active" : ""}`}
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            goToPane(1);
+          }}
+        >
+          menu
+        </a>
+        <a
+          className={`appShellTab ${paneIndex === 2 ? "is-active" : ""}`}
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            goToPane(2);
+          }}
+        >
+          page
+        </a>
+      </nav>
+
+      <div
+        className="appShellTrack"
+        style={
+          {
+            ["--app-shell-index" as any]: String(paneIndex),
+          } as React.CSSProperties
+        }
+      >
+        <section className="appShellPane appShellPaneIntro" aria-label="intro">
+          <main className="appIntroRoot">
+            <header className="appIntroHead">
+              <div className="appIntroTag">sowwwl</div>
+              <div className="appIntroMode">vues: 3</div>
+            </header>
+            <div className="appIntroMatter">
+              <h1 className="appIntroTitle">navigation en plans séparés</h1>
+              <p className="appIntroCopy">swipe gauche/droite pour passer de intro à menu puis à la page active.</p>
+            </div>
+            <div className="appIntroCmds" aria-label="intro cmds">
+              <a
+                className="appIntroCmd"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  goToPane(1);
+                }}
+              >
+                ouvrir menu
+              </a>
+              <a
+                className="appIntroCmd"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  goToPane(paneIndexForNode(id));
+                }}
+              >
+                ouvrir page
+              </a>
+              <a className="appIntroCmd" href="#/entry">
+                entry
+              </a>
+            </div>
+            <div className="appIntroHint" aria-hidden="true">
+              ←/→ : changer de vue
+            </div>
+          </main>
+        </section>
+
+        <section className="appShellPane appShellPaneMenu" aria-label="menu">
+          <BoardPage active={id} />
+          <Molette current={id} />
+          <HelmDock />
+          <nav className="appShellList" aria-label="liste">
+            {APP_NODE_LIST.map((node) => (
+              <a
+                key={node}
+                className={`appShellListItem ${id === node ? "is-active" : ""}`}
+                href={`#/${node}`}
+                onClick={() => setPaneIndex(paneIndexForNode(node))}
+              >
+                {node}
+              </a>
+            ))}
+          </nav>
+        </section>
+
+        <section className="appShellPane appShellPaneContent" aria-label="page">
+          <AppContentForNode id={id} />
+        </section>
+      </div>
+    </div>
   );
 }
 
