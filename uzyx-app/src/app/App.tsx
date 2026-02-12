@@ -479,9 +479,9 @@ function AppSwipeShell(props: { id: NodeId }) {
         </section>
 
         <section className="appShellPane appShellPaneMenu" aria-label="menu">
-          <BoardPage active={id} />
-          <Molette current={id} />
-          <HelmDock />
+          {paneIndex === 1 ? <BoardPage active={id} /> : null}
+          {paneIndex === 1 ? <Molette current={id} /> : null}
+          {paneIndex === 1 ? <HelmDock /> : null}
           <nav className="appShellList" aria-label="liste">
             {APP_NODE_LIST.map((node) => (
               <a
@@ -497,7 +497,7 @@ function AppSwipeShell(props: { id: NodeId }) {
         </section>
 
         <section className="appShellPane appShellPaneContent" aria-label="page">
-          <AppContentForNode id={id} />
+          {paneIndex === 2 ? <AppContentForNode id={id} /> : null}
         </section>
       </div>
     </div>
