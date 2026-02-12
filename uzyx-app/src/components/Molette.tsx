@@ -137,7 +137,6 @@ export function Molette(props: { current: NodeId }) {
 
   const centerRef = useRef<HTMLDivElement | null>(null);
   const commitRef = useRef<{ busy: boolean }>({ busy: false });
-  const lastDragRef = useRef<number>(0);
 
   const oScore = useMemo(() => {
     if (uzyx.failSafe) return 0.02;
@@ -643,9 +642,6 @@ export function Molette(props: { current: NodeId }) {
   const onPointerMove: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (!dragRef.current.active) return;
     if (dragRef.current.pointerId !== e.pointerId) return;
-    const dx = e.clientX - dragRef.current.x;
-    const dy = e.clientY - dragRef.current.y;
-    if (Math.hypot(dx, dy) > 10) lastDragRef.current = Date.now();
     const a = angleOf(e.clientX, e.clientY);
     const d = normalizeAngle(a - dragRef.current.startA);
     setTheta(normalizeAngle(dragRef.current.startTheta + d));
@@ -675,6 +671,7 @@ export function Molette(props: { current: NodeId }) {
   };
 
   const hint = ghostFor(sel?.id ?? null);
+  const keyRangeHint = adjacent.length > 1 ? `1..${adjacent.length}` : "1";
   const thetaDeg = Math.round(((theta + Math.PI * 2) % (Math.PI * 2)) * (180 / Math.PI));
 
   const birds = useMemo(() => {
@@ -727,13 +724,6 @@ export function Molette(props: { current: NodeId }) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onClick={(e) => {
-        if (e.defaultPrevented) return;
-        if (commitRef.current.busy) return;
-        const now = Date.now();
-        if (now - lastDragRef.current < 240) return;
-        onCommit();
-      }}
     >
       <div className="helmHalo" aria-hidden="true" />
       <div ref={wheelRef} className="helmWheel" aria-hidden="true">
@@ -833,7 +823,7 @@ export function Molette(props: { current: NodeId }) {
       {helm.previewLevel > 0 && helm.mode !== "failsafe-hard" ? (
         <div className="helmGhost" aria-hidden="true">
           <span className="helmGhostLine">{`//// ${sel?.id ?? "—"} · ${hint} · ${thetaDeg}°`}</span>
-          <span className="helmGhostHint">drag · ←/→ · 1..4 · ↵</span>
+          <span className="helmGhostHint">{`drag · ←/→ · ${keyRangeHint} · ↵`}</span>
         </div>
       ) : null}
     </div>

@@ -241,7 +241,7 @@
   letter-spacing:.32em;
   text-transform:uppercase;
   opacity:.72;
-  cursor:default;
+  cursor:pointer;
 }
 
 .oPointIcon{

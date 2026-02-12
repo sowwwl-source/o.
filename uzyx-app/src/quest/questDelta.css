@@ -142,11 +142,14 @@
   justify-content:flex-end;
 }
 .qDeltaCmd{
-  display:inline-block;
+  display:inline-flex;
+  align-items:center;
   font: inherit;
   font-size:12px;
   letter-spacing:.18em;
   text-transform:uppercase;
+  min-height:30px;
+  padding:2px 0;
   opacity:.86;
   user-select:none;
 }
@@ -191,13 +194,30 @@
     bottom:calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
     max-width: calc(100vw - 2 * var(--space-lg));
   }
+  .qDeltaMeta,
+  .qDeltaHint,
+  .qDeltaGuide,
+  .qDeltaStatus{
+    line-height:1.45;
+  }
   .qDeltaRow{
     grid-template-columns: 1fr;
     gap:6px;
   }
-  .qDeltaInput{ text-align:left; }
+  .qDeltaInput{
+    text-align:left;
+    font-size:16px;
+  }
   .qDeltaRoot{ text-align:left; }
-  .qDeltaCmds{ justify-content:flex-start; }
+  .qDeltaCmds{
+    justify-content:flex-start;
+    gap:8px;
+  }
+  .qDeltaCmd{
+    min-height:40px;
+    padding:6px 10px;
+    border:1px solid color-mix(in srgb, var(--fg) 20%, transparent);
+  }
   .qDeltaProgress{ justify-content:flex-start; }
 }
 
