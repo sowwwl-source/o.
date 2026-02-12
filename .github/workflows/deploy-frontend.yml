@@ -27,6 +27,10 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y rsync openssh-client
 
+          BUILD_ID="${GITHUB_SHA::7}"
+          BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          printf '{"id":"%s","time":"%s"}\n' "$BUILD_ID" "$BUILD_TIME" > sowwwl-front/o.build.json
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "${DO_SSH_KEY}" > ~/.ssh/id_deploy
@@ -36,3 +40,11 @@ jobs:
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo mkdir -p /var/www/sowwwl-front'
           rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" sowwwl-front/ "${DO_USER}@${DO_HOST}:/var/www/sowwwl-front/"
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo chmod -R a+rX /var/www/sowwwl-front'
+
+          # Verify build marker is present on disk and served by Caddy.
+          PRIMARY_HOST="sowwwl.com"
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            "set -euo pipefail
+             test -f /var/www/sowwwl-front/o.build.json
+             grep -q '\"id\":\"${BUILD_ID}\"' /var/www/sowwwl-front/o.build.json
+             curl -fsS --resolve '${PRIMARY_HOST}:443:127.0.0.1' 'https://${PRIMARY_HOST}/o.build.json' | grep -q '\"id\":\"${BUILD_ID}\"'"
