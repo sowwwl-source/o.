@@ -24,7 +24,6 @@
 - GET  /me
 - POST /auth/admin/magic/send   {email}  (anti-enumeration: always 200)
 - POST /auth/admin/magic/verify {token}  (200 JSON; sets session)
-- GET  /auth/admin/magic/verify?token=... (302 → `O_ADMIN_MAGIC_REDIRECT`, legacy)
 - GET  /soul/token
 - POST /soul/token     {token, config?} (requires X-CSRF)
 - POST /soul/upload    multipart: archive (.zip) + manifest_json? (requires X-CSRF)
@@ -42,12 +41,18 @@ Recommended env:
 - `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` (forces link host + strict verify host)
 - `O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard`
 - `O_EMAIL_HASH_SALT=<random>` (privacy for email_hash logs)
-- `O_ADMIN_MAGIC_MAIL_MODE=smtp` (recommended in Docker; PHP `mail()` usually has no MTA)
+- `O_ADMIN_MAGIC_MAIL_MODE=smtp` (recommended in Docker when SMTP egress is open)
+- `O_ADMIN_MAGIC_MAIL_MODE=resend` (recommended when outbound SMTP ports are blocked; HTTPS API on 443)
 - SMTP vars:
   - `O_ADMIN_MAGIC_SMTP_HOST`, `O_ADMIN_MAGIC_SMTP_PORT`
   - `O_ADMIN_MAGIC_SMTP_SECURE=starttls|tls|none`
   - `O_ADMIN_MAGIC_SMTP_USER`, `O_ADMIN_MAGIC_SMTP_PASS`
   - `O_ADMIN_MAGIC_SMTP_FROM`
+- Resend vars:
+  - `O_ADMIN_MAGIC_RESEND_API_KEY`
+  - `O_ADMIN_MAGIC_RESEND_FROM`
+  - `O_ADMIN_MAGIC_RESEND_ENDPOINT` (optional; default `https://api.resend.com/emails`)
+  - `O_ADMIN_MAGIC_HTTP_TIMEOUT_SEC` (optional; default `8`)
 
 ## Frontend integration (recommended)
 Serve the frontend and proxy API calls through the same origin:

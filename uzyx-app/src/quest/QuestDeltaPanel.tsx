@@ -49,6 +49,19 @@ function landTypeToPassageAnswer(t: LandType): string | null {
   return null;
 }
 
+function stepGuideText(step: number, landType: LandType): string {
+  if (step === 1) return "step 1/5: pose une ligne cohérente (après alpha beta gamma).";
+  if (step === 2) return "step 2/5: synthèse courte (9 mots max).";
+  if (step === 3) {
+    const auto = landTypeToPassageAnswer(landType);
+    if (auto) return `step 3/5: passage auto détecté (${auto.toUpperCase()}) via type de land.`;
+    return "step 3/5: choisis un passage (C / D / O).";
+  }
+  if (step === 4) return "step 4/5: donne un glyph (une lettre alpha..omega).";
+  if (step === 5) return "step 5/5: envoie une seed O. ; fin automatique après validation.";
+  return "step 0/5: lance START pour initier delta.";
+}
+
 export function QuestDeltaPanel(props: {
   landType: LandType;
   refreshSession: () => void;
@@ -142,6 +155,7 @@ export function QuestDeltaPanel(props: {
     if (busy) return;
     if (!q || q.state !== "RUNNING") return;
     if (!requireCsrf()) return;
+    const stepBefore = Math.max(0, Math.floor(q.step || 0));
     const payload = normalizeOneLine(typeof forced === "string" ? forced : answer);
     if (!payload) {
       setNote("—");
@@ -167,6 +181,7 @@ export function QuestDeltaPanel(props: {
       // Server replies {ok:boolean, step:number, hint?:string, error?:string}
       const ok = Boolean((r.data as any)?.ok);
       const step = Number((r.data as any)?.step);
+      const readyToEnd = Boolean((r.data as any)?.ready_to_end);
       if (!ok) {
         const hint = String((r.data as any)?.hint || (r.data as any)?.error || "—");
         setFails((x) => Math.min(9, x + 1));
@@ -180,6 +195,33 @@ export function QuestDeltaPanel(props: {
       // Optimistic step update; then sync for answers.
       if (Number.isFinite(step) && q) setQ({ ...q, step: Math.max(0, Math.floor(step)) });
       await sync();
+
+      // Simplicity: at step 5, auto-complete the quest after a valid seed.
+      // Keep manual END as a fallback if this call fails.
+      if (ok && stepBefore === 5 && readyToEnd) {
+        const end = await apiQuestDeltaEnd();
+        if (!end.ok) {
+          const tag = String((end.data as any)?.error || end.status || "");
+          if (end.status === 403 && tag === "csrf") {
+            setNote("csrf: …");
+            props.refreshSession();
+          } else {
+            setNote(end.status === 0 ? "réseau: fragile" : `err:${tag || "http"}`);
+          }
+          dispatch(end.status === 0 ? "network_error" : "form_validation_error");
+          setFails((x) => Math.min(9, x + 1));
+          return;
+        }
+
+        const maybeTheme = (end.data as any)?.theme as LandTheme | null | undefined;
+        if (maybeTheme && typeof maybeTheme === "object" && typeof (maybeTheme as any).glyph === "string") {
+          applyLandTheme(maybeTheme);
+        }
+        const seal = String((end.data as any)?.seal || "");
+        setNote(seal ? `seal:${seal}` : "ended");
+        setFails(0);
+        await sync();
+      }
     } finally {
       setBusy(null);
     }
@@ -230,6 +272,7 @@ export function QuestDeltaPanel(props: {
 
   const step = q?.state === "RUNNING" ? q.step : 0;
   const hint = useMemo(() => pickStepHint(step), [step]);
+  const stepGuide = useMemo(() => stepGuideText(step, landType), [step, landType]);
   const seal = q?.answers?.seal ? String(q.answers.seal) : "";
   const glyph = q?.answers?.land_glyph ? String(q.answers.land_glyph) : "";
   const hasSeed = Boolean(q?.answers?.o_seed_line);
@@ -253,7 +296,7 @@ export function QuestDeltaPanel(props: {
     : busy
       ? "…"
       : q
-        ? `${q.state.toLowerCase()} · ${q.state === "RUNNING" ? `step:${q.step}` : "—"}`
+        ? `${q.state.toLowerCase()} · ${q.state === "RUNNING" ? `step:${Math.max(1, Math.min(5, q.step))}/5` : "—"}`
         : "Δ: …";
 
   const voice = useQuestVoiceAgent({
@@ -314,6 +357,21 @@ export function QuestDeltaPanel(props: {
 
       {q?.state === "RUNNING" ? (
         <>
+          <div className="qDeltaProgress" aria-hidden="true">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <span
+                key={n}
+                className={`qDeltaStep ${step > n ? "is-done" : ""} ${step === n ? "is-current" : ""}`}
+              >
+                {n}
+              </span>
+            ))}
+          </div>
+
+          <div className="qDeltaGuide" aria-hidden="true">
+            {stepGuide}
+          </div>
+
           {showStep2 ? <QuestStep2Strates /> : null}
 
           <div className="qDeltaHint" aria-hidden="true">
@@ -414,7 +472,7 @@ export function QuestDeltaPanel(props: {
                   void onAnswer();
                 }}
               >
-                SEND
+                SEND (↵)
               </a>
             ) : null}
 
@@ -430,7 +488,7 @@ export function QuestDeltaPanel(props: {
                   void onEnd();
                 }}
               >
-                END
+                END (fallback)
               </a>
             ) : null}
 

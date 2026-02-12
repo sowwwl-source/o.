@@ -78,7 +78,7 @@ O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud
 O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard
 # TTL clamped 10..15 minutes (default 15)
 O_ADMIN_MAGIC_TTL_MIN=15
-# "smtp" (recommended), "mail" (requires local MTA), or "outbox" (dev)
+# "smtp" (recommended), "resend" (HTTPS API), "mail" (requires local MTA), or "outbox" (dev)
 O_ADMIN_MAGIC_MAIL_MODE=smtp
 # SMTP mode
 O_ADMIN_MAGIC_SMTP_HOST=ssl0.ovh.net
@@ -87,6 +87,11 @@ O_ADMIN_MAGIC_SMTP_SECURE=starttls
 O_ADMIN_MAGIC_SMTP_USER=CHANGE_THIS_SMTP_USER
 O_ADMIN_MAGIC_SMTP_PASS=CHANGE_THIS_SMTP_PASS
 O_ADMIN_MAGIC_SMTP_FROM=no-reply@sowwwl.com
+# Resend mode (alternative when SMTP egress is blocked)
+# O_ADMIN_MAGIC_RESEND_API_KEY=CHANGE_THIS_RESEND_API_KEY
+# O_ADMIN_MAGIC_RESEND_FROM=no-reply@sowwwl.com
+# O_ADMIN_MAGIC_RESEND_ENDPOINT=https://api.resend.com/emails
+# O_ADMIN_MAGIC_HTTP_TIMEOUT_SEC=8
 # Salt for email_hash logs (privacy)
 O_EMAIL_HASH_SALT=CHANGE_THIS_RANDOM
 EOF

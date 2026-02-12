@@ -786,10 +786,16 @@
     const label = document.createElement("div");
     label.className = "o-petals-label muted";
     label.setAttribute("aria-live", "polite");
+    const hint = document.createElement("div");
+    hint.className = "o-petals-hint muted";
+    hint.textContent = "molette: tourner • entrée/clic: ouvrir";
+    const hintSeen = storage.get("o:petal:hint") === "1";
+    if (hintSeen) hint.hidden = true;
 
     ui.appendChild(ring);
     ui.appendChild(actions);
     ui.appendChild(label);
+    ui.appendChild(hint);
     nav.appendChild(ui);
     document.body.appendChild(nav);
 
@@ -804,7 +810,33 @@
     // Molette: trackpad/mouse wheel rotates petals (no classic menu).
     let wheelAcc = 0;
     let wheelLast = 0;
-    const WHEEL_THRESHOLD = 60;
+    const WHEEL_THRESHOLD = 34;
+
+    function wheelDeltaPx(e) {
+      const dx = typeof e.deltaX === "number" ? e.deltaX : 0;
+      const dy = typeof e.deltaY === "number" ? e.deltaY : 0;
+      let d = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+      // Normalize wheel units: pixel, line, page.
+      if (e.deltaMode === 1) d *= 16;
+      else if (e.deltaMode === 2) d *= Math.max(320, window.innerHeight * 0.9);
+      return d;
+    }
+
+    function pointerNearRing(e) {
+      const r = ring.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      const maxDist = Math.max(r.width, r.height) * 0.95;
+      return dist <= maxDist;
+    }
+
+    function markHintSeen() {
+      if (hint.hidden) return;
+      hint.hidden = true;
+      storage.set("o:petal:hint", "1");
+    }
+
     nav.addEventListener(
       "wheel",
       (e) => {
@@ -812,8 +844,8 @@
         if (e.ctrlKey) return; // pinch-to-zoom / browser zoom gestures
         const target = e.target;
         if (!(target instanceof Element)) return;
-        // Only when interacting with the cluster.
-        if (!ui.contains(target)) return;
+        // Trigger only when near the ring or directly on the cluster.
+        if (!ui.contains(target) && !pointerNearRing(e)) return;
 
         const now =
           typeof e.timeStamp === "number" && e.timeStamp > 0
@@ -824,12 +856,11 @@
         if (now - wheelLast > 240) wheelAcc = 0;
         wheelLast = now;
 
-        const dx = typeof e.deltaX === "number" ? e.deltaX : 0;
-        const dy = typeof e.deltaY === "number" ? e.deltaY : 0;
-        const d = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+        const d = wheelDeltaPx(e);
         if (!Number.isFinite(d) || d === 0) return;
 
         e.preventDefault();
+        markHintSeen();
         wheelAcc += d;
         while (wheelAcc >= WHEEL_THRESHOLD) {
           rotate(1);
@@ -881,14 +912,27 @@
       await go(cur.href);
     }
 
-    coreBtn.addEventListener("click", () => go(CORE.href));
-    prevBtn.addEventListener("click", () => rotate(-1));
-    nextBtn.addEventListener("click", () => rotate(1));
-    openBtn.addEventListener("click", () => openCursor());
+    coreBtn.addEventListener("click", () => {
+      markHintSeen();
+      go(CORE.href);
+    });
+    prevBtn.addEventListener("click", () => {
+      markHintSeen();
+      rotate(-1);
+    });
+    nextBtn.addEventListener("click", () => {
+      markHintSeen();
+      rotate(1);
+    });
+    openBtn.addEventListener("click", () => {
+      markHintSeen();
+      openCursor();
+    });
 
     markButtons.forEach((b) => {
       b.addEventListener("click", () => {
         const id = b.getAttribute("data-id") || "";
+        markHintSeen();
         if (id === cursorId) return openCursor();
         applyCursor(id);
       });

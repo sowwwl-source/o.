@@ -29,6 +29,43 @@
   opacity:.62;
 }
 
+.qDeltaProgress{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+
+.qDeltaStep{
+  min-width:22px;
+  height:22px;
+  padding:0 6px;
+  border:1px solid color-mix(in srgb, var(--fg) 20%, transparent);
+  border-radius:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  letter-spacing:.1em;
+  opacity:.5;
+}
+
+.qDeltaStep.is-current{
+  border-color:color-mix(in srgb, var(--fg) 70%, transparent);
+  opacity:.95;
+}
+
+.qDeltaStep.is-done{
+  border-color:color-mix(in srgb, var(--fg) 44%, transparent);
+  opacity:.78;
+}
+
+.qDeltaGuide{
+  font-size:12px;
+  letter-spacing:.08em;
+  opacity:.72;
+  max-width:min(62ch, 100%);
+}
+
 .qDeltaRow{
   display:grid;
   grid-template-columns: 10ch 1fr;
@@ -99,4 +136,5 @@
   .qDeltaInput{ text-align:left; }
   .qDeltaRoot{ text-align:left; }
   .qDeltaCmds{ justify-content:flex-start; }
+  .qDeltaProgress{ justify-content:flex-start; }
 }

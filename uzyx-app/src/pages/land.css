@@ -81,6 +81,17 @@
   opacity:.62;
 }
 
+.landGuide{
+  position:absolute;
+  top:calc(var(--space-xl) + env(safe-area-inset-top, 0px));
+  right:calc(var(--space-xl) + env(safe-area-inset-right, 0px));
+  font-size:11px;
+  letter-spacing:.12em;
+  opacity:.52;
+  max-width:min(52ch, calc(100vw - 2 * var(--space-xl)));
+  text-align:right;
+}
+
 @media (max-width: 640px){
   .oC3{
     left:calc(var(--space-lg) + env(safe-area-inset-left, 0px));
@@ -92,4 +103,9 @@
     gap:6px;
   }
   .oC3Key{ padding-top: 0; }
+  .landGuide{
+    top:calc(var(--space-lg) + env(safe-area-inset-top, 0px));
+    right:calc(var(--space-lg) + env(safe-area-inset-right, 0px));
+    max-width:calc(100vw - 2 * var(--space-lg));
+  }
 }

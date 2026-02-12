@@ -6,12 +6,12 @@ Pré-requis (prod / staging)
 - (recommandé) `O_ADMIN_MAGIC_PUBLIC_HOST=0.user.o.sowwwl.cloud` pour forcer le domaine des liens (évite les variations de Host).
 - Envoi email :
   - prod (Docker) : `O_ADMIN_MAGIC_MAIL_MODE=smtp` + variables SMTP (recommandé)
+  - prod (SMTP bloqué) : `O_ADMIN_MAGIC_MAIL_MODE=resend` + variables Resend (HTTPS/443)
   - dev : `O_ADMIN_MAGIC_MAIL_MODE=outbox` écrit un JSON dans `O_ADMIN_MAGIC_OUTBOX_DIR`
 
 Endpoints
 - Envoi: `POST /api/auth/admin/magic/send` `{ "email": "0wlslw0@protonmail.com" }`
-- Vérif (recommandé): lien e-mail → UI `/#/admin/magic/verify?token=...` → POST `/api/auth/admin/magic/verify` (session) → `/#/admin/b0ard`
-- Vérif (legacy): `GET /api/auth/admin/magic/verify?token=...` (302 → `/#/admin/b0ard`)
+- Vérif: lien e-mail → UI `/#/admin/magic/verify?token=...` → POST `/api/auth/admin/magic/verify` (session) → `/#/admin/b0ard`
 
 Notes de sécurité
 - Le token n’est jamais renvoyé par l’API “send”, ni affiché dans l’UI.

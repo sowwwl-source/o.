@@ -110,10 +110,173 @@ function require_csrf(): void {
     }
 }
 
+function host_from_url_header(string $raw): string {
+    $u = trim($raw);
+    if ($u === '') return '';
+    $h = parse_url($u, PHP_URL_HOST);
+    if (!is_string($h) || trim($h) === '') return '';
+    return canonical_host($h);
+}
+
+function request_host_for_origin_check(): string {
+    $h = canonical_host((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if ($h !== '') return $h;
+    return request_public_host();
+}
+
+/**
+ * Protect auth bootstrap endpoints against cross-site POST (login CSRF).
+ * We intentionally do not require X-CSRF here, because guests do not have
+ * a bootstrap endpoint that returns CSRF before login/register.
+ */
+function require_same_origin_auth_bootstrap(): void {
+    $expected = request_host_for_origin_check();
+    if ($expected === '') out(403, ['error' => 'bad_origin']);
+
+    $originHost = host_from_url_header((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
+    if ($originHost !== '') {
+        if ($originHost !== $expected) out(403, ['error' => 'bad_origin']);
+        return;
+    }
+
+    $refererHost = host_from_url_header((string)($_SERVER['HTTP_REFERER'] ?? ''));
+    if ($refererHost !== '') {
+        if ($refererHost !== $expected) out(403, ['error' => 'bad_origin']);
+        return;
+    }
+
+    // Legacy non-browser clients may not send Origin/Referer.
+    if ((string)(env('O_AUTH_ALLOW_NO_ORIGIN', '0') ?? '0') === '1') return;
+    out(403, ['error' => 'origin_required']);
+}
+
 function env(string $key, ?string $default = null): ?string {
     $v = $_ENV[$key] ?? getenv($key);
     if ($v === false || $v === null || $v === '') return $default;
     return (string)$v;
+}
+
+function auth_client_ip(): string {
+    $xff = trim((string)($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
+    if ($xff !== '') {
+        $parts = explode(',', $xff);
+        $first = trim((string)($parts[0] ?? ''));
+        if ($first !== '') return $first;
+    }
+    $rip = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    if ($rip !== '') return $rip;
+    return 'unknown';
+}
+
+function ensure_auth_rate_limit_schema(PDO $pdo): void {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS auth_rate_limit (
+              bucket_key CHAR(64) PRIMARY KEY,
+              window_started_at DATETIME NOT NULL,
+              hits INT UNSIGNED NOT NULL DEFAULT 0,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              INDEX idx_window_started_at (window_started_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    } catch (Throwable) {
+        // Fail-open: auth must remain available if schema migration is blocked.
+    }
+}
+
+function auth_rate_bucket_key(string $scope, string $value): string {
+    $s = mb_strtolower(trim($scope));
+    $v = mb_strtolower(trim($value));
+    return hash('sha256', $s . '|' . $v);
+}
+
+/**
+ * Returns [allowed, retry_after_seconds]
+ */
+function auth_rate_hit(PDO $pdo, string $bucketKey, int $limit, int $windowSec): array {
+    if ($limit <= 0 || $windowSec <= 0) return [true, 0];
+    ensure_auth_rate_limit_schema($pdo);
+
+    $now = time();
+    $nowSql = gmdate('Y-m-d H:i:s', $now);
+
+    try {
+        $stmt = $pdo->prepare("SELECT window_started_at, hits FROM auth_rate_limit WHERE bucket_key = :b LIMIT 1");
+        $stmt->execute([':b' => $bucketKey]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            $pdo->prepare("
+                INSERT INTO auth_rate_limit (bucket_key, window_started_at, hits)
+                VALUES (:b, :w, 1)
+            ")->execute([':b' => $bucketKey, ':w' => $nowSql]);
+            return [true, 0];
+        }
+
+        $start = strtotime((string)($row['window_started_at'] ?? ''));
+        $hits = (int)($row['hits'] ?? 0);
+
+        if ($start === false || ($now - $start) >= $windowSec) {
+            $pdo->prepare("
+                UPDATE auth_rate_limit
+                SET window_started_at = :w, hits = 1
+                WHERE bucket_key = :b
+            ")->execute([':w' => $nowSql, ':b' => $bucketKey]);
+            return [true, 0];
+        }
+
+        $hits += 1;
+        $pdo->prepare("
+            UPDATE auth_rate_limit
+            SET hits = :h
+            WHERE bucket_key = :b
+        ")->execute([':h' => $hits, ':b' => $bucketKey]);
+
+        if ($hits > $limit) {
+            $retry = max(1, $windowSec - ($now - $start));
+            return [false, $retry];
+        }
+
+        // Opportunistic cleanup.
+        if (random_int(1, 128) === 1) {
+            $cutoff = gmdate('Y-m-d H:i:s', $now - max($windowSec * 4, 3600));
+            $pdo->prepare("DELETE FROM auth_rate_limit WHERE window_started_at < :c")
+                ->execute([':c' => $cutoff]);
+        }
+
+        return [true, 0];
+    } catch (Throwable) {
+        // Fail-open: don't lock users out if throttling storage is unavailable.
+        return [true, 0];
+    }
+}
+
+/**
+ * $rules: each item = [scope, value, limit, windowSec]
+ */
+function require_auth_rate_limit(PDO $pdo, array $rules): void {
+    $maxRetry = 0;
+    foreach ($rules as $r) {
+        $scope = (string)($r['scope'] ?? '');
+        $value = (string)($r['value'] ?? '');
+        $limit = (int)($r['limit'] ?? 0);
+        $windowSec = (int)($r['windowSec'] ?? 0);
+        if ($scope === '' || $value === '' || $limit <= 0 || $windowSec <= 0) continue;
+
+        $bucket = auth_rate_bucket_key($scope, $value);
+        [$ok, $retry] = auth_rate_hit($pdo, $bucket, $limit, $windowSec);
+        if (!$ok) $maxRetry = max($maxRetry, (int)$retry);
+    }
+
+    if ($maxRetry > 0) {
+        http_response_code(429);
+        header('Retry-After: ' . $maxRetry);
+        echo json_encode(['error' => 'rate_limited', 'retry_after' => $maxRetry], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 // ====== Roles (network admin) ======
@@ -568,15 +731,24 @@ if ($path === '/health') {
 
 if ($path === '/auth/register') {
     require_method('POST');
+    require_same_origin_auth_bootstrap();
     $in = json_input();
 
     $email = strtolower(trim((string)($in['email'] ?? '')));
     $password = (string)($in['password'] ?? '');
 
+    $pdo = db();
+    $ip = auth_client_ip();
+    require_auth_rate_limit($pdo, [
+        ['scope' => 'register_ip', 'value' => $ip, 'limit' => 12, 'windowSec' => 600],
+    ]);
+
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(422, ['error' => 'invalid_email']);
     if (mb_strlen($password) < 8) out(422, ['error' => 'password_too_short', 'min' => 8]);
 
-    $pdo = db();
+    require_auth_rate_limit($pdo, [
+        ['scope' => 'register_email', 'value' => $email, 'limit' => 6, 'windowSec' => 3600],
+    ]);
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -655,16 +827,9 @@ if ($path === '/auth/admin/magic/send') {
 }
 
 if ($path === '/auth/admin/magic/verify') {
-    $wants_json = false;
-    $token = '';
-    if ($method === 'POST') {
-        $wants_json = true;
-        $in = json_input();
-        $token = (string)($in['token'] ?? '');
-    } else {
-        require_method('GET');
-        $token = (string)($_GET['token'] ?? '');
-    }
+    require_method('POST');
+    $in = json_input();
+    $token = (string)($in['token'] ?? '');
     if (trim($token) === '') out(400, ['error' => 'invalid_token']);
 
     $pdo = db();
@@ -721,25 +886,29 @@ if ($path === '/auth/admin/magic/verify') {
     // Back-compat: treat the old default as an alias of the b0ard.
     if ($to === '/#/admin' || $to === '/#/admin/') $to = '/#/admin/b0ard';
 
-    if ($wants_json) out(200, ['status' => 'ok', 'redirect' => $to]);
-
-    // Avoid JSON for the redirect response (browsers follow Location anyway).
-    header('Content-Type: text/plain; charset=utf-8');
-    header('Location: ' . $to, true, 302);
-    echo "ok\n";
-    exit;
+    out(200, ['status' => 'ok', 'redirect' => $to]);
 }
 
 if ($path === '/auth/login') {
     require_method('POST');
+    require_same_origin_auth_bootstrap();
     $in = json_input();
 
     $email = strtolower(trim((string)($in['email'] ?? '')));
     $password = (string)($in['password'] ?? '');
 
+    $pdo = db();
+    $ip = auth_client_ip();
+    require_auth_rate_limit($pdo, [
+        ['scope' => 'login_ip', 'value' => $ip, 'limit' => 24, 'windowSec' => 600],
+    ]);
+
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) out(422, ['error' => 'invalid_email']);
 
-    $pdo = db();
+    require_auth_rate_limit($pdo, [
+        ['scope' => 'login_email', 'value' => $email, 'limit' => 10, 'windowSec' => 600],
+    ]);
+
     $stmt = $pdo->prepare("SELECT id, password_hash, status FROM users WHERE email = :e");
     $stmt->execute([':e' => $email]);
     $user = $stmt->fetch();

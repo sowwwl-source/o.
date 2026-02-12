@@ -398,6 +398,9 @@ export function LandPage() {
         ) : null}
       </section>
       <QuestDeltaPanel landType={landType} refreshSession={() => void session.api.refresh()} />
+      <div className="landGuide" aria-hidden="true">
+        helm: clic centre / alt+h · molette/drag: tourner · entree: ouvrir
+      </div>
     </main>
   );
 }

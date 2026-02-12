@@ -10,11 +10,16 @@ declare(strict_types=1);
  *
  * Env (optional):
  * - O_ADMIN_MAGIC_TTL_MIN (default 15)
- * - O_ADMIN_MAGIC_MAIL_MODE = "mail" | "outbox" (default "mail")
+ * - O_ADMIN_MAGIC_MAIL_MODE = "mail" | "outbox" | "smtp" | "resend" (default "mail")
  * - O_ADMIN_MAGIC_OUTBOX_DIR (default /data/magic_outbox)
  * - O_ADMIN_MAGIC_PUBLIC_HOST (optional; forces link host)
  * - O_ADMIN_MAGIC_REDIRECT (default "/#/admin/b0ard")
  * - O_EMAIL_HASH_SALT (optional; salts email_hash logs)
+ * - Resend (HTTPS API):
+ *   - O_ADMIN_MAGIC_RESEND_API_KEY
+ *   - O_ADMIN_MAGIC_RESEND_FROM (fallback: O_ADMIN_MAGIC_SMTP_FROM / O_ADMIN_MAGIC_MAIL_FROM)
+ *   - O_ADMIN_MAGIC_RESEND_ENDPOINT (default https://api.resend.com/emails)
+ *   - O_ADMIN_MAGIC_HTTP_TIMEOUT_SEC (default 8)
  */
 
 function canonical_host(string $raw): string {
@@ -180,6 +185,7 @@ function admin_magic_mail_mode(): string {
     $m = mb_strtolower(trim($m));
     if ($m === 'outbox') return 'outbox';
     if ($m === 'smtp') return 'smtp';
+    if ($m === 'resend') return 'resend';
     return 'mail';
 }
 
@@ -236,6 +242,112 @@ function admin_magic_smtp_from(): string {
     $from = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_MAIL_FROM', 'no-reply@sowwwl.com') : 'no-reply@sowwwl.com');
     $from = trim($from);
     return $from !== '' ? $from : 'no-reply@sowwwl.com';
+}
+
+function admin_magic_http_timeout_sec(): int {
+    $raw = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_HTTP_TIMEOUT_SEC', '8') : '8');
+    $n = (int)trim($raw);
+    if ($n < 3) $n = 3;
+    if ($n > 30) $n = 30;
+    return $n;
+}
+
+function admin_magic_resend_api_key(): string {
+    $k = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_RESEND_API_KEY', '') : '');
+    return trim($k);
+}
+
+function admin_magic_resend_endpoint(): string {
+    $u = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_RESEND_ENDPOINT', 'https://api.resend.com/emails') : 'https://api.resend.com/emails');
+    $u = trim($u);
+    if ($u === '') return 'https://api.resend.com/emails';
+    return $u;
+}
+
+function admin_magic_resend_from(): string {
+    $from = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_RESEND_FROM', '') : '');
+    $from = trim($from);
+    if ($from !== '') return $from;
+    return admin_magic_smtp_from();
+}
+
+function http_status_from_headers(array $headers): int {
+    $first = (string)($headers[0] ?? '');
+    if ($first === '') return 0;
+    if (preg_match('/\\s(\\d{3})\\b/', $first, $m)) return (int)$m[1];
+    return 0;
+}
+
+function http_post_json(string $url, array $headers, array $payload, int $timeout): array {
+    $raw = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($raw === false) return [false, 0, '', 'json_encode_failed'];
+
+    $hdrs = [
+        'Content-Type: application/json',
+        'Accept: application/json',
+    ];
+    foreach ($headers as $h) {
+        $line = trim((string)$h);
+        if ($line === '') continue;
+        $hdrs[] = $line;
+    }
+
+    $ctx = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => implode("\r\n", $hdrs) . "\r\n",
+            'content' => $raw,
+            'timeout' => $timeout,
+            'ignore_errors' => true,
+        ],
+    ]);
+
+    $fp = @fopen($url, 'rb', false, $ctx);
+    if ($fp === false) return [false, 0, '', 'http_connect_failed'];
+    $meta = @stream_get_meta_data($fp);
+    $resp = @stream_get_contents($fp);
+    @fclose($fp);
+
+    $response_headers = [];
+    $wrapper_data = is_array($meta) ? ($meta['wrapper_data'] ?? null) : null;
+    if (is_array($wrapper_data)) $response_headers = $wrapper_data;
+    $status = http_status_from_headers($response_headers);
+
+    if ($status <= 0) return [false, 0, is_string($resp) ? $resp : '', 'http_connect_failed'];
+    return [true, $status, is_string($resp) ? $resp : '', null];
+}
+
+function admin_magic_send_email_resend(string $to, string $subject, string $body, string $from): array {
+    $apiKey = admin_magic_resend_api_key();
+    if ($apiKey === '') return [false, 'resend_not_configured'];
+
+    $url = admin_magic_resend_endpoint();
+    if (!preg_match('#^https?://#i', $url)) return [false, 'resend_not_configured'];
+
+    $from = trim($from);
+    $to = trim($to);
+    if ($from === '' || $to === '') return [false, 'resend_not_configured'];
+
+    $timeout = admin_magic_http_timeout_sec();
+    [$ok, $status] = http_post_json(
+        $url,
+        ['Authorization: Bearer ' . $apiKey],
+        [
+            'from' => $from,
+            'to' => [$to],
+            'subject' => $subject,
+            'text' => $body,
+        ],
+        $timeout
+    );
+
+    if (!$ok) return [false, 'resend_connect_failed'];
+    if ($status >= 200 && $status < 300) return [true, null];
+    if ($status === 400 || $status === 422) return [false, 'resend_bad_request'];
+    if ($status === 401 || $status === 403) return [false, 'resend_auth_failed'];
+    if ($status === 429) return [false, 'resend_rate_limited'];
+    if ($status >= 500 && $status < 600) return [false, 'resend_upstream_failed'];
+    return [false, 'resend_http_failed'];
 }
 
 function smtp_read_response($fp): array {
@@ -436,6 +548,11 @@ function admin_magic_send_email(string $to, string $link, int $ttl_min): array {
     if ($mode === 'smtp') {
         $from = admin_magic_smtp_from();
         return admin_magic_send_email_smtp($to, $subject, $body, $from);
+    }
+
+    if ($mode === 'resend') {
+        $from = admin_magic_resend_from();
+        return admin_magic_send_email_resend($to, $subject, $body, $from);
     }
 
     $from = (string)(function_exists('env') ? env('O_ADMIN_MAGIC_MAIL_FROM', 'no-reply@sowwwl.com') : 'no-reply@sowwwl.com');

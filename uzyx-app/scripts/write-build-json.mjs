@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -36,3 +36,14 @@ const time = resolveBuildTime();
 const distDir = path.resolve(process.cwd(), "dist");
 await mkdir(distDir, { recursive: true });
 await writeFile(path.join(distDir, "o.build.json"), JSON.stringify({ id, time }) + "\n", "utf8");
+
+// Vite leaves unknown %VITE_*% placeholders intact. Patch the built HTML so
+// build metadata is always available (even in local builds without env vars).
+const indexPath = path.join(distDir, "index.html");
+try {
+  const html = await readFile(indexPath, "utf8");
+  const patched = html.replaceAll("%VITE_BUILD_ID%", id).replaceAll("%VITE_BUILD_TIME%", time);
+  if (patched !== html) await writeFile(indexPath, patched, "utf8");
+} catch {
+  // No built index.html (e.g. running the script standalone).
+}

@@ -288,8 +288,7 @@ Objectif : authentification admin via email magic link, usage unique, expirant (
 
 - Endpoints
   - `POST /api/auth/admin/magic/send` `{ "email": "…" }` (anti-énumération : réponse uniforme)
-  - (recommandé) lien UI `/#/admin/magic/verify?token=…` → `POST /api/auth/admin/magic/verify` `{ "token": "…" }` (session) → `/#/admin/b0ard`
-  - (legacy) `GET /api/auth/admin/magic/verify?token=…` (redirige ensuite vers `O_ADMIN_MAGIC_REDIRECT`, défaut `/#/admin/b0ard`)
+  - lien UI `/#/admin/magic/verify?token=…` → `POST /api/auth/admin/magic/verify` `{ "token": "…" }` (session) → `/#/admin/b0ard`
 - Sécurité
   - token stocké **hashé uniquement** (sha256), invalidé si envoi échoue
   - lien lié au domaine d’émission (refus sur mauvais host)
@@ -297,7 +296,7 @@ Objectif : authentification admin via email magic link, usage unique, expirant (
   - logs : `email_hash`, timestamp, `used_ip`, `used_ua`
 - Opérationnel
   - le token vit dans le hash `/#/...` (pas dans les logs serveur)
-  - en prod (Docker), privilégier `O_ADMIN_MAGIC_MAIL_MODE=smtp` (pas de MTA pour `mail()`)
+  - en prod (Docker), privilégier `O_ADMIN_MAGIC_MAIL_MODE=smtp` si SMTP sortant est ouvert; sinon `O_ADMIN_MAGIC_MAIL_MODE=resend` (API HTTPS)
 - Références code
   - impl : `sowwwl-api-php/lib/admin-magic.php`
   - routes : `sowwwl-api-php/index.php` (section “Admin magic-link”)

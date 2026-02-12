@@ -351,6 +351,26 @@ html[data-focus="dot"] .mark-dot{transform:scale(var(--zoom))}
 
 .manifesto{margin-top:18px}
 
+.onboardingCard{
+  margin-top:18px;
+}
+
+.onboardingCard h2{
+  margin:0 0 10px;
+  font-size:14px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.onboardingSteps{
+  margin:14px 0 0;
+  padding-left:1.2em;
+  display:grid;
+  gap:6px;
+  font-size:13px;
+  letter-spacing:.03em;
+}
+
 /* Glitch links */
 .glitch-link{
   color:var(--accent-green);
@@ -607,6 +627,12 @@ html.is-inverted .o-petals-ring{
   text-transform:uppercase;
 }
 
+.o-petals-hint{
+  font-size:11px;
+  letter-spacing:.12em;
+  max-width:220px;
+}
+
 @media (pointer: coarse){
   .o-petals-ring{width:92px;height:92px}
   .o-petal{
@@ -620,6 +646,10 @@ html.is-inverted .o-petals-ring{
   }
   .o-petal-core{width:40px;height:40px}
   .o-petals-btn{width:40px;height:40px}
+  .o-petals-actions{
+    opacity:1;
+    pointer-events:auto;
+  }
 }
 
 /* ===== Toroidal wrap surface (FL0W/dev) ===== */

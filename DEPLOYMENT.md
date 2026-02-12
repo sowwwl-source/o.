@@ -48,6 +48,9 @@ O_NETWORK_ADMINS=you@example.com
 # O_ADMIN_MAGIC_REDIRECT=/#/admin/b0ard
 # - Salt for email_hash logs (privacy):
 # O_EMAIL_HASH_SALT=<random>
+# - Transport mode:
+# O_ADMIN_MAGIC_MAIL_MODE=smtp      # SMTP direct
+# O_ADMIN_MAGIC_MAIL_MODE=resend    # HTTPS API (recommended if SMTP egress is blocked)
 ```
 
 ### 2. Frontend Setup (Static)

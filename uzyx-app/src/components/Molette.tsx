@@ -604,8 +604,13 @@ export function Molette(props: { current: NodeId }) {
   const onWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const d = clamp((e.deltaX || 0) + (e.deltaY || 0), -120, 120);
-    const k = store.getReducedMotion() ? 0.002 : 0.006;
+    let d = Math.abs(e.deltaY || 0) >= Math.abs(e.deltaX || 0) ? e.deltaY || 0 : e.deltaX || 0;
+    if (e.deltaMode === 1) d *= 16;
+    else if (e.deltaMode === 2) d *= Math.max(320, window.innerHeight * 0.9);
+    if (!Number.isFinite(d) || d === 0) return;
+    const cap = store.getReducedMotion() ? 180 : 240;
+    d = clamp(d, -cap, cap);
+    const k = store.getReducedMotion() ? 0.0018 : 0.0034;
     setTheta((t) => normalizeAngle(t + d * k));
   };
 
