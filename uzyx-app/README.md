@@ -7,8 +7,17 @@ Minimal Vite + React + TypeScript app (no images) with bicolour tokens, graph na
 ```bash
 cd uzyx-app
 npm install
+cp .env.example .env.local
 npm run dev
 ```
+
+If the defaults already match your local setup, `npm run dev` also works without a local env file.
+
+## Env
+
+- `.env.example` provides the baseline variables for local development.
+- `VITE_CANONICAL_HOST`: canonical host enforced on the `*.sowwwl.cloud` surface. Defaults to `0.user.o.sowwwl.cloud`.
+- `VITE_API_PROXY_TARGET`: dev-only backend target used by the Vite proxy for `/api/*`. Defaults to `http://127.0.0.1:8000`.
 
 ## API (session)
 

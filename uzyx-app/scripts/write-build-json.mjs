@@ -37,12 +37,12 @@ const distDir = path.resolve(process.cwd(), "dist");
 await mkdir(distDir, { recursive: true });
 await writeFile(path.join(distDir, "o.build.json"), JSON.stringify({ id, time }) + "\n", "utf8");
 
-// Vite leaves unknown %VITE_*% placeholders intact. Patch the built HTML so
-// build metadata is always available (even in local builds without env vars).
+// Patch the built HTML so build metadata is always available, even when the
+// local build runs without explicitly exported env vars.
 const indexPath = path.join(distDir, "index.html");
 try {
   const html = await readFile(indexPath, "utf8");
-  const patched = html.replaceAll("%VITE_BUILD_ID%", id).replaceAll("%VITE_BUILD_TIME%", time);
+  const patched = html.replaceAll("__O_BUILD_ID__", id).replaceAll("__O_BUILD_TIME__", time);
   if (patched !== html) await writeFile(indexPath, patched, "utf8");
 } catch {
   // No built index.html (e.g. running the script standalone).
