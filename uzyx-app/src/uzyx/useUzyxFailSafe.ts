@@ -6,9 +6,11 @@ type ActionKind = "tap" | "key" | "wheel" | "scroll" | "touch" | "focus" | "blur
 type ActionSample = { t: number; dt?: number; kind: ActionKind; nonInteractive?: boolean; onInvoke?: boolean };
 
 const KEEP_MS = 12_000;
-const CLICK_6S = 12;
-const ACTION_10S = 25;
-const RELEASE_SILENCE_MS = 180_000;
+const CLICK_6S = 18;
+const ACTION_10S = 34;
+const NON_INTERACTIVE_6S = 14;
+const INVOKE_10S = 10;
+const RELEASE_SILENCE_MS = 60_000;
 
 function isInteractiveTarget(t: EventTarget | null): boolean {
   if (!(t instanceof Element)) return false;
@@ -76,21 +78,17 @@ export function useUzyxFailSafe() {
     const nonInteractive6s = arr.filter((x) => x.kind === "tap" && x.nonInteractive && x.t >= now - 6_000).length;
     const invoke10s = arr.filter((x) => x.onInvoke && x.t >= now - 10_000).length;
 
-    const blurFocus10s = arr.filter((x) => (x.kind === "blur" || x.kind === "focus") && x.t >= now - 10_000).length;
-    const invert10s = arr.filter((x) => x.kind === "invert" && x.t >= now - 10_000).length;
-
     const dts = arr
       .map((x) => x.dt)
       .filter((x): x is number => typeof x === "number" && Number.isFinite(x) && x > 0 && x < 4_000);
     const { mean, std } = meanAndStd(dts);
 
     const frenzy = clicks6s >= CLICK_6S || actions10s >= ACTION_10S;
-    const testEverything = nonInteractive6s >= 10 || invoke10s >= 7;
+    const testEverything = nonInteractive6s >= NON_INTERACTIVE_6S || invoke10s >= INVOKE_10S;
     const botLike = dts.length >= 10 && mean < 600 && std < 80;
-    const explainMode = blurFocus10s >= 8 || (invert10s >= 5 && actions10s >= 12);
 
     const untrusted = Boolean(e && "isTrusted" in e && (e as any).isTrusted === false);
-    if (untrusted || frenzy || testEverything || botLike || explainMode) {
+    if (untrusted || frenzy || testEverything || botLike) {
       uzyxFooterAPI.setUzyxState({ failSafe: true, locked: false });
     }
   };

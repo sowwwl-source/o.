@@ -52,10 +52,17 @@
 }
 
 [data-failsafe="true"]{
-  --c1:#000000;
-  --c2:#060606;
+  --c1:#0a0a0a;
+  --c2:#d9ccb7;
   --bg:var(--c1);
   --fg:var(--c2);
-  --accent:var(--fg);
+  --accent:#bda88a;
   --halo:transparent;
+}
+
+@supports (color: color-mix(in srgb, #000 50%, #fff)){
+  [data-failsafe="true"]{
+    --accent:color-mix(in srgb, var(--fg) 72%, var(--bg));
+    --halo:color-mix(in srgb, var(--fg) 12%, transparent);
+  }
 }

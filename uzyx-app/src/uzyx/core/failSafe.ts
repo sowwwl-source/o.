@@ -1,5 +1,5 @@
-// Fail Safe: black-on-black, random palette on each click.
-// It should feel like "the system is unreadable" not like an error page.
+// Fail Safe: low-stimulation recovery mode with an explicit way back.
+// It should feel calmer, not punitive.
 
 import { PALETTES, randomPalette, type Palette } from "./palettes";
 
@@ -82,19 +82,15 @@ export function applyPaletteToRoot(p: Palette) {
 }
 
 export function applyFailSafeBase() {
-  // black on black, unreadable but present
-  // Keep the wave barely present via accent only.
-  applyPaletteToRoot({ bg: "#000000", fg: "#000000", accent: "#0b0b0b" });
+  applyPaletteToRoot({ bg: "#0a0a0a", fg: "#d9ccb7", accent: "#bda88a" });
 }
 
 export function installFailSafeRandomClick(): () => void {
-  // Random palette per click, but keep the UI unreadable:
-  // - bg/fg stay black-on-black
-  // - only the wave's accent shifts, very dark.
+  // Keep the surface readable while softening contrast and motion.
   const onClick = () => {
     const seed = Math.floor(Math.random() * 10_000_000);
     const p = randomPalette(seed);
-    applyPaletteToRoot({ bg: "#000000", fg: "#000000", accent: failSafeAccentFromPalette(p) });
+    applyPaletteToRoot({ bg: "#0a0a0a", fg: "#d9ccb7", accent: failSafeAccentFromPalette(p) });
   };
   window.addEventListener("click", onClick, { passive: true });
   return () => window.removeEventListener("click", onClick);

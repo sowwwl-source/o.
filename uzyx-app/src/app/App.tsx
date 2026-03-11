@@ -192,7 +192,7 @@ export function App() {
       )}
 
       <ONoteLine muted align={route.kind === "app" || route.kind === "admin" ? "right" : "left"} min_o={min_o} />
-      <UzyxImplicitAssist />
+      <UzyxImplicitAssist routeKey={route.kind} appNode={route.kind === "app" ? route.id : null} />
       <ONoteContextBridge />
       <LandThemeHydrator />
     </ONoteProvider>
@@ -313,8 +313,7 @@ function AppContentForNode(props: { id: NodeId }) {
 
 function AppSwipeShell(props: { id: NodeId }) {
   const id = props.id;
-  const [paneIndex, setPaneIndex] = useState<number>(0);
-  const firstMountRef = useRef(true);
+  const [paneIndex, setPaneIndex] = useState<number>(() => paneIndexForNode(id));
   const swipeRef = useRef<{
     active: boolean;
     pointerId: number | null;
@@ -332,10 +331,6 @@ function AppSwipeShell(props: { id: NodeId }) {
   });
 
   useEffect(() => {
-    if (firstMountRef.current) {
-      firstMountRef.current = false;
-      return;
-    }
     setPaneIndex(paneIndexForNode(id));
   }, [id]);
 

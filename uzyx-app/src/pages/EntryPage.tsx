@@ -43,12 +43,19 @@ export function EntryPage() {
     window.location.hash = "#/app";
   }, [session.state.phase, dispatch]);
 
-  const [identity, setIdentity] = useState(() => localStorage.getItem("sowwwl:identity_public") || "");
   const [address, setAddress] = useState(() => localStorage.getItem("sowwwl:identity_address") || "");
   const [code, setCode] = useState("");
 
-  const [busy, setBusy] = useState<null | "passkey" | "anchor">(null);
+  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem("sowwwl:identity_public");
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (!note) return;
@@ -58,22 +65,13 @@ export function EntryPage() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("sowwwl:identity_public", identity);
       localStorage.setItem("sowwwl:identity_address", address);
     } catch {
       // ignore
     }
-  }, [identity, address]);
+  }, [address]);
 
   const anchorReady = useMemo(() => looksLikeEmail(address) && looksLikeRescueCode(code), [address, code]);
-
-  const onPasskey = async () => {
-    if (busy) return;
-    // Guardrail: do not fake a server session with a local-only passkey marker.
-    // PASSKEY is visible, but only becomes active once backend WebAuthn is deployed.
-    dispatch("auth_passkey_failed");
-    setNote("passkey: pas ici");
-  };
 
   const onAnchor = async () => {
     if (busy) return;
@@ -86,7 +84,7 @@ export function EntryPage() {
       return;
     }
 
-    setBusy("anchor");
+    setBusy(true);
     try {
       const reg = await apiAuthRegister(email, rescue);
       if (reg.ok) {
@@ -122,7 +120,7 @@ export function EntryPage() {
         setNote(`forme: ${normalizeErrTag(reg.data?.error)}`);
       }
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
@@ -148,30 +146,14 @@ export function EntryPage() {
       <section className="entryBlock" aria-label="identity">
         <div className="entryRow">
           <span className="entryKey" aria-hidden="true">
-            identité publique
-          </span>
-          <input
-            className="entryInput"
-            value={identity}
-            onChange={(e) => setIdentity(e.target.value)}
-            placeholder="nom…"
-            aria-label="identité publique"
-            autoCorrect="off"
-            spellCheck={false}
-            onKeyDown={onKey}
-          />
-        </div>
-
-        <div className="entryRow">
-          <span className="entryKey" aria-hidden="true">
-            adresse (secours)
+            adresse
           </span>
           <input
             className="entryInput"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="adresse…"
-            aria-label="adresse secours"
+            placeholder="adresse@…"
+            aria-label="adresse"
             autoCorrect="off"
             autoCapitalize="none"
             spellCheck={false}
@@ -182,7 +164,7 @@ export function EntryPage() {
 
         <div className="entryRow">
           <span className="entryKey" aria-hidden="true">
-            code (secours)
+            code
           </span>
           <input
             className="entryInput"
@@ -199,20 +181,6 @@ export function EntryPage() {
         </div>
 
         <div className="entryCmds" aria-label="commands">
-          <a
-            className="entryCmd"
-            href="#"
-            aria-label="create passkey"
-            data-disabled="1"
-            aria-disabled="true"
-            onClick={(e) => {
-              e.preventDefault();
-              if (busy) return;
-              void onPasskey();
-            }}
-          >
-            PASSKEY
-          </a>
           <a
             className="entryCmd"
             href="#"
@@ -235,7 +203,7 @@ export function EntryPage() {
         ) : null}
 
         <div className="entryHint" aria-hidden="true">
-          pas de jargon · un message à la fois
+          adresse + code suffisent · un message a la fois
         </div>
       </section>
     </main>
