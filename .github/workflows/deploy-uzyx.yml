@@ -24,11 +24,12 @@ jobs:
           cache: npm
           cache-dependency-path: uzyx-app/package-lock.json
 
-      - name: Install + build
+      - name: Install + test + build
         run: |
           set -euo pipefail
           cd uzyx-app
           npm ci
+          npm test -- --run
           export VITE_BUILD_ID="${GITHUB_SHA::7}"
           export VITE_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           npm run build
