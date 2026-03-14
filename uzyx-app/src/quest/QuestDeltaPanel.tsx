@@ -1,26 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./questDelta.css";
-import { apiQuestDeltaAnswer, apiQuestDeltaEnd, apiQuestDeltaGet, apiQuestDeltaStart, getCsrf } from "@/api/apiClient";
+import {
+  apiQuestDeltaAnswer,
+  apiQuestDeltaEnd,
+  apiQuestDeltaGet,
+  apiQuestDeltaStart,
+  getCsrf,
+  type ApiPayload,
+  type LandTheme,
+  type LandType,
+  type QuestDeltaGetResponse,
+} from "@/api/apiClient";
 import { useOEvent } from "@/oNote/oNote.hooks";
 import { applyLandTheme } from "@/theme/landTheme";
-import type { LandTheme } from "@/api/apiClient";
 import { QuestStep2Strates } from "@/quest/QuestStep2Strates";
 import { useQuestVoiceAgent } from "@/quest/questVoiceAgent";
 
-type LandType = "A" | "B" | "C" | null;
-
-type QuestState = {
-  state: "IDLE" | "RUNNING" | "ENDED";
-  step: number;
-  answers: {
-    beauty_text?: string | null;
-    coherence_score?: number | null;
-    passage_choice?: string | null;
-    land_glyph?: string | null;
-    o_seed_line?: string | null;
-    seal?: string | null;
-  };
-};
+type QuestState = QuestDeltaGetResponse;
+type QuestLandType = LandType | null;
 
 const NOTE_TTL_MS = 2400;
 
@@ -42,14 +39,14 @@ function pickStepHint(step: number): string {
   return "—";
 }
 
-function landTypeToPassageAnswer(t: LandType): string | null {
+function landTypeToPassageAnswer(t: QuestLandType): string | null {
   if (t === "A") return "c";
   if (t === "B") return "d";
   if (t === "C") return "o";
   return null;
 }
 
-function stepGuideText(step: number, landType: LandType): string {
+function stepGuideText(step: number, landType: QuestLandType): string {
   if (step === 1) return "step 1/5: pose une ligne cohérente (après alpha beta gamma).";
   if (step === 2) return "step 2/5: synthèse courte (9 mots max).";
   if (step === 3) {
@@ -62,8 +59,18 @@ function stepGuideText(step: number, landType: LandType): string {
   return "step 0/5: lance START pour initier delta.";
 }
 
+function apiErrorTag(data: ApiPayload, status: number): string {
+  if (typeof data.error === "string" && data.error) return data.error;
+  if (typeof data.detail === "string" && data.detail) return data.detail;
+  return String(status || "http");
+}
+
+function applyLandThemeIfPresent(theme: LandTheme | null | undefined): void {
+  if (theme?.glyph) applyLandTheme(theme);
+}
+
 export function QuestDeltaPanel(props: {
-  landType: LandType;
+  landType: QuestLandType;
   refreshSession: () => void;
 }) {
   const dispatch = useOEvent();
@@ -72,11 +79,11 @@ export function QuestDeltaPanel(props: {
   const [q, setQ] = useState<QuestState | null>(null);
   const [busy, setBusy] = useState<null | "sync" | "start" | "answer" | "end">(null);
   const [note, setNote] = useState<string | null>(null);
-  const [answer, setAnswer] = useState("");
   const [fails, setFails] = useState(0);
   const [stepFx, setStepFx] = useState<{ token: number; dir: -1 | 0 | 1 }>({ token: 0, dir: 0 });
   const lastStepRef = useRef<{ phase: QuestState["state"] | null; step: number }>({ phase: null, step: 0 });
 
+  const answerInputRef = useRef<HTMLInputElement>(null);
   const noteTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (!note) return;
@@ -98,13 +105,13 @@ export function QuestDeltaPanel(props: {
         setQ({
           state: r.data.state,
           step: Math.max(0, Math.floor(r.data.step || 0)),
-          answers: r.data.answers || {},
+          answers: r.data.answers ?? {},
         });
         return;
       }
       dispatch(r.status === 0 ? "network_error" : "form_validation_error");
       setFails((x) => Math.min(9, x + 1));
-      setNote(r.status === 0 ? "réseau: fragile" : `err:${String((r.data as any)?.error || r.status)}`);
+      setNote(r.status === 0 ? "réseau: fragile" : `err:${apiErrorTag(r.data, r.status)}`);
     } finally {
     }
   };
@@ -140,11 +147,10 @@ export function QuestDeltaPanel(props: {
       if (!r.ok) {
         dispatch(r.status === 0 ? "network_error" : "form_validation_error");
         setFails((x) => Math.min(9, x + 1));
-        setNote(r.status === 0 ? "réseau: fragile" : `err:${String((r.data as any)?.error || r.status)}`);
+        setNote(r.status === 0 ? "réseau: fragile" : `err:${apiErrorTag(r.data, r.status)}`);
         return;
       }
       setNote("Δ: …");
-      setAnswer("");
       setFails(0);
       await sync();
     } finally {
@@ -157,7 +163,7 @@ export function QuestDeltaPanel(props: {
     if (!q || q.state !== "RUNNING") return;
     if (!requireCsrf()) return;
     const stepBefore = Math.max(0, Math.floor(q.step || 0));
-    const payload = normalizeOneLine(typeof forced === "string" ? forced : answer);
+    const payload = normalizeOneLine(typeof forced === "string" ? forced : answerInputRef.current?.value ?? "");
     if (!payload) {
       setNote("—");
       return;
@@ -167,7 +173,7 @@ export function QuestDeltaPanel(props: {
     try {
       const r = await apiQuestDeltaAnswer(payload);
       if (!r.ok) {
-        const tag = String((r.data as any)?.error || r.status || "");
+        const tag = apiErrorTag(r.data, r.status);
         if (r.status === 403 && tag === "csrf") {
           setNote("csrf: …");
           props.refreshSession();
@@ -179,16 +185,15 @@ export function QuestDeltaPanel(props: {
         return;
       }
 
-      // Server replies {ok:boolean, step:number, hint?:string, error?:string}
-      const ok = Boolean((r.data as any)?.ok);
-      const step = Number((r.data as any)?.step);
-      const readyToEnd = Boolean((r.data as any)?.ready_to_end);
+      const ok = r.data.ok;
+      const step = Number(r.data.step);
+      const readyToEnd = Boolean(r.data.ready_to_end);
       if (!ok) {
-        const hint = String((r.data as any)?.hint || (r.data as any)?.error || "—");
+        const hint = r.data.hint || r.data.error || "—";
         setFails((x) => Math.min(9, x + 1));
         setNote(clampLen(hint, 72));
       } else {
-        setAnswer("");
+        if (answerInputRef.current) answerInputRef.current.value = "";
         setNote(null);
         setFails(0);
       }
@@ -202,7 +207,7 @@ export function QuestDeltaPanel(props: {
       if (ok && stepBefore === 5 && readyToEnd) {
         const end = await apiQuestDeltaEnd();
         if (!end.ok) {
-          const tag = String((end.data as any)?.error || end.status || "");
+          const tag = apiErrorTag(end.data, end.status);
           if (end.status === 403 && tag === "csrf") {
             setNote("csrf: …");
             props.refreshSession();
@@ -214,11 +219,8 @@ export function QuestDeltaPanel(props: {
           return;
         }
 
-        const maybeTheme = (end.data as any)?.theme as LandTheme | null | undefined;
-        if (maybeTheme && typeof maybeTheme === "object" && typeof (maybeTheme as any).glyph === "string") {
-          applyLandTheme(maybeTheme);
-        }
-        const seal = String((end.data as any)?.seal || "");
+        applyLandThemeIfPresent(end.data.theme);
+        const seal = typeof end.data.seal === "string" ? end.data.seal : "";
         setNote(seal ? `seal:${seal}` : "ended");
         setFails(0);
         await sync();
@@ -236,7 +238,7 @@ export function QuestDeltaPanel(props: {
     try {
       const r = await apiQuestDeltaEnd();
       if (!r.ok) {
-        const tag = String((r.data as any)?.error || r.status || "");
+        const tag = apiErrorTag(r.data, r.status);
         if (r.status === 403 && tag === "csrf") {
           setNote("csrf: …");
           props.refreshSession();
@@ -248,11 +250,8 @@ export function QuestDeltaPanel(props: {
         return;
       }
 
-      const maybeTheme = (r.data as any)?.theme as LandTheme | null | undefined;
-      if (maybeTheme && typeof maybeTheme === "object" && typeof (maybeTheme as any).glyph === "string") {
-        applyLandTheme(maybeTheme);
-      }
-      const seal = String((r.data as any)?.seal || "");
+      applyLandThemeIfPresent(r.data.theme);
+      const seal = typeof r.data.seal === "string" ? r.data.seal : "";
       setNote(seal ? `seal:${seal}` : "ended");
       setFails(0);
       await sync();
@@ -286,14 +285,6 @@ export function QuestDeltaPanel(props: {
   const showPassage = q?.state === "RUNNING" && step === 3;
   const canEnd = q?.state === "RUNNING" && step === 5 && hasSeed;
   const showStep2 = q?.state === "RUNNING" && step === 2;
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.defaultPrevented) return;
-    if (e.key !== "Enter") return;
-    if (busy) return;
-    e.preventDefault();
-    if (showAnswerInput) void onAnswer();
-  };
 
   const status = note
     ? note
@@ -451,15 +442,21 @@ export function QuestDeltaPanel(props: {
                 answer
               </span>
               <input
+                key={`answer-input-${step}`}
                 className="qDeltaInput"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
+                ref={answerInputRef}
+                defaultValue=""
                 placeholder={step === 1 ? "δ" : step === 4 ? "α" : step === 5 ? "O. …" : "…"}
                 aria-label="answer"
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck={false}
-                onKeyDown={onKeyDown}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.defaultPrevented && !busy) {
+                    e.preventDefault();
+                    void onAnswer();
+                  }
+                }}
               />
             </div>
           ) : null}
@@ -470,10 +467,11 @@ export function QuestDeltaPanel(props: {
                 className="qDeltaCmd"
                 href="#"
                 aria-label="send answer"
-                data-disabled={!answer || busy ? "1" : "0"}
+                // Le bouton n'est plus désactivé par le contenu, mais le handler rejette les envois vides.
+                data-disabled={busy ? "1" : "0"}
                 onClick={(e) => {
                   e.preventDefault();
-                  if (!answer || busy) return;
+                  if (busy) return;
                   void onAnswer();
                 }}
               >

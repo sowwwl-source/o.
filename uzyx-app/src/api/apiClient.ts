@@ -1,6 +1,7 @@
+export type ApiPayload = Record<string, unknown>;
 export type ApiOk<T> = { ok: true; status: number; data: T };
-export type ApiErr = { ok: false; status: number; data: any };
-export type ApiResult<T> = ApiOk<T> | ApiErr;
+export type ApiErr<E = ApiPayload> = { ok: false; status: number; data: E };
+export type ApiResult<T, E = ApiPayload> = ApiOk<T> | ApiErr<E>;
 
 const API_BASE = "/api";
 
@@ -14,7 +15,7 @@ export function setCsrf(next: string | null): void {
   csrf = next && String(next).trim() ? String(next).trim() : null;
 }
 
-async function readJsonOrText(res: Response): Promise<any> {
+async function readJsonOrText(res: Response): Promise<unknown> {
   const text = await res.text();
   try {
     return JSON.parse(text);
@@ -23,10 +24,10 @@ async function readJsonOrText(res: Response): Promise<any> {
   }
 }
 
-export async function apiRequest<T>(
+export async function apiRequest<T, E extends ApiPayload = ApiPayload>(
   path: string,
-  init: RequestInit & { json?: any; csrf?: boolean } = {}
-): Promise<ApiResult<T>> {
+  init: RequestInit & { json?: unknown; csrf?: boolean } = {}
+): Promise<ApiResult<T, E>> {
   const url = API_BASE + path;
   const headers = new Headers(init.headers || {});
 
@@ -48,9 +49,10 @@ export async function apiRequest<T>(
       credentials: "include",
     });
     const data = await readJsonOrText(res);
-    return res.ok ? ({ ok: true, status: res.status, data } as ApiOk<T>) : ({ ok: false, status: res.status, data } as ApiErr);
-  } catch (e: any) {
-    return { ok: false, status: 0, data: { error: "network_error", detail: String(e?.message || e || "network") } };
+    return res.ok ? ({ ok: true, status: res.status, data } as ApiOk<T>) : ({ ok: false, status: res.status, data } as ApiErr<E>);
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e || "network");
+    return { ok: false, status: 0, data: { error: "network_error", detail } as unknown as E };
   }
 }
 
@@ -70,29 +72,30 @@ export type MeResponse = {
 export async function apiMe(): Promise<ApiResult<MeResponse>> {
   const r = await apiRequest<MeResponse>("/me", { method: "GET" });
   if (r.ok) {
-    const token = (r.data as any)?.csrf;
-    if (typeof token === "string") setCsrf(token);
+    if (typeof r.data.csrf === "string") setCsrf(r.data.csrf);
   }
   return r;
 }
 
-export async function apiAuthRegister(email: string, code: string): Promise<ApiResult<any>> {
+export async function apiAuthRegister(email: string, code: string): Promise<ApiResult<ApiPayload>> {
   return apiRequest("/auth/register", { method: "POST", json: { email, password: code } });
 }
 
-export async function apiAuthLogin(email: string, code: string): Promise<ApiResult<any>> {
+export async function apiAuthLogin(email: string, code: string): Promise<ApiResult<ApiPayload>> {
   return apiRequest("/auth/login", { method: "POST", json: { email, password: code } });
 }
 
-export async function apiAuthLogout(): Promise<ApiResult<any>> {
+export async function apiAuthLogout(): Promise<ApiResult<ApiPayload>> {
   // The API currently does not require CSRF for logout.
   return apiRequest("/auth/logout", { method: "POST", json: {} });
 }
 
+export type LandType = "A" | "B" | "C";
+
 export type LandGetResponse = {
   created: boolean;
   land: {
-    land_type: "A" | "B" | "C" | null;
+    land_type: LandType | null;
     token?: string | null;
     glyph?: string | null;
     updated_at?: string | null;
@@ -103,7 +106,7 @@ export async function apiLandGet(): Promise<ApiResult<LandGetResponse>> {
   return apiRequest("/land", { method: "GET" });
 }
 
-export async function apiLandCreate(land_type: "A" | "B" | "C"): Promise<ApiResult<any>> {
+export async function apiLandCreate(land_type: LandType): Promise<ApiResult<ApiPayload>> {
   return apiRequest("/land/create", { method: "POST", json: { land_type }, csrf: true });
 }
 
@@ -126,7 +129,7 @@ export async function apiLandThemeGet(): Promise<ApiResult<LandThemeGetResponse>
 }
 
 export type LandStateGetResponse = {
-  land_type: "A" | "B" | "C" | null;
+  land_type: LandType | null;
   lambda: number | null;
   beaute_text: string | null;
   beaute_updated_at: string | null;
@@ -141,7 +144,7 @@ export type LandStateSavePayload = {
   beaute_text?: string;
 };
 
-export async function apiLandStateSave(payload: LandStateSavePayload): Promise<ApiResult<any>> {
+export async function apiLandStateSave(payload: LandStateSavePayload): Promise<ApiResult<ApiPayload>> {
   return apiRequest("/land/state", { method: "POST", json: payload, csrf: true });
 }
 
@@ -163,18 +166,43 @@ export type QuestDeltaGetResponse = {
   updated_at?: string | null;
 };
 
+export type QuestDeltaStartResponse = {
+  state: "RUNNING";
+  step: number;
+};
+
+export type QuestDeltaAnswerResponse = {
+  ok: boolean;
+  step: number;
+  hint?: string;
+  error?: string;
+  max_words?: number;
+  score?: number;
+  ready_to_end?: boolean;
+  glyph?: string;
+  land_type?: LandType;
+};
+
+export type QuestDeltaEndResponse = {
+  status: "ended";
+  seal?: string;
+  flip_seq?: number;
+  theme?: LandTheme | null;
+  bote_unlock_until?: string | null;
+};
+
 export async function apiQuestDeltaGet(): Promise<ApiResult<QuestDeltaGetResponse>> {
   return apiRequest("/quest/delta", { method: "GET" });
 }
 
-export async function apiQuestDeltaStart(): Promise<ApiResult<any>> {
+export async function apiQuestDeltaStart(): Promise<ApiResult<QuestDeltaStartResponse>> {
   return apiRequest("/quest/delta/start", { method: "POST", json: {}, csrf: true });
 }
 
-export async function apiQuestDeltaAnswer(answer: string): Promise<ApiResult<any>> {
+export async function apiQuestDeltaAnswer(answer: string): Promise<ApiResult<QuestDeltaAnswerResponse>> {
   return apiRequest("/quest/delta/answer", { method: "POST", json: { answer }, csrf: true });
 }
 
-export async function apiQuestDeltaEnd(): Promise<ApiResult<any>> {
+export async function apiQuestDeltaEnd(): Promise<ApiResult<QuestDeltaEndResponse>> {
   return apiRequest("/quest/delta/end", { method: "POST", json: {}, csrf: true });
 }
