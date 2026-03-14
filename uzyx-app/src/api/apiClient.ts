@@ -90,6 +90,52 @@ export async function apiAuthLogout(): Promise<ApiResult<ApiPayload>> {
   return apiRequest("/auth/logout", { method: "POST", json: {} });
 }
 
+export type SoulTokenGetResponse = {
+  token_set: boolean;
+  token_hint?: string;
+  config?: ApiPayload | null;
+  updated_at?: string | null;
+};
+
+export type SoulTokenSetResponse = {
+  ok: true;
+  token_hint: string;
+};
+
+export type SoulUploadResponse = {
+  ok: true;
+  upload_id: number;
+  archive: {
+    name: string;
+    bytes: number;
+    sha256: string;
+  };
+  stored: {
+    scope: "soul.cloud";
+    path: string;
+    manifest: boolean;
+  };
+};
+
+export async function apiSoulTokenGet(): Promise<ApiResult<SoulTokenGetResponse>> {
+  return apiRequest("/soul/token", { method: "GET" });
+}
+
+export async function apiSoulTokenSet(token: string, config?: unknown): Promise<ApiResult<SoulTokenSetResponse>> {
+  const payload: Record<string, unknown> = { token };
+  if (config !== undefined) payload.config = config;
+  return apiRequest("/soul/token", { method: "POST", json: payload, csrf: true });
+}
+
+export async function apiSoulUpload(archive: File, manifest?: unknown): Promise<ApiResult<SoulUploadResponse>> {
+  const form = new FormData();
+  form.set("archive", archive, archive.name);
+  if (manifest !== undefined) {
+    form.set("manifest_json", JSON.stringify(manifest));
+  }
+  return apiRequest("/soul/upload", { method: "POST", body: form, csrf: true });
+}
+
 export type LandType = "A" | "B" | "C";
 
 export type LandGetResponse = {

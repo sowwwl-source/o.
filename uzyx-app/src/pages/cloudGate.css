@@ -1,7 +1,9 @@
 .cloudGateRoot{
   min-height:100vh;
   min-height:100svh;
-  background:var(--bg);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--fg) 8%, transparent), transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 88%, #020202), var(--bg) 32%, color-mix(in srgb, var(--bg) 92%, #070707));
   color:var(--fg);
   padding:
     calc(var(--space-xl) + env(safe-area-inset-top, 0px))
@@ -15,7 +17,7 @@
 .cloudGateTop{
   display:grid;
   gap:8px;
-  max-width:880px;
+  max-width:1120px;
 }
 
 .cloudGateTitle{
@@ -31,12 +33,32 @@
   opacity:.68;
   font-size:12px;
   text-transform:uppercase;
+  overflow-wrap:anywhere;
+}
+
+.cloudGateLayout{
+  max-width:1120px;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:18px;
+}
+
+.cloudGateSpan2{
+  grid-column:1 / -1;
 }
 
 .cloudGateBlock{
-  max-width:880px;
   display:grid;
-  gap:12px;
+  gap:14px;
+  padding:18px;
+  border:1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  background:color-mix(in srgb, var(--bg) 84%, transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--fg) 4%, transparent) inset;
+}
+
+.cloudGateBody{
+  display:grid;
+  gap:14px;
 }
 
 .cloudGateLine{
@@ -46,18 +68,30 @@
   opacity:.82;
 }
 
-.cloudGateTextarea{
+.cloudGateTextarea,
+.cloudGateInput{
   width:100%;
-  min-height:96px;
-  resize:vertical;
   padding:12px;
   border:1px solid color-mix(in srgb, var(--fg) 22%, transparent);
-  background:transparent;
+  background:color-mix(in srgb, var(--bg) 70%, transparent);
   color:inherit;
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size:12px;
   letter-spacing:.06em;
   line-height:1.45;
+}
+
+.cloudGateTextarea{
+  min-height:112px;
+  resize:vertical;
+}
+
+.cloudGateTextareaCompact{
+  min-height:88px;
+}
+
+.cloudGateInput{
+  min-height:44px;
 }
 
 .cloudGateCmds{
@@ -106,7 +140,11 @@
   text-transform:uppercase;
   opacity:.58;
 }
-.cloudGateKey::after{ content:":"; opacity:.8; }
+
+.cloudGateKey::after{
+  content:":";
+  opacity:.8;
+}
 
 .cloudGateVal{
   font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -114,6 +152,87 @@
   letter-spacing:.08em;
   opacity:.9;
   overflow-wrap:anywhere;
+}
+
+.cloudGateUploadTop{
+  display:grid;
+  gap:12px;
+  grid-template-columns:minmax(0, 1fr) auto;
+  align-items:end;
+}
+
+.cloudGatePicker{
+  display:grid;
+  gap:8px;
+  padding:12px;
+  border:1px dashed color-mix(in srgb, var(--fg) 24%, transparent);
+  background:color-mix(in srgb, var(--bg) 72%, transparent);
+}
+
+.cloudGatePickerTitle{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:10px;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  opacity:.6;
+}
+
+.cloudGateFileInput{
+  width:100%;
+  color:inherit;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+}
+
+.cloudGateUploadMeta{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  opacity:.62;
+  justify-self:end;
+  text-align:right;
+}
+
+.cloudGateFiles{
+  display:grid;
+  gap:8px;
+  max-height:260px;
+  overflow:auto;
+  padding-right:4px;
+}
+
+.cloudGateFileItem{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  background:color-mix(in srgb, var(--bg) 76%, transparent);
+}
+
+.cloudGateFileName,
+.cloudGateFileMeta{
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  letter-spacing:.04em;
+}
+
+.cloudGateFileName{
+  overflow-wrap:anywhere;
+}
+
+.cloudGateFileMeta{
+  opacity:.58;
+  white-space:nowrap;
+}
+
+.cloudGateReceipt{
+  display:grid;
+  gap:10px;
+  padding:14px;
+  border:1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+  background:color-mix(in srgb, var(--bg) 68%, transparent);
 }
 
 .cloudGatePre{
@@ -142,7 +261,30 @@
   font-size:10px;
   letter-spacing:.22em;
   text-transform:uppercase;
-  opacity:.62;
+  opacity:.72;
+}
+
+@media (max-width: 860px){
+  .cloudGateLayout{
+    grid-template-columns:minmax(0, 1fr);
+  }
+
+  .cloudGateSpan2{
+    grid-column:auto;
+  }
+
+  .cloudGateUploadTop{
+    grid-template-columns:minmax(0, 1fr);
+  }
+
+  .cloudGateUploadMeta{
+    justify-self:start;
+    text-align:left;
+  }
+
+  .cloudGateFileItem{
+    flex-direction:column;
+  }
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -151,4 +293,3 @@
     text-shadow:none;
   }
 }
-
