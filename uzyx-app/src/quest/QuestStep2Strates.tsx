@@ -75,21 +75,7 @@ async function copyText(text: string): Promise<boolean> {
     await navigator.clipboard.writeText(t);
     return true;
   } catch {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = t;
-      ta.setAttribute("readonly", "");
-      ta.style.position = "fixed";
-      ta.style.left = "-9999px";
-      ta.style.top = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return ok;
-    } catch {
-      return false;
-    }
+    return false;
   }
 }
 
@@ -226,4 +212,3 @@ export function QuestStep2Strates() {
     </section>
   );
 }
-
