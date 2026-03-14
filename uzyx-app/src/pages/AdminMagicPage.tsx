@@ -4,6 +4,8 @@ import { apiRequest } from "@/api/apiClient";
 import { useSession } from "@/api/sessionStore";
 import { useOEvent } from "@/oNote/oNote.hooks";
 
+const FAST_ADMIN_EMAIL = "0wlslw0@protonmail.com";
+
 function normalizeEmail(s: string): string {
   const one = String(s || "")
     .replace(/\s+/g, " ")
@@ -24,7 +26,7 @@ export function AdminMagicPage() {
   const dispatch = useOEvent();
   const session = useSession();
 
-  const [email, setEmail] = useState(() => localStorage.getItem("sowwwl:admin_email") || "");
+  const [email, setEmail] = useState(() => localStorage.getItem("sowwwl:admin_email") || FAST_ADMIN_EMAIL);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
@@ -115,10 +117,13 @@ export function AdminMagicPage() {
   }, [email]);
 
   const ready = useMemo(() => looksLikeEmail(email), [email]);
+  const fastTarget = useMemo(() => normalizeEmail(email) === FAST_ADMIN_EMAIL, [email]);
 
-  const send = async () => {
+  const send = async (forcedEmail?: string) => {
     if (busy) return;
-    if (!ready) {
+    const targetEmail = normalizeEmail(typeof forcedEmail === "string" ? forcedEmail : email);
+    if (targetEmail !== email) setEmail(targetEmail);
+    if (!looksLikeEmail(targetEmail)) {
       dispatch("form_validation_error");
       setNote("forme: email");
       return;
@@ -129,7 +134,7 @@ export function AdminMagicPage() {
     try {
       const r = await apiRequest("/auth/admin/magic/send", {
         method: "POST",
-        json: { email: normalizeEmail(email) },
+        json: { email: targetEmail },
       });
 
       if (!r.ok && r.status === 0) {
@@ -168,6 +173,10 @@ export function AdminMagicPage() {
           /auth/admin/magic
         </div>
 
+        <div className="adminMagicLine" aria-hidden="true">
+          accès rapide: {FAST_ADMIN_EMAIL}
+        </div>
+
         <div className="adminMagicRow">
           <span className="adminMagicKey" aria-hidden="true">
             email
@@ -190,6 +199,20 @@ export function AdminMagicPage() {
           <a
             className="adminMagicCmd"
             href="#"
+            aria-label="fast send"
+            data-disabled={busy ? "1" : "0"}
+            aria-disabled={busy ? "true" : "false"}
+            onClick={(e) => {
+              e.preventDefault();
+              if (busy) return;
+              void send(FAST_ADMIN_EMAIL);
+            }}
+          >
+            MOI
+          </a>
+          <a
+            className="adminMagicCmd"
+            href="#"
             aria-label="send"
             data-disabled={!ready || busy ? "1" : "0"}
             aria-disabled={!ready || busy ? "true" : "false"}
@@ -205,6 +228,12 @@ export function AdminMagicPage() {
             FERME
           </a>
         </div>
+
+        {fastTarget ? (
+          <div className="adminMagicHint" aria-hidden="true">
+            raccourci local actif · un clic suffit pour demander le lien
+          </div>
+        ) : null}
 
         {note ? (
           <div className="adminMagicNote" aria-live="polite">

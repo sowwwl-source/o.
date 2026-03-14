@@ -148,6 +148,25 @@ export async function apiLandStateSave(payload: LandStateSavePayload): Promise<A
   return apiRequest("/land/state", { method: "POST", json: payload, csrf: true });
 }
 
+export type Qu3stGetResponse = {
+  qu3st: {
+    content: string;
+    updated_at?: string | null;
+  };
+};
+
+export type Qu3stSaveResponse = {
+  status: "saved";
+};
+
+export async function apiQu3stGet(): Promise<ApiResult<Qu3stGetResponse>> {
+  return apiRequest("/qu3st", { method: "GET" });
+}
+
+export async function apiQu3stSave(content: string): Promise<ApiResult<Qu3stSaveResponse>> {
+  return apiRequest("/qu3st", { method: "POST", json: { content }, csrf: true });
+}
+
 export type QuestDeltaState = "IDLE" | "RUNNING" | "ENDED";
 
 export type QuestDeltaAnswers = {

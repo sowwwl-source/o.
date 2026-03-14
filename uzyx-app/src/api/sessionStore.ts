@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from "react";
-import type { ApiErr, ApiOk } from "./apiClient";
+import type { ApiErr } from "./apiClient";
 import { apiMe, type MeResponse } from "./apiClient";
 
 export type SessionState =
@@ -25,7 +25,13 @@ function setState(next: SessionState) {
 }
 
 function isGuestErr(r: ApiErr): boolean {
-  return r.status === 401 && Boolean((r.data as any)?.guest);
+  return r.status === 401 && r.data.guest === true;
+}
+
+function apiErrorMessage(r: ApiErr): string {
+  if (typeof r.data.error === "string" && r.data.error) return r.data.error;
+  if (typeof r.data.detail === "string" && r.data.detail) return r.data.detail;
+  return `http_${r.status || 0}`;
 }
 
 export const sessionStore = {
@@ -46,16 +52,14 @@ export const sessionStore = {
     inflight = (async () => {
       const r = await apiMe();
       if (r.ok) {
-        setState({ phase: "authed", me: (r as ApiOk<MeResponse>).data });
+        setState({ phase: "authed", me: r.data });
         return;
       }
-      const err = r as ApiErr;
-      if (isGuestErr(err)) {
+      if (isGuestErr(r)) {
         setState({ phase: "guest" });
         return;
       }
-      const msg = String((err.data as any)?.error || (err.data as any)?.detail || `http_${err.status || 0}`);
-      setState({ phase: "error", error: msg });
+      setState({ phase: "error", error: apiErrorMessage(r) });
     })().finally(() => {
       inflight = null;
     });
@@ -72,4 +76,3 @@ export function useSession(): { state: SessionState; api: typeof sessionStore } 
   const s = useSyncExternalStore(sessionStore.subscribe, sessionStore.get, sessionStore.get);
   return useMemo(() => ({ state: s, api: sessionStore }), [s]);
 }
-
