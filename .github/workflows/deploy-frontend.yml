@@ -6,6 +6,7 @@ on:
     paths:
       - 'sowwwl-front/**'
       - '.github/workflows/deploy-frontend.yml'
+      - 'scripts/ensure-apache-front-site.sh'
   workflow_dispatch:
 
 jobs:
@@ -16,11 +17,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run frontend tests
+        run: |
+          node sowwwl-front/tests/gesture_o.test.mjs
+          node sowwwl-front/tests/bote_engine.test.mjs
+
       - name: Deploy to DigitalOcean (rsync over ssh)
         env:
           DO_HOST: ${{ secrets.DO_HOST }}
           DO_USER: ${{ secrets.DO_USER }}
           DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+          DO_KNOWN_HOSTS: ${{ secrets.DO_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
 
@@ -35,16 +47,45 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "${DO_SSH_KEY}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ -z "${DO_KNOWN_HOSTS}" ]; then
+            echo "Missing DO_KNOWN_HOSTS secret" >&2
+            exit 1
+          fi
+          printf '%s\n' "${DO_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo mkdir -p /var/www/sowwwl-front'
           rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" sowwwl-front/ "${DO_USER}@${DO_HOST}:/var/www/sowwwl-front/"
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" 'set -euo pipefail; sudo chmod -R a+rX /var/www/sowwwl-front'
 
-          # Verify build marker is present on disk and served by Caddy.
-          PRIMARY_HOST="sowwwl.com"
+          # If Apache is actively serving this host, keep its vhost in sync.
+          scp -i ~/.ssh/id_deploy scripts/ensure-apache-front-site.sh "${DO_USER}@${DO_HOST}:/tmp/ensure-apache-front-site.sh"
+          ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
+            'set -euo pipefail
+             run_front_fix=0
+             if command -v apache2ctl >/dev/null 2>&1; then
+               if systemctl is-active --quiet apache2; then
+                 run_front_fix=1
+               elif [ "$(id -u)" -ne 0 ] && sudo -n systemctl is-active --quiet apache2 2>/dev/null; then
+                 run_front_fix=1
+               fi
+             fi
+             if [ "$run_front_fix" = "1" ]; then
+               if [ "$(id -u)" -eq 0 ]; then
+                 bash /tmp/ensure-apache-front-site.sh
+               elif sudo -n true 2>/dev/null; then
+                 sudo -n bash /tmp/ensure-apache-front-site.sh
+               else
+                 echo "SKIP ensure-apache-front-site.sh (no sudo)"
+               fi
+             else
+               echo "SKIP ensure-apache-front-site.sh (apache not active)"
+             fi'
+
+          # Verify build marker is present on disk and served by the primary hostname.
+          PRIMARY_HOST="sowwwl.cloud"
           ssh -i ~/.ssh/id_deploy "${DO_USER}@${DO_HOST}" \
             "set -euo pipefail
              test -f /var/www/sowwwl-front/o.build.json
              grep -q '\"id\":\"${BUILD_ID}\"' /var/www/sowwwl-front/o.build.json
-             curl -fsS --resolve '${PRIMARY_HOST}:443:127.0.0.1' 'https://${PRIMARY_HOST}/o.build.json' | grep -q '\"id\":\"${BUILD_ID}\"'"
+             curl -kfsS --resolve '${PRIMARY_HOST}:443:127.0.0.1' 'https://${PRIMARY_HOST}/o.build.json' | grep -q '\"id\":\"${BUILD_ID}\"'"

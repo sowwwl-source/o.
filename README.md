@@ -108,6 +108,13 @@ Add these in `Settings → Secrets and variables → Actions`:
 | `DO_HOST` | Droplet IP address | `165.232.123.45` |
 | `DO_USER` | SSH username | `root` |
 | `DO_SSH_KEY` | Private SSH key | `-----BEGIN...` |
+| `DO_KNOWN_HOSTS` | Pinned SSH host key entry for the droplet | `example.com ssh-ed25519 AAAA...` |
+
+Generate `DO_KNOWN_HOSTS` from a trusted machine, then review and store the exact line:
+
+```bash
+ssh-keyscan -H your-droplet-ip
+```
 
 ### 5. Deploy!
 

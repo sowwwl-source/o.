@@ -30,6 +30,12 @@ function normalizeOneLine(s: string, max = 220): string {
   return clampLen(String(s || "").replace(/\s+/g, " ").trim(), max);
 }
 
+function normalizeQuestStep(step: unknown): number {
+  const n = Number(step);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(5, Math.floor(n)));
+}
+
 function pickStepHint(step: number): string {
   if (step === 1) return "après α β γ…";
   if (step === 2) return "≤ 9 mots";
@@ -66,7 +72,8 @@ function apiErrorTag(data: ApiPayload, status: number): string {
 }
 
 function applyLandThemeIfPresent(theme: LandTheme | null | undefined): void {
-  if (theme?.glyph) applyLandTheme(theme);
+  if (theme === undefined) return;
+  applyLandTheme(theme);
 }
 
 export function QuestDeltaPanel(props: {
@@ -80,6 +87,7 @@ export function QuestDeltaPanel(props: {
   const [busy, setBusy] = useState<null | "sync" | "start" | "answer" | "end">(null);
   const [note, setNote] = useState<string | null>(null);
   const [fails, setFails] = useState(0);
+  const [localReadyToEnd, setLocalReadyToEnd] = useState(false);
   const [stepFx, setStepFx] = useState<{ token: number; dir: -1 | 0 | 1 }>({ token: 0, dir: 0 });
   const lastStepRef = useRef<{ phase: QuestState["state"] | null; step: number }>({ phase: null, step: 0 });
 
@@ -102,11 +110,13 @@ export function QuestDeltaPanel(props: {
     try {
       const r = await apiQuestDeltaGet();
       if (r.ok) {
-        setQ({
+        const nextQ = {
           state: r.data.state,
-          step: Math.max(0, Math.floor(r.data.step || 0)),
+          step: normalizeQuestStep(r.data.step),
           answers: r.data.answers ?? {},
-        });
+        };
+        setQ(nextQ);
+        setLocalReadyToEnd(nextQ.state === "RUNNING" && nextQ.step === 5 && Boolean(nextQ.answers?.o_seed_line));
         return;
       }
       dispatch(r.status === 0 ? "network_error" : "form_validation_error");
@@ -150,6 +160,7 @@ export function QuestDeltaPanel(props: {
         setNote(r.status === 0 ? "réseau: fragile" : `err:${apiErrorTag(r.data, r.status)}`);
         return;
       }
+      setLocalReadyToEnd(false);
       setNote("Δ: …");
       setFails(0);
       await sync();
@@ -162,7 +173,7 @@ export function QuestDeltaPanel(props: {
     if (busy) return;
     if (!q || q.state !== "RUNNING") return;
     if (!requireCsrf()) return;
-    const stepBefore = Math.max(0, Math.floor(q.step || 0));
+    const stepBefore = normalizeQuestStep(q.step);
     const payload = normalizeOneLine(typeof forced === "string" ? forced : answerInputRef.current?.value ?? "");
     if (!payload) {
       setNote("—");
@@ -196,10 +207,13 @@ export function QuestDeltaPanel(props: {
         if (answerInputRef.current) answerInputRef.current.value = "";
         setNote(null);
         setFails(0);
+        if (stepBefore === 5 && readyToEnd) setLocalReadyToEnd(true);
       }
 
       // Optimistic step update; then sync for answers.
-      if (Number.isFinite(step) && q) setQ({ ...q, step: Math.max(0, Math.floor(step)) });
+      if (Number.isFinite(step)) {
+        setQ((curr) => (curr ? { ...curr, step: normalizeQuestStep(step) } : curr));
+      }
       await sync();
 
       // Simplicity: at step 5, auto-complete the quest after a valid seed.
@@ -223,6 +237,7 @@ export function QuestDeltaPanel(props: {
         const seal = typeof end.data.seal === "string" ? end.data.seal : "";
         setNote(seal ? `seal:${seal}` : "ended");
         setFails(0);
+        setLocalReadyToEnd(false);
         await sync();
       }
     } finally {
@@ -254,6 +269,7 @@ export function QuestDeltaPanel(props: {
       const seal = typeof r.data.seal === "string" ? r.data.seal : "";
       setNote(seal ? `seal:${seal}` : "ended");
       setFails(0);
+      setLocalReadyToEnd(false);
       await sync();
     } finally {
       setBusy(null);
@@ -262,7 +278,7 @@ export function QuestDeltaPanel(props: {
 
   useEffect(() => {
     const phase = q?.state ?? null;
-    const step = phase === "RUNNING" ? Math.max(0, Math.floor(q?.step || 0)) : 0;
+    const step = phase === "RUNNING" ? normalizeQuestStep(q?.step) : 0;
     const prev = lastStepRef.current;
     if (phase !== prev.phase || step !== prev.step) {
       const dir: -1 | 0 | 1 =
@@ -273,7 +289,7 @@ export function QuestDeltaPanel(props: {
     }
   }, [q?.state, q?.step]);
 
-  const step = q?.state === "RUNNING" ? q.step : 0;
+  const step = q?.state === "RUNNING" ? normalizeQuestStep(q.step) : 0;
   const hint = useMemo(() => pickStepHint(step), [step]);
   const stepGuide = useMemo(() => stepGuideText(step, landType), [step, landType]);
   const seal = q?.answers?.seal ? String(q.answers.seal) : "";
@@ -283,7 +299,7 @@ export function QuestDeltaPanel(props: {
   const passageAuto = useMemo(() => landTypeToPassageAnswer(landType), [landType]);
   const showAnswerInput = q?.state === "RUNNING" && (step === 1 || step === 2 || step === 4 || step === 5);
   const showPassage = q?.state === "RUNNING" && step === 3;
-  const canEnd = q?.state === "RUNNING" && step === 5 && hasSeed;
+  const canEnd = q?.state === "RUNNING" && step === 5 && (hasSeed || localReadyToEnd);
   const showStep2 = q?.state === "RUNNING" && step === 2;
 
   const status = note
@@ -291,7 +307,7 @@ export function QuestDeltaPanel(props: {
     : busy
       ? "…"
       : q
-        ? `${q.state.toLowerCase()} · ${q.state === "RUNNING" ? `step:${Math.max(1, Math.min(5, q.step))}/5` : "—"}`
+        ? `${q.state.toLowerCase()} · ${q.state === "RUNNING" ? `step:${step}/5` : "—"}`
         : "Δ: …";
   const stepFxClass = stepFx.dir > 0 ? "is-step-forward" : stepFx.dir < 0 ? "is-step-back" : "";
 
@@ -319,6 +335,24 @@ export function QuestDeltaPanel(props: {
       <div className="qDeltaMeta" aria-hidden="true">
         {glyph ? `glyph:${glyph}` : "glyph:—"} · {seal ? `seal:${seal}` : "seal:—"}
       </div>
+
+      {!q ? (
+        <div className="qDeltaCmds" aria-label="delta bootstrap cmds">
+          <a
+            className="qDeltaCmd"
+            href="#"
+            aria-label="sync delta"
+            data-disabled={busy ? "1" : "0"}
+            onClick={(e) => {
+              e.preventDefault();
+              if (busy) return;
+              void onSync();
+            }}
+          >
+            SYNC
+          </a>
+        </div>
+      ) : null}
 
       {q?.state === "IDLE" || q?.state === "ENDED" ? (
         <div className="qDeltaCmds" aria-label="delta cmds">

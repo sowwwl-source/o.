@@ -1,0 +1,99 @@
+name: CI Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main, production]
+  workflow_dispatch:
+
+jobs:
+  node-packages:
+    name: Node quality (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: admin
+            workdir: admin
+            run_test: "false"
+          - name: agent
+            workdir: agent
+            run_test: "true"
+          - name: backend
+            workdir: backend
+            run_test: "true"
+          - name: social3d
+            workdir: social3d
+            run_test: "false"
+          - name: uzyx-app
+            workdir: uzyx-app
+            run_test: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.workdir }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ matrix.workdir }}
+
+      - name: Run tests
+        if: matrix.run_test == 'true'
+        run: |
+          if [ "${{ matrix.workdir }}" = "uzyx-app" ]; then
+            npm test -- --run
+          else
+            npm test
+          fi
+        working-directory: ${{ matrix.workdir }}
+
+      - name: Run build
+        run: npm run build
+        working-directory: ${{ matrix.workdir }}
+
+  sowwwl-front-tests:
+    name: sowwwl-front tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run gesture tests
+        run: node sowwwl-front/tests/gesture_o.test.mjs
+
+      - name: Run bote engine tests
+        run: node sowwwl-front/tests/bote_engine.test.mjs
+
+  php-tests:
+    name: PHP tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - name: Run PHP tests
+        run: |
+          set -euo pipefail
+          for f in sowwwl-api-php/tests/*_test.php; do
+            php "$f"
+          done

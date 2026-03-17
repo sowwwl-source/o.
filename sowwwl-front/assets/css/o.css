@@ -371,6 +371,379 @@ html[data-focus="dot"] .mark-dot{transform:scale(var(--zoom))}
   letter-spacing:.03em;
 }
 
+.homeBloomPage{
+  gap:22px !important;
+}
+
+.homeLead{
+  display:grid;
+  grid-template-columns:minmax(0, 1.4fr) minmax(260px, .8fr);
+  gap:18px;
+  align-items:end;
+}
+
+.homeLeadMain{
+  display:grid;
+  gap:10px;
+}
+
+.homeLeadOverline,
+.homeSectionLabel{
+  margin:0;
+  font-size:12px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+}
+
+.homeIntro{
+  max-width:18ch;
+  margin:0;
+  font-family:var(--font-title);
+  font-size:clamp(22px, 3.6vw, 42px);
+  line-height:1.08;
+  letter-spacing:-.02em;
+}
+
+.homeSignalCard{
+  position:relative;
+  overflow:hidden;
+  margin-top:0;
+  min-height:100%;
+  background:
+    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--accent-green) 18%, transparent), transparent 58%),
+    linear-gradient(145deg, color-mix(in srgb, var(--shade) 72%, transparent), transparent 72%);
+}
+
+.homeSignalTop,
+.homeSpecimenTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.homeChip,
+.homeSpecimenCode{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  opacity:.86;
+}
+
+.homeSignalStack{
+  display:grid;
+  gap:8px;
+  margin:14px 0 18px;
+  font-family:var(--font-mono);
+  font-size:clamp(16px, 2vw, 20px);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
+
+.homeSignalStack span{
+  width:fit-content;
+  padding:2px 0;
+  border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.homeHeroCard{
+  position:relative;
+  overflow:hidden;
+  background:
+    linear-gradient(125deg, color-mix(in srgb, var(--shade) 92%, transparent), transparent 58%),
+    radial-gradient(circle at 80% 24%, color-mix(in srgb, var(--accent-green) 14%, transparent), transparent 38%);
+}
+
+.homeHeroGrid{
+  display:grid;
+  grid-template-columns:minmax(0, 1.2fr) minmax(280px, .95fr);
+  gap:18px;
+  align-items:stretch;
+}
+
+.homeHeroCopy{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:12px;
+}
+
+.homeHeroCopy h2,
+.homeSpecimen h2{
+  margin:0;
+  font-size:clamp(28px, 4vw, 46px);
+  line-height:1.02;
+  letter-spacing:-.03em;
+}
+
+.homeHeroCopy p,
+.homeSpecimen p,
+.homeManifestoCard p,
+.homeDoorsCard p{
+  max-width:52ch;
+}
+
+.homeHeroHint{
+  margin-top:auto;
+  font-size:13px;
+  letter-spacing:.04em;
+}
+
+.homeHeroMatter{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  min-height:280px;
+  border:1px solid color-mix(in srgb, var(--line) 92%, transparent);
+  border-radius:20px;
+  padding:18px;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent-amber) 11%, transparent), transparent 52%),
+    linear-gradient(160deg, color-mix(in srgb, var(--shade) 88%, transparent), transparent 76%);
+}
+
+.homeMatterHalo{
+  position:absolute;
+  inset:auto auto 18px 18px;
+  width:96px;
+  height:96px;
+  border:1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius:999px;
+  opacity:.52;
+  box-shadow:
+    0 0 0 10px color-mix(in srgb, var(--shade) 60%, transparent),
+    0 0 0 26px color-mix(in srgb, var(--shade) 32%, transparent);
+  animation:homeHaloBreath 8.2s ease-in-out infinite;
+}
+
+.homeBloomField{
+  position:relative;
+  z-index:1;
+  margin:0;
+  padding-left:clamp(54px, 8vw, 78px);
+  font-size:clamp(12px, 1.5vw, 16px);
+  line-height:1.72;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  opacity:.88;
+}
+
+.homeMatterMeta{
+  position:relative;
+  z-index:1;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  font-size:11px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  opacity:.72;
+}
+
+.homeSpecimens{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px;
+}
+
+.homeSpecimen{
+  position:relative;
+  overflow:hidden;
+  margin-top:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--shade) 90%, transparent), transparent 80%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent-green) 10%, transparent), transparent 30%);
+}
+
+.homeSpecimen .btn{
+  margin-top:auto;
+  width:fit-content;
+}
+
+.homeSpecimen::after{
+  content:"";
+  position:absolute;
+  right:-24px;
+  top:-24px;
+  width:96px;
+  height:96px;
+  border:1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  border-radius:999px;
+  opacity:.42;
+}
+
+.homeSpecimenNote,
+.homeDoorsHint{
+  font-size:13px;
+  letter-spacing:.03em;
+}
+
+.homeLowerGrid{
+  display:grid;
+  grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr);
+  gap:14px;
+}
+
+.homeManifestoCard,
+.homeDoorsCard,
+.homeOnboardingCard{
+  margin-top:0;
+}
+
+.homeDoorsCard{
+  display:grid;
+  gap:14px;
+  align-content:start;
+}
+
+.homeOnboardingCard{
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--shade) 84%, transparent), transparent 75%);
+}
+
+.homeBranchCard{
+  margin-top:0;
+}
+
+.homeBranchNote{
+  font-size:13px;
+  letter-spacing:.04em;
+}
+
+.branchPage{
+  max-width:min(1120px, calc(100vw - (var(--pad) * 2)));
+}
+
+.branchLead{
+  display:grid;
+  grid-template-columns:minmax(0, 1.2fr) auto;
+  gap:18px;
+  align-items:end;
+}
+
+.branchLeadMain{
+  display:grid;
+  gap:10px;
+}
+
+.branchTitle{
+  margin:0;
+  font-size:clamp(34px, 6vw, 76px);
+  line-height:1.02;
+  letter-spacing:-.04em;
+  max-width:12ch;
+}
+
+.branchIntro{
+  max-width:40rem;
+  font-size:clamp(18px, 2vw, 24px);
+  line-height:1.18;
+  letter-spacing:-.02em;
+}
+
+.branchTopNav{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:flex-end;
+}
+
+.branchHero{
+  margin-top:0;
+}
+
+.branchPanels{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px;
+}
+
+.branchPanel{
+  margin-top:0;
+  display:grid;
+  gap:12px;
+  align-content:start;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--shade) 88%, transparent), transparent 76%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent-green) 8%, transparent), transparent 28%);
+}
+
+.branchPanel h3{
+  margin:0;
+  font-size:clamp(22px, 3vw, 32px);
+  line-height:1.06;
+  letter-spacing:-.03em;
+}
+
+.branchList{
+  margin:0;
+  padding-left:1.2em;
+  display:grid;
+  gap:6px;
+  font-size:13px;
+  letter-spacing:.03em;
+}
+
+.branchSystemCard{
+  margin-top:0;
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--shade) 90%, transparent), transparent 68%);
+}
+
+.branchSystemGrid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px;
+}
+
+.branchSystemBlock{
+  display:grid;
+  gap:12px;
+  padding:16px;
+  border:1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius:18px;
+  background:color-mix(in srgb, var(--shade) 58%, transparent);
+}
+
+.branchRail{
+  margin:0;
+  font-size:12px;
+  line-height:1.7;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.branchSystemNote{
+  font-size:13px;
+  letter-spacing:.03em;
+}
+
+.branchFooter{
+  margin-top:0;
+}
+
+@keyframes homeHaloBreath{
+  0%,100%{
+    transform:scale(.96);
+    opacity:.38;
+  }
+  50%{
+    transform:scale(1.04);
+    opacity:.62;
+  }
+}
+
 /* Glitch links */
 .glitch-link{
   color:var(--accent-green);
@@ -642,6 +1015,7 @@ html.is-inverted .o-petals-ring{
 }
 @media (prefers-reduced-motion: reduce){
   .o-petals-marks{transition:none}
+  .homeMatterHalo{animation:none}
 }
 
 .o-petal{
@@ -782,6 +1156,71 @@ html.is-inverted .o-petals-tree-btn{
   .o-petals-tree-btn{
     min-height:32px;
     font-size:12px;
+  }
+}
+
+@media (max-width: 900px){
+  .homeLead,
+  .homeHeroGrid,
+  .homeLowerGrid,
+  .homeSpecimens,
+  .branchLead,
+  .branchPanels,
+  .branchSystemGrid{
+    grid-template-columns:1fr;
+  }
+
+  .homeIntro{
+    max-width:22ch;
+  }
+
+  .branchTopNav{
+    justify-content:flex-start;
+  }
+
+  .homeHeroMatter{
+    min-height:240px;
+  }
+
+  .homeBloomField{
+    padding-left:42px;
+  }
+}
+
+@media (max-width: 640px){
+  .homeLead{
+    gap:14px;
+  }
+
+  .homeSignalCard,
+  .homeHeroMatter,
+  .homeSpecimen,
+  .homeManifestoCard,
+  .homeDoorsCard,
+  .homeOnboardingCard,
+  .branchPanel,
+  .branchSystemBlock{
+    border-radius:16px;
+  }
+
+  .homeHeroCopy h2,
+  .homeSpecimen h2,
+  .branchPanel h3{
+    font-size:clamp(26px, 8vw, 36px);
+  }
+
+  .homeBloomField{
+    padding-left:22px;
+    font-size:12px;
+    letter-spacing:.12em;
+  }
+
+  .homeMatterMeta{
+    justify-content:flex-start;
+  }
+
+  .branchTitle{
+    font-size:clamp(30px, 10vw, 44px);
   }
 }
 

@@ -88,6 +88,7 @@ Add these secrets to your GitHub repository (Settings → Secrets and variables 
 - `DO_HOST`: Your DigitalOcean droplet IP
 - `DO_USER`: SSH user (usually `root` or your username)
 - `DO_SSH_KEY`: Private SSH key for authentication
+- `DO_KNOWN_HOSTS`: Pinned SSH host key entry for the droplet (`ssh-keyscan -H <host>` collected from a trusted machine)
 
 ## Local Development
 

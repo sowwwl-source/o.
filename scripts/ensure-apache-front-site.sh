@@ -1,31 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Ensure Apache serves the O. UI (uzyx-app) from /var/www/o
+# Ensure Apache serves the sowwwl static homepage from /var/www/sowwwl-front
 # and proxies /api/* to the local PHP API container.
 #
 # This is intended to be run on the droplet (as root).
 # It is idempotent and will disable conflicting vhosts for the same hostnames.
 #
-# Host:
-# - 0.user.o.sowwwl.cloud (primary)
+# Hosts:
+# - sowwwl.cloud (primary)
+# - www.sowwwl.cloud (alias)
+#
+# Optional:
+# - export TLS_CERT_FILE=/path/to/fullchain-or-origin-cert.pem
+# - export TLS_KEY_FILE=/path/to/private-key.pem
+#   If omitted, the script falls back to Let's Encrypt discovery.
 
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-  echo "[ensure-apache-o-site] must run as root" >&2
+  echo "[ensure-apache-front-site] must run as root" >&2
   exit 1
 fi
 
 if ! command -v apache2ctl >/dev/null 2>&1; then
-  echo "[ensure-apache-o-site] apache2 not found; skipping" >&2
+  echo "[ensure-apache-front-site] apache2 not found; skipping" >&2
   exit 0
 fi
 
-SITE_NAME="o-sowwwl-cloud"
-DOCROOT="/var/www/o"
+SITE_NAME="front-sowwwl-cloud"
+DOCROOT="/var/www/sowwwl-front"
 API_UPSTREAM="http://127.0.0.1:8000/"
 
-PRIMARY_HOST="0.user.o.sowwwl.cloud"
-ALIASES=()
+PRIMARY_HOST="sowwwl.cloud"
+ALIASES=("www.sowwwl.cloud")
 
 TLS_CERT_FILE="${TLS_CERT_FILE:-}"
 TLS_KEY_FILE="${TLS_KEY_FILE:-}"
@@ -49,26 +55,29 @@ CERT_FILE=""
 KEY_FILE=""
 if [ -n "${TLS_CERT_FILE}" ] || [ -n "${TLS_KEY_FILE}" ]; then
   if [ ! -r "${TLS_CERT_FILE}" ] || [ ! -r "${TLS_KEY_FILE}" ]; then
-    echo "[ensure-apache-o-site] TLS_CERT_FILE / TLS_KEY_FILE unreadable; aborting" >&2
+    echo "[ensure-apache-front-site] TLS_CERT_FILE / TLS_KEY_FILE unreadable; aborting" >&2
     exit 1
   fi
   CERT_FILE="${TLS_CERT_FILE}"
   KEY_FILE="${TLS_KEY_FILE}"
-  echo "[ensure-apache-o-site] using explicit TLS files"
+  echo "[ensure-apache-front-site] using explicit TLS files"
 else
   CERT_DIR="$(find_le_cert_dir_for_host "${PRIMARY_HOST}" || true)"
   if [ -z "${CERT_DIR}" ]; then
-    echo "[ensure-apache-o-site] could not find a Let's Encrypt cert for ${PRIMARY_HOST}; aborting" >&2
+    CERT_DIR="$(find_le_cert_dir_for_host "${ALIASES[0]}" || true)"
+  fi
+  if [ -z "${CERT_DIR}" ]; then
+    echo "[ensure-apache-front-site] could not find a Let's Encrypt cert for ${PRIMARY_HOST}; aborting" >&2
     exit 1
   fi
   CERT_FILE="${CERT_DIR}/fullchain.pem"
   KEY_FILE="${CERT_DIR}/privkey.pem"
-  echo "[ensure-apache-o-site] using cert dir: ${CERT_DIR}"
+  echo "[ensure-apache-front-site] using cert dir: ${CERT_DIR}"
 fi
 
 mkdir -p "${DOCROOT}"
 
-echo "[ensure-apache-o-site] enabling apache modules"
+echo "[ensure-apache-front-site] enabling apache modules"
 a2enmod ssl headers proxy proxy_http rewrite mime >/dev/null || true
 
 disable_conflicts_for_host() {
@@ -83,7 +92,7 @@ disable_conflicts_for_host() {
       bn="$(basename "$f")"
       name="${bn%.conf}"
       if [ "${name}" != "${SITE_NAME}" ]; then
-        echo "[ensure-apache-o-site] disabling conflicting site: ${name} (host=${host})"
+        echo "[ensure-apache-front-site] disabling conflicting site: ${name} (host=${host})"
         a2dissite "${name}" >/dev/null || true
       fi
     fi
@@ -114,6 +123,7 @@ ${ALIASES_LINE}
 ${ALIASES_LINE}
 
   DocumentRoot ${DOCROOT}
+  DirectoryIndex index.html
 
   SSLEngine on
   SSLCertificateFile ${CERT_FILE}
@@ -134,20 +144,6 @@ ${ALIASES_LINE}
     Require all granted
   </Directory>
 
-  # SPA fallback without breaking /api
-  RewriteEngine On
-  # Never rewrite API or build stamp.
-  # NOTE: %{REQUEST_URI} always starts with "/" (more robust than RewriteRule path matching).
-  RewriteCond %{REQUEST_URI} ^/api/ [OR]
-  RewriteCond %{REQUEST_URI} ^/assets/ [OR]
-  RewriteCond %{REQUEST_URI} =/o.build.json
-  RewriteRule ^ - [L]
-
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-  RewriteRule ^ /index.html [L]
-
   <Files "index.html">
     Header set Cache-Control "no-store"
   </Files>
@@ -166,13 +162,13 @@ EOF
 install -m 0644 "${TMP}" "${CONF_PATH}"
 rm -f "${TMP}"
 
-echo "[ensure-apache-o-site] enabling site: ${SITE_NAME}"
+echo "[ensure-apache-front-site] enabling site: ${SITE_NAME}"
 a2ensite "${SITE_NAME}" >/dev/null || true
 
-echo "[ensure-apache-o-site] apache configtest"
+echo "[ensure-apache-front-site] apache configtest"
 apache2ctl configtest
 
-echo "[ensure-apache-o-site] reloading apache"
+echo "[ensure-apache-front-site] reloading apache"
 systemctl reload apache2
 
-echo "[ensure-apache-o-site] ok"
+echo "[ensure-apache-front-site] ok"

@@ -13,6 +13,7 @@ import { CloudGatePage } from "@/pages/CloudGatePage";
 import { AdminBoardPage } from "@/pages/AdminBoardPage";
 import { AdminMagicPage } from "@/pages/AdminMagicPage";
 import type { NodeId } from "@/graph/graph";
+import { parseRouteFromHash, type Route } from "@/app/routes";
 import { PerceptionProvider } from "@/perception/PerceptionProvider";
 import { Molette } from "@/components/Molette";
 import { useUzyxSignals } from "@/uzyx/useUzyxSignals";
@@ -44,17 +45,6 @@ function isSwipeBlockedTarget(t: EventTarget | null): boolean {
   return Boolean(t.closest("a,button,input,textarea,select,[role='link'],[contenteditable='true']"));
 }
 
-type Route =
-  | { kind: "home" }
-  | { kind: "entry" }
-  | { kind: "anchored" }
-  | { kind: "lande_new" }
-  | { kind: "admin" }
-  | { kind: "admin_magic" }
-  | { kind: "app"; id: NodeId }
-  | { kind: "profile"; handle: string }
-  | { kind: "cloud" };
-
 type AppPane = "intro" | "menu" | "content";
 
 const APP_PANES: readonly AppPane[] = ["intro", "menu", "content"];
@@ -66,45 +56,6 @@ function clampPaneIndex(n: number): number {
 
 function paneIndexForNode(id: NodeId): number {
   return id === "HAUT" ? 1 : 2;
-}
-
-function parseRouteFromHash(hash: string): Route {
-  const raw = String(hash || "").replace(/^#\/?/, "").replace(/^\/+/, "");
-  const parts = raw.split("/").filter(Boolean);
-  const head = (parts[0] ?? "").toLowerCase();
-
-  if (raw.trim() === "") return { kind: "home" };
-  if (head === "entry") return { kind: "entry" };
-  if (head === "anchored") return { kind: "anchored" };
-  if (head === "lande" && (parts[1] ?? "").toLowerCase() === "new") return { kind: "lande_new" };
-  if (head === "admin" && (parts[1] ?? "").toLowerCase() === "magic") return { kind: "admin_magic" };
-  if (head === "admin") return { kind: "admin" };
-
-  if (head === "u" && parts[1]) {
-    const handle = decodeURIComponent(parts[1]).replace(/^@+/, "");
-    return { kind: "profile", handle };
-  }
-
-  if (head === "cloud" || head === "soul" || head === "soul.cloud") return { kind: "cloud" };
-
-  if (head === "app") {
-    const k2 = String(parts[1] ?? "").trim().toUpperCase();
-    if (k2 === "" || k2 === "HAUT" || k2 === "B0ARD" || k2 === "BOARD") return { kind: "app", id: "HAUT" };
-    if (k2 === "LAND") return { kind: "app", id: "LAND" };
-    if (k2 === "FERRY") return { kind: "app", id: "FERRY" };
-    if (k2 === "STR3M" || k2 === "STR3AM" || k2 === "STREAM") return { kind: "app", id: "STR3M" };
-    if (k2 === "CONTACT" || k2 === "CONTACTS") return { kind: "app", id: "CONTACT" };
-    return { kind: "app", id: "HAUT" };
-  }
-
-  // Back-compat: node ids at the root are treated as "/app/<node>".
-  const key = raw.trim().toUpperCase();
-  if (key === "HAUT" || key === "B0ARD" || key === "BOARD") return { kind: "app", id: "HAUT" };
-  if (key === "LAND") return { kind: "app", id: "LAND" };
-  if (key === "FERRY") return { kind: "app", id: "FERRY" };
-  if (key === "STR3M" || key === "STR3AM" || key === "STREAM") return { kind: "app", id: "STR3M" };
-  if (key === "CONTACT" || key === "CONTACTS") return { kind: "app", id: "CONTACT" };
-  return { kind: "home" };
 }
 
 function isPasskeySupported(): boolean {

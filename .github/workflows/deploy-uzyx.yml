@@ -48,6 +48,7 @@ jobs:
           DO_HOST: ${{ secrets.DO_HOST }}
           DO_USER: ${{ secrets.DO_USER }}
           DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+          DO_KNOWN_HOSTS: ${{ secrets.DO_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
 
@@ -58,7 +59,12 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "${DO_SSH_KEY}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "${DO_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          if [ -z "${DO_KNOWN_HOSTS}" ]; then
+            echo "Missing DO_KNOWN_HOSTS secret" >&2
+            exit 1
+          fi
+          printf '%s\n' "${DO_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
           # Ensure directories exist (and keep /var/www/o/signals reserved for server-side drops).
           # NOTE: Some deploy users don't have passwordless sudo. Avoid failing the deploy just for that.
@@ -144,11 +150,11 @@ jobs:
             "set -euo pipefail
              test -f /var/www/o/o.build.json
              grep -q '\"id\":\"${GITHUB_SHA::7}\"' /var/www/o/o.build.json
-             H=\$(curl -fsSI --resolve '${PRIMARY_HOST}:443:127.0.0.1' \"https://${PRIMARY_HOST}/assets/${JS}\" | tr -d '\\r')
+             H=\$(curl -kfsSI --resolve '${PRIMARY_HOST}:443:127.0.0.1' \"https://${PRIMARY_HOST}/assets/${JS}\" | tr -d '\\r')
              echo \"\$H\" | head -n 1 | grep -q ' 200 '
              echo \"\$H\" | grep -qi '^content-type:'
              echo \"\$H\" | grep -qi '^content-type:.*javascript' || { echo 'BAD_JS_MIME' >&2; echo \"\$H\"; exit 1; }
-             H=\$(curl -fsSI --resolve '${PRIMARY_HOST}:443:127.0.0.1' \"https://${PRIMARY_HOST}/assets/${CSS}\" | tr -d '\\r')
+             H=\$(curl -kfsSI --resolve '${PRIMARY_HOST}:443:127.0.0.1' \"https://${PRIMARY_HOST}/assets/${CSS}\" | tr -d '\\r')
              echo \"\$H\" | head -n 1 | grep -q ' 200 '
              echo \"\$H\" | grep -qi '^content-type:'
              echo \"\$H\" | grep -qi '^content-type:.*text/css' || { echo 'BAD_CSS_MIME' >&2; echo \"\$H\"; exit 1; }"

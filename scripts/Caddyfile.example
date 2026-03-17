@@ -24,8 +24,8 @@
     file_server
 }
 
-# Frontend + same-origin API proxy (/api/* strips /api)
-sowwwl.com, www.sowwwl.com {
+# Canonical public homepage (flowers / 0isO / soul.cloud)
+sowwwl.cloud, www.sowwwl.cloud {
     root * /var/www/sowwwl-front
 
     handle_path /api/* {
@@ -40,6 +40,11 @@ sowwwl.com, www.sowwwl.com {
     }
 
     file_server
+}
+
+# Optional legacy redirect
+sowwwl.com, www.sowwwl.com {
+    redir https://sowwwl.cloud{uri} 308
 }
 
 # Optional: direct API domain

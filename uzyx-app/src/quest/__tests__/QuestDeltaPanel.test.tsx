@@ -100,6 +100,19 @@ describe("QuestDeltaPanel", () => {
     expect(mocks.dispatch).toHaveBeenCalledWith("network_error");
   });
 
+  it("keeps sync available after an initial fetch failure and recovers on retry", async () => {
+    mocks.apiQuestDeltaGet.mockResolvedValueOnce(fail(0, { error: "network_error" })).mockResolvedValueOnce(ok(questState("IDLE", 0)));
+
+    render(<QuestDeltaPanel landType={null} refreshSession={() => undefined} />);
+
+    expect(await screen.findByText("réseau: fragile")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: "sync delta" }));
+
+    await waitFor(() => expect(mocks.apiQuestDeltaGet).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("link", { name: "start delta" })).toBeInTheDocument();
+  });
+
   it("sends the inferred passage from the land type at step 3", async () => {
     mocks.apiQuestDeltaGet
       .mockResolvedValueOnce(ok(questState("RUNNING", 3)))
@@ -154,6 +167,49 @@ describe("QuestDeltaPanel", () => {
     await waitFor(() => expect(mocks.apiQuestDeltaEnd).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mocks.applyLandTheme).toHaveBeenCalledWith(theme));
     expect(await screen.findByText("seal:Δ")).toBeInTheDocument();
+  });
+
+  it("clears the land theme when delta end returns an explicit null theme", async () => {
+    mocks.apiQuestDeltaGet
+      .mockResolvedValueOnce(ok(questState("RUNNING", 5, { land_glyph: "δ", o_seed_line: "O. seed" })))
+      .mockResolvedValueOnce(ok(questState("ENDED", 0, { seal: "Δ" })));
+    mocks.apiQuestDeltaEnd.mockResolvedValueOnce(ok<QuestDeltaEndResponse>({ status: "ended", seal: "Δ", theme: null }));
+
+    render(<QuestDeltaPanel landType={null} refreshSession={() => undefined} />);
+
+    fireEvent.click(await screen.findByRole("link", { name: "end delta" }));
+
+    await waitFor(() => expect(mocks.apiQuestDeltaEnd).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.applyLandTheme).toHaveBeenCalledWith(null));
+    expect(await screen.findByText("seal:Δ")).toBeInTheDocument();
+  });
+
+  it("clamps out-of-range running steps consistently across status and controls", async () => {
+    mocks.apiQuestDeltaGet.mockResolvedValueOnce(ok(questState("RUNNING", 9, { o_seed_line: "O. seed" })));
+
+    render(<QuestDeltaPanel landType={null} refreshSession={() => undefined} />);
+
+    expect(await screen.findByText("running · step:5/5")).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "answer" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "end delta" })).toBeInTheDocument();
+  });
+
+  it("keeps the manual end fallback available when seed acceptance is followed by sync and auto-end failures", async () => {
+    mocks.apiQuestDeltaGet
+      .mockResolvedValueOnce(ok(questState("RUNNING", 5, { land_glyph: "δ" })))
+      .mockResolvedValueOnce(fail(0, { error: "network_error" }));
+    mocks.apiQuestDeltaAnswer.mockResolvedValueOnce(ok<QuestDeltaAnswerResponse>({ ok: true, step: 5, ready_to_end: true }));
+    mocks.apiQuestDeltaEnd.mockResolvedValueOnce(fail(0, { error: "network_error" }));
+
+    render(<QuestDeltaPanel landType={null} refreshSession={() => undefined} />);
+
+    const input = await screen.findByRole("textbox", { name: "answer" });
+    fireEvent.change(input, { target: { value: "O. seed" } });
+    fireEvent.click(screen.getByRole("link", { name: "send answer" }));
+
+    await waitFor(() => expect(mocks.apiQuestDeltaAnswer).toHaveBeenCalledWith("O. seed"));
+    await waitFor(() => expect(mocks.apiQuestDeltaEnd).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("link", { name: "end delta" })).toBeInTheDocument();
   });
 
   it("shows seed validation errors returned at step 5", async () => {

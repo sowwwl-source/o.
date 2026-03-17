@@ -17,7 +17,7 @@ function unauthorized() {
   });
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const user = process.env.O_ADMIN_UI_USER ?? "";
   const pass = process.env.O_ADMIN_UI_PASS ?? "";
   if (!user || !pass) {
@@ -46,4 +46,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
-

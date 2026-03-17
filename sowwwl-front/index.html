@@ -7,58 +7,209 @@
   <link rel="stylesheet" href="/assets/css/o.css" />
 </head>
 <body>
-  <main id="o" aria-label="O.">
-    <header>
-      <h1 class="title" aria-label="O.">
-        <span class="mark" aria-hidden="true">
-          <span class="mark-o">O</span><span class="mark-dot">.</span>
-        </span>
-      </h1>
-      <p class="tagline muted">Le réseau minimal.</p>
+  <main id="o" class="homeBloomPage" aria-label="O.">
+    <header class="homeLead">
+      <div class="homeLeadMain">
+        <p class="tagline muted">sowwwl.cloud</p>
+        <p class="homeLeadOverline muted">fleurs · 0isO · soul.cloud</p>
+        <h1 class="title" aria-label="O.">
+          <span class="mark" aria-hidden="true">
+            <span class="mark-o">O</span><span class="mark-dot">.</span>
+          </span>
+        </h1>
+        <p class="homeIntro">
+          Des fleurs sans image. Un 0isO sans avatar. Une page d’accueil qui ouvre des trajectoires au lieu d’empiler des blocs.
+        </p>
+      </div>
 
-      <p class="muted" style="margin-top:18px" data-no-glitch>
-        Ar(chi)bOrescence: panneau ↙ (clic direct • 1..8 • ←/→ • ↵).
-      </p>
-
-      <nav class="sr-only" aria-label="Navigation (fallback)">
-        <a href="/index.html">C0RE</a>
-        <a href="/fl0w.html">FL0W</a>
-        <a href="/str3am.html">STR3AM</a>
-        <a href="/b0te.html">B(o)Té</a>
-        <a href="/arch1ve.html">ARCHIVE</a>
-        <a href="/l4nd.html">LAND</a>
-        <a href="/s1gnal.html">SIGNAL</a>
-        <a href="/sal0n.html">SAL0N</a>
-        <a href="/syst3m.html">SYST3M</a>
-      </nav>
+      <aside class="card homeSignalCard" aria-label="Signal d'entrée">
+        <div class="homeSignalTop">
+          <span class="homeChip">entrée</span>
+          <span class="homeChip">public</span>
+        </div>
+        <div class="homeSignalStack" aria-hidden="true">
+          <span>fleur</span>
+          <span>0isO</span>
+          <span>cloud</span>
+          <span>pollen</span>
+        </div>
+        <p class="muted">
+          Ici, la floraison est typographique. Les portes restent lisibles. Le centre reste vide.
+        </p>
+      </aside>
     </header>
 
-    <section class="card onboardingCard" aria-label="Premier accès">
-      <h2 class="muted">premier accès</h2>
-      <p class="muted">
-        Point d’entrée recommandé: ouvre le hub <code>/0</code> pour voir les portes actives et l’état API/session.
-      </p>
-      <div class="row" style="margin-top:14px">
-        <a class="btn" href="/0.html">ouvrir le hub /0</a>
-        <a class="btn" href="/login.html">ouvrir login</a>
-        <a class="btn" href="/qu3st.html">ouvrir qu3st</a>
+    <section class="card homeHeroCard" aria-label="Entrée fleurs et 0isO">
+      <div class="homeHeroGrid">
+        <div class="homeHeroCopy">
+          <p class="homeSectionLabel muted">premier mouvement</p>
+          <h2>Une floraison de portes, pas un dashboard.</h2>
+          <p>
+            FL0W ouvre la dérive sur surface torique. <code>0isO</code> pose une seed publique, un <code>principal_id</code>, une matière ASCII.
+            <code>soul.cloud</code> sert de passage opérable vers l’app.
+          </p>
+          <div class="row" style="margin-top:14px">
+            <a class="btn" href="/fl0w.html">ouvrir FL0W</a>
+            <a class="btn" href="/owl-branch.html">ouvrir owl branch</a>
+            <a class="btn" href="https://0.user.o.sowwwl.cloud/#/cloud">ouvrir soul.cloud</a>
+            <a class="btn" href="/0.html">ouvrir le hub /0</a>
+          </div>
+          <p class="muted homeHeroHint" data-no-glitch>
+            Ar(chi)bOrescence: panneau ↙ (clic direct • 1..8 • ←/→ • ↵).
+          </p>
+        </div>
+
+        <div class="homeHeroMatter" aria-hidden="true">
+          <div class="homeMatterHalo"></div>
+          <pre class="homeBloomField">             fleur
+       pollen      cloud
+
+   0isO        .        FL0W
+
+       seed     centre     porte
+
+             soul</pre>
+          <div class="homeMatterMeta">
+            <span>surface</span>
+            <span>bicolore</span>
+            <span>sans image</span>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <section class="homeSpecimens" aria-label="Trois portes">
+      <article class="card homeSpecimen">
+        <div class="homeSpecimenTop">
+          <div>
+            <p class="homeSectionLabel muted">fleurs</p>
+            <h2>FL0W</h2>
+          </div>
+          <span class="homeSpecimenCode">/fl0w</span>
+        </div>
+        <p>
+          Une dérive sans feed, sans ranking, sur une surface qui boucle. La fleur n’est pas décorative: c’est la façon dont les portes respirent.
+        </p>
+        <p class="muted homeSpecimenNote">clavier: flèches / WASD · shift = grand pas · 0 = centre</p>
+        <a class="btn" href="/fl0w.html">entrer dans FL0W</a>
+      </article>
+
+      <article class="card homeSpecimen">
+        <div class="homeSpecimenTop">
+          <div>
+            <p class="homeSectionLabel muted">0isO</p>
+            <h2>Seed publique</h2>
+          </div>
+          <span class="homeSpecimenCode">0iso:&lt;principal&gt;:v1</span>
+        </div>
+        <p>
+          <code>0isO</code> ne montre pas d’image. Il transforme une identité publique en champ ASCII, puis garde seulement la trame utile.
+        </p>
+        <p class="muted homeSpecimenNote">principal_id → cloud namespace → seed publique</p>
+        <a class="btn" href="https://0.user.o.sowwwl.cloud/#/cloud">ouvrir la gate cloud</a>
+      </article>
+
+      <article class="card homeSpecimen">
+        <div class="homeSpecimenTop">
+          <div>
+            <p class="homeSectionLabel muted">orientation</p>
+            <h2>Hub /0</h2>
+          </div>
+          <span class="homeSpecimenCode">source</span>
+        </div>
+        <p>
+          Le point d’entrée opérable: état API, portes actives, session, accès aux surfaces ouvertes. Pas un menu final, un endroit source.
+        </p>
+        <p class="muted homeSpecimenNote">voir les solutions ouvertes avant de choisir une trajectoire</p>
+        <a class="btn" href="/0.html">ouvrir /0</a>
+      </article>
+    </section>
+
+    <section class="card homeHeroCard homeBranchCard" aria-label="owl branch">
+      <div class="homeHeroGrid">
+        <div class="homeHeroCopy">
+          <p class="homeSectionLabel muted">owl branch</p>
+          <h2>Batcave / Soul Pi / sowl u t0.</h2>
+          <p>
+            Une branche pour les systemes wearable + installation: EEG, OSC, TouchDesigner, Ableton, ceinture puissance,
+            Pi 5 en sac compute, nodes ESP32, rack MOSFET et ferrofluide.
+          </p>
+          <p class="muted homeBranchNote">
+            Pas un portfolio. Un point de branchement entre atelier, corps, studio et soul.cloud.
+          </p>
+          <div class="row" style="margin-top:14px">
+            <a class="btn" href="/owl-branch.html">ouvrir owl branch</a>
+            <a class="btn" href="https://0.user.o.sowwwl.cloud/#/cloud">ouvrir soul.cloud</a>
+          </div>
+        </div>
+
+        <div class="homeHeroMatter" aria-hidden="true">
+          <div class="homeMatterHalo"></div>
+          <pre class="homeBloomField">head      muse -> osc -> touchdesigner
+belt      12v bus -> fuse -> e-stop
+bag       pi5 -> ui -> logs -> mqtt/osc
+nodes     esp32/pico -> pwm -> mosfet
+matter    electromagnets -> ferrofluid
+studio    ableton -> light -> branch</pre>
+          <div class="homeMatterMeta">
+            <span>batcave</span>
+            <span>wearable</span>
+            <span>owl branch</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="homeLowerGrid" aria-label="Manifestes et portes">
+      <section class="card homeManifestoCard" data-glitch-oe aria-label="Manifeste fleurs et 0isO">
+        <p class="homeSectionLabel muted">manifeste</p>
+        <p>Les fleurs ici ne sont ni motifs ni illustrations. Elles désignent des seuils, des respirations, des groupements légers sur les bords.</p>
+        <p><code>0isO</code> n’est pas un profil classique. C’est une trace publique, une matière ASCII, un moyen de tenir une identité sans l’écraser en image.</p>
+        <p>La home ne promet pas un centre. Elle prépare un déplacement: vers FL0W, vers la cloud gate, vers le point source.</p>
+      </section>
+
+      <section class="card homeDoorsCard" aria-label="Portes actives">
+        <p class="homeSectionLabel muted">portes actives</p>
+        <div class="row">
+          <a class="btn" href="/manif3st.html">manif3st</a>
+          <a class="btn" href="/qu3st.html">qu3st</a>
+          <a class="btn" href="/str3am.html">str3am</a>
+          <a class="btn" href="/owl-branch.html">owl branch</a>
+          <a class="btn" href="/l4nd.html">land</a>
+          <a class="btn" href="/login.html">login</a>
+        </div>
+        <p class="muted homeDoorsHint">
+          Clique. Inverse. Recommence. Si tu veux l’axe public + seed, ouvre <code>soul.cloud</code>. Si tu veux dériver, prends <code>FL0W</code>.
+        </p>
+      </section>
+    </section>
+
+    <section class="card homeOnboardingCard" aria-label="Guide rapide">
+      <p class="homeSectionLabel muted">guide rapide</p>
       <ol class="onboardingSteps muted" aria-label="Guide rapide">
-        <li>1. Clique une entrée dans le panneau arborescence (bas-gauche).</li>
-        <li>2. Ou utilise 1..8 pour ouvrir directement une section.</li>
-        <li>3. Flèches pour parcourir, Entrée pour ouvrir la sélection.</li>
+        <li>1. Ouvre <code>FL0W</code> si tu veux commencer par l’errance.</li>
+        <li>2. Ouvre <code>soul.cloud</code> si tu veux calculer un <code>principal_id</code> et une seed <code>0isO</code>.</li>
+        <li>3. Ouvre <code>owl branch</code> si tu veux le rail wearable + installation + batcave.</li>
+        <li>4. Reviens sur <code>/0</code> si tu veux voir l’état opérable des portes.</li>
       </ol>
     </section>
 
-    <section class="manifesto" data-glitch-oe aria-label="Manifeste">
-      <p>Manifeste O. O. n’est n i site. O. est n i état. Un point posé après la phrase, quand tout le reste a été dit. Un arrêt volontaire dans le flux. Une résistance minimale.</p>
-      <p>O. refuse l’accumulation. Ce qui n’est pas nécessaire est retiré. Ce qui reste devient lisible.</p>
-      <p>Ici, la stabilité n’est pas un point de départ, c’est une conquête. Le calme n’est pas promis, il est évalué. L’équilibre ne se proclame pas : il se prouve.</p>
-      <p>O. observe sans exploiter. Il ne capte pas pour vendre, il capte pour réguler. L’algorithme n’est pas un piège, c’est un miroir. Il ne vous pousse pas, il vous replace.</p>
-    </section>
+    <nav class="sr-only" aria-label="Navigation (fallback)">
+      <a href="/index.html">C0RE</a>
+      <a href="/fl0w.html">FL0W</a>
+      <a href="/str3am.html">STR3AM</a>
+      <a href="/owl-branch.html">OWL BRANCH</a>
+      <a href="/b0te.html">B(o)Té</a>
+      <a href="/arch1ve.html">ARCHIVE</a>
+      <a href="/l4nd.html">LAND</a>
+      <a href="/s1gnal.html">SIGNAL</a>
+      <a href="/sal0n.html">SAL0N</a>
+      <a href="/syst3m.html">SYST3M</a>
+      <a href="https://0.user.o.sowwwl.cloud/#/cloud">SOUL.CLOUD</a>
+    </nav>
 
     <footer class="muted" style="margin-top:18px">
-      <p>Clique. Inverse. Recommence.</p>
+      <p>fleurs. 0isO. dérive publique. Clique. Inverse. Recommence.</p>
     </footer>
   </main>
 
