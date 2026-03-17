@@ -64,7 +64,14 @@ function questState(state: QuestDeltaGetResponse["state"], step: number, answers
 
 describe("QuestDeltaPanel", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mocks.apiQuestDeltaGet.mockReset();
+    mocks.apiQuestDeltaStart.mockReset();
+    mocks.apiQuestDeltaAnswer.mockReset();
+    mocks.apiQuestDeltaEnd.mockReset();
+    mocks.getCsrf.mockReset();
+    mocks.dispatch.mockReset();
+    mocks.applyLandTheme.mockReset();
+
     mocks.getCsrf.mockReturnValue("csrf-token");
     mocks.apiQuestDeltaGet.mockResolvedValue(ok(questState("IDLE", 0)));
     mocks.apiQuestDeltaStart.mockResolvedValue(ok<QuestDeltaStartResponse>({ state: "RUNNING", step: 1 }));
@@ -185,12 +192,12 @@ describe("QuestDeltaPanel", () => {
   });
 
   it("clamps out-of-range running steps consistently across status and controls", async () => {
-    mocks.apiQuestDeltaGet.mockResolvedValueOnce(ok(questState("RUNNING", 9, { o_seed_line: "O. seed" })));
+    mocks.apiQuestDeltaGet.mockResolvedValue(ok(questState("RUNNING", 9, { o_seed_line: "O. seed" })));
 
     render(<QuestDeltaPanel landType={null} refreshSession={() => undefined} />);
 
-    expect(await screen.findByText("running · step:5/5")).toBeInTheDocument();
     expect(await screen.findByRole("textbox", { name: "answer" })).toBeInTheDocument();
+    expect(await screen.findByText(/running · step:5\/5/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "end delta" })).toBeInTheDocument();
   });
 
