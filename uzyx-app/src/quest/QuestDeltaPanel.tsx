@@ -82,7 +82,6 @@ export function QuestDeltaPanel(props: {
 }) {
   const dispatch = useOEvent();
   const landType = props.landType;
-
   const [q, setQ] = useState<QuestState | null>(null);
   const [busy, setBusy] = useState<null | "sync" | "start" | "answer" | "end">(null);
   const [note, setNote] = useState<string | null>(null);
