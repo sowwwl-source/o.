@@ -42,7 +42,7 @@ export async function startLocalUiServer(opts: { port?: number }) {
   app.use(express.static(uiDir, { index: "index.html" }));
 
   const port = opts.port ?? 0;
-  const server = app.listen(port);
+  const server = app.listen(port, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", () => resolve()));
   const addr = server.address();
   const actualPort = typeof addr === "object" && addr ? addr.port : port;

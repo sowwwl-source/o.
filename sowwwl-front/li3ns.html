@@ -116,7 +116,14 @@
 
         const left = document.createElement('div');
         left.className = 'muted';
-        left.innerHTML = `<b>${(link.peer && link.peer.handle) || '—'}</b> <span style="opacity:.7">(${(link.peer && link.peer.comm_address) || '—'})</span>`;
+        const handle = document.createElement('b');
+        handle.textContent = (link.peer && link.peer.handle) || '—';
+        const addr = document.createElement('span');
+        addr.style.opacity = '.7';
+        addr.textContent = '(' + ((link.peer && link.peer.comm_address) || '—') + ')';
+        left.appendChild(handle);
+        left.appendChild(document.createTextNode(' '));
+        left.appendChild(addr);
 
         const right = document.createElement('div');
         right.className = 'badges';

@@ -13,6 +13,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# Read DB password from environment; fail fast if not set.
+DB_USER="${DB_USER:-sowwwl}"
+DB_NAME="${DB_NAME:-sowwwl}"
+if [ -z "${DB_PASS:-}" ]; then
+    echo -e "${RED}Error: DB_PASS environment variable is not set.${NC}" >&2
+    echo "Set DB_PASS before running this script (or source your .env file)." >&2
+    exit 1
+fi
+
 usage() {
     echo "Database Management Utility"
     echo ""
@@ -34,13 +43,12 @@ backup() {
     
     BACKUP_FILE="$BACKUP_DIR/sowwwl_${DATE}.sql"
     
-    $COMPOSE exec -T db mysqldump \
-        -u sowwwl \
-        -psowwwlpass \
+    MYSQL_PWD="$DB_PASS" $COMPOSE exec -T db mysqldump \
+        -u "$DB_USER" \
         --single-transaction \
         --quick \
         --lock-tables=false \
-        sowwwl > "$BACKUP_FILE"
+        "$DB_NAME" > "$BACKUP_FILE"
     
     echo -e "${GREEN}✓ Backup created: $BACKUP_FILE${NC}"
     echo -e "  Size: $(du -h "$BACKUP_FILE" | cut -f1)"
@@ -67,10 +75,9 @@ restore() {
         exit 0
     fi
     
-    $COMPOSE exec -T db mysql \
-        -u sowwwl \
-        -psowwwlpass \
-        sowwwl < "$1"
+    MYSQL_PWD="$DB_PASS" $COMPOSE exec -T db mysql \
+        -u "$DB_USER" \
+        "$DB_NAME" < "$1"
     
     echo -e "${GREEN}✓ Database restored successfully${NC}"
 }
@@ -95,17 +102,16 @@ init_db() {
         exit 1
     fi
     
-    $COMPOSE exec -T db mysql \
-        -u sowwwl \
-        -psowwwlpass \
-        sowwwl < sowwwl-api-php/schema.sql
+    MYSQL_PWD="$DB_PASS" $COMPOSE exec -T db mysql \
+        -u "$DB_USER" \
+        "$DB_NAME" < sowwwl-api-php/schema.sql
     
     echo -e "${GREEN}✓ Database initialized${NC}"
 }
 
 db_shell() {
     echo -e "${YELLOW}Opening MySQL shell...${NC}"
-    $COMPOSE exec db mysql -u sowwwl -psowwwlpass sowwwl
+    MYSQL_PWD="$DB_PASS" $COMPOSE exec db mysql -u "$DB_USER" "$DB_NAME"
 }
 
 status() {
@@ -123,7 +129,7 @@ status() {
     # Get database info
     echo ""
     echo "Database info:"
-    $COMPOSE exec db mysql -u sowwwl -psowwwlpass sowwwl -e "
+    MYSQL_PWD="$DB_PASS" $COMPOSE exec db mysql -u "$DB_USER" "$DB_NAME" -e "
         SELECT 
             'Tables' as Metric, 
             COUNT(*) as Value 

@@ -14,8 +14,19 @@ export type AgentSecrets = {
 
 function cleanUrl(u: string): string {
   const s = u.trim().replace(/\/+$/, "");
-  // Basic: allow http(s).
   if (!/^https?:\/\//i.test(s)) throw new Error("backendUrl must start with http(s)://");
+  // Reject plain http:// for non-localhost targets (SEC-006).
+  if (/^http:\/\//i.test(s)) {
+    let host: string;
+    try {
+      host = new URL(s).hostname;
+    } catch {
+      throw new Error("backendUrl is not a valid URL");
+    }
+    if (host !== "localhost" && host !== "127.0.0.1" && host !== "::1") {
+      throw new Error("backendUrl must use https:// for non-localhost targets");
+    }
+  }
   return s;
 }
 

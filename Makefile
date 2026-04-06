@@ -55,5 +55,6 @@ test: ## Run quick API tests
 		-d '{"email":"test@example.com","password":"test12345"}' | jq .
 
 init-db: ## Initialize database with schema
-	docker compose exec db mysql -u sowwwl -psowwwlpass sowwwl < sowwwl-api-php/schema.sql
+	@test -n "$$DB_PASS" || (echo "Error: DB_PASS is not set. Source your .env file first." >&2 && exit 1)
+	MYSQL_PWD="$$DB_PASS" docker compose exec db mysql -u "$${DB_USER:-sowwwl}" "$${DB_NAME:-sowwwl}" < sowwwl-api-php/schema.sql
 	@echo "Database initialized successfully"
