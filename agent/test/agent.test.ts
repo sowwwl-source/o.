@@ -6,6 +6,7 @@ import { decryptTextLocal, encryptTextLocal, ensureAgeIdentity } from "../src/ag
 import { configureFromEnvIfMissing, loadConfig } from "../src/config.js";
 import { ensureSshKeypair } from "../src/ssh.js";
 import { ageIdentityPath, configPath, sshPrivAgePath, sshPubPath, tokenSecretAgePath } from "../src/paths.js";
+import { startLocalUiServer } from "../src/ui/server.js";
 
 async function tmpHome(): Promise<string> {
   return await fs.promises.mkdtemp(path.join(os.tmpdir(), "o-agent-test-"));
@@ -60,6 +61,61 @@ describe("o-agent", () => {
     const privArmored = await fs.promises.readFile(sshPrivAgePath(), "utf8");
     expect(privArmored).toContain("BEGIN AGE ENCRYPTED FILE");
     expect(privArmored).not.toContain("BEGIN OPENSSH PRIVATE KEY");
+  });
+
+  describe("SEC-006: HTTP transport enforcement", () => {
+    it("accepts http:// for 127.0.0.1 (loopback)", async () => {
+      process.env.O_AGENT_BACKEND_URL = "http://127.0.0.1:8787";
+      process.env.O_AGENT_TOKEN_ID = "token-loopback";
+      process.env.O_AGENT_TOKEN_SECRET = "secret-loopback";
+      await expect(configureFromEnvIfMissing()).resolves.toBe(true);
+    });
+
+    it("accepts http:// for localhost", async () => {
+      process.env.O_AGENT_BACKEND_URL = "http://localhost:8787";
+      process.env.O_AGENT_TOKEN_ID = "token-localhost";
+      process.env.O_AGENT_TOKEN_SECRET = "secret-localhost";
+      await expect(configureFromEnvIfMissing()).resolves.toBe(true);
+    });
+
+    it("rejects http:// for non-localhost remote URL", async () => {
+      process.env.O_AGENT_BACKEND_URL = "http://remote-backend.example.com";
+      process.env.O_AGENT_TOKEN_ID = "token-remote";
+      process.env.O_AGENT_TOKEN_SECRET = "secret-remote";
+      await expect(configureFromEnvIfMissing()).rejects.toThrow(
+        "backendUrl must use https:// for non-localhost targets"
+      );
+    });
+
+    it("accepts https:// for a non-localhost remote URL", async () => {
+      process.env.O_AGENT_BACKEND_URL = "https://remote-backend.example.com";
+      process.env.O_AGENT_TOKEN_ID = "token-https";
+      process.env.O_AGENT_TOKEN_SECRET = "secret-https";
+      await expect(configureFromEnvIfMissing()).resolves.toBe(true);
+    });
+
+    it("rejects a URL with no http(s):// scheme", async () => {
+      process.env.O_AGENT_BACKEND_URL = "ftp://remote-backend.example.com";
+      process.env.O_AGENT_TOKEN_ID = "token-ftp";
+      process.env.O_AGENT_TOKEN_SECRET = "secret-ftp";
+      await expect(configureFromEnvIfMissing()).rejects.toThrow(
+        "backendUrl must start with http(s)://"
+      );
+    });
+  });
+
+  describe("SEC-002: local UI server binds to 127.0.0.1 only", () => {
+    it("server address is bound to 127.0.0.1, not 0.0.0.0", async () => {
+      const { server, port } = await startLocalUiServer({});
+      try {
+        const addr = server.address();
+        expect(typeof addr).toBe("object");
+        expect((addr as { address: string }).address).toBe("127.0.0.1");
+        expect(port).toBeGreaterThan(0);
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    });
   });
 });
 
