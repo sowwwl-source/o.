@@ -1,0 +1,8 @@
+REGLES DE PATCH (v0.1)
+
+- Chaque liaison physique a un label unique et stable.
+- Chaque scene et preset a un ID fixe.
+- Pas de hot-swap sans plan de rollback.
+- Toute modif est notee dans 10_ADMIN/checklist_live.md.
+- Priorite a la fiabilite: cables courts, tests, backup.
+- Documenter chaque flux (source -> traitement -> sortie).

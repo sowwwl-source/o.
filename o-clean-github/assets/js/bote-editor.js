@@ -97,23 +97,29 @@
     overlay.classList.toggle("negative", hit);
   }
 
-  // Save via fetch POST (same origin)
+  // Save to localStorage
   async function save() {
-    const form = btnSave?.closest("form");
-    if (!form) return;
-    status.textContent = "saving…";
+    const id = document.getElementById('boteId')?.value || '';
+    const titleInput = document.getElementById('boteTitle');
+    if (!id || !/^[a-f0-9]{12}$/.test(id)) { status.textContent = 'error: bad id'; return; }
+    status.textContent = 'saving…';
     try {
-      const fd = new FormData(form);
-      fd.set("content", ta.value);
-
-      const res = await fetch(form.action, { method: "POST", body: fd, credentials: "same-origin" });
-      const txt = await res.text();
-      // server responds with JSON
-      const j = JSON.parse(txt);
-      if (j.ok) status.textContent = "saved";
-      else status.textContent = "error: " + (j.error || "unknown");
+      const STORAGE_KEY = 'sowl_botes';
+      let botes = {};
+      try { botes = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+      const existing = botes[id] || {};
+      botes[id] = {
+        ...existing,
+        id,
+        title: titleInput ? (titleInput.value.trim() || 'B(o)Té') : (existing.title || 'B(o)Té'),
+        content: ta.value,
+        updated_at: new Date().toISOString(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(botes));
+      if (titleInput) document.title = botes[id].title;
+      status.textContent = 'saved';
     } catch (e) {
-      status.textContent = "error";
+      status.textContent = 'error';
     }
     setTimeout(()=> status.textContent = "", 1200);
   }

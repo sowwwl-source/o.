@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>B(o)Té</title>
+<link rel="stylesheet" href="/assets/css/o.css">
+</head>
+<body>
+<main class="editor-wrap">
+  <div class="toolbar">
+    <a class="btn" href="/botes.html">↩</a>
+    <div class="field">
+      <div id="metaForm" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input type="hidden" id="boteId" value="">
+        <input type="text" id="boteTitle" value="" aria-label="Titre">
+        <button id="btnSave" class="btn" type="button">Sauver</button>
+        <button id="btnOrange" class="btn" type="button">Orange</button>
+        <span id="status" class="muted"></span>
+      </div>
+    </div>
+  </div>
+
+  <textarea id="src" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+
+  <div class="render">
+    <div id="scanOverlay" class="scanOverlay" aria-hidden="true"></div>
+    <pre id="view"></pre>
+  </div>
+
+  <div class="hint">
+    Scan : bouge le doigt/la souris. Si un caractère orange passe dans le O, le vert bascule en négatif.
+  </div>
+</main>
+
+<script>
+// Load bote from localStorage
+const STORAGE_KEY = 'sowl_botes';
+const params = new URLSearchParams(location.search);
+const id = params.get('id') || '';
+
+if (!id || !/^[a-f0-9]{12}$/.test(id)) {
+  document.querySelector('.editor-wrap').innerHTML = '<p class="muted"><a href="/botes.html">↩</a> ID invalide.</p>';
+} else {
+  let botes = {};
+  try { botes = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+
+  if (!botes[id]) {
+    const now = new Date().toISOString();
+    botes[id] = { id, title: 'B(o)Té', content: '⟦O⟧\n\n', created_at: now, updated_at: now };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(botes));
+  }
+
+  const bote = botes[id];
+  document.getElementById('boteId').value = id;
+  document.getElementById('boteTitle').value = bote.title;
+  document.getElementById('src').value = bote.content;
+  document.title = bote.title;
+}
+</script>
+<script src="/assets/js/bote-editor.js"></script>
+</body>
+</html>

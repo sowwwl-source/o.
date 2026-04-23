@@ -1,0 +1,14 @@
+ARCHITECTURE 5 STRATES (draft)
+
+Strate 1 - Experience / dramaturgie
+Strate 2 - Interfaces humaines (iPad, gestes, voix)
+Strate 3 - Logique / orchestration (scenes, timelines)
+Strate 4 - Signal / routage (audio, OSC, MIDI, DMX)
+Strate 5 - Materiel (machines, RPi, lumiere, audio)
+
+Rattachements initiaux
+- 04_INTERFACES -> Strate 2
+- 07_IPAD_CONTROL -> Strate 2
+- 03_MODULES -> Strate 3
+- 09_AUDIO_ROUTING + 08_LIGHT_VIDEO -> Strate 4
+- 05_MACHINES + 06_RASPBERRY -> Strate 5

@@ -1,0 +1,10 @@
+INVENTAIRE MODULES (seed)
+
+- Audio routing (09_AUDIO_ROUTING)
+- Light/video (08_LIGHT_VIDEO)
+- iPad control (07_IPAD_CONTROL)
+- Raspberry layer (06_RASPBERRY)
+- Machines: son / moteurs / lumiere (05_MACHINES)
+
+Notes
+- Seeded from folder structure; a completer avec modules reels.

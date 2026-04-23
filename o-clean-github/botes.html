@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>B(o)Té</title>
+<link rel="stylesheet" href="/assets/css/o.css">
+</head>
+<body>
+<main id="o">
+  <h1 class="muted">// B(o)Té //</h1>
+  <p class="muted"><a href="/">↩</a></p>
+
+  <form id="newForm" class="field">
+    <input type="text" id="newTitle" placeholder="nouvelle B(o)Té — titre">
+    <button class="btn" type="submit">Créer</button>
+  </form>
+
+  <div id="list" style="margin-top:18px">
+    <p class="muted">Chargement…</p>
+  </div>
+</main>
+<script>
+const STORAGE_KEY = 'sowl_botes';
+const SEED = {
+  'a1b2c3d4e5f6': {
+    id: 'a1b2c3d4e5f6',
+    title: 'B(o)Té — 0',
+    content: 'La vérité se trouve dans les détails.\n\n⟦O⟧\n\nTape. Efface. Révèle.\n',
+    created_at: '2026-02-05T17:17:07Z',
+    updated_at: '2026-02-05T17:17:07Z'
+  }
+};
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : null;
+    if (!data || typeof data !== 'object' || !Object.keys(data).length) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED));
+      return SEED;
+    }
+    return data;
+  } catch(e) { return SEED; }
+}
+
+function render(botes) {
+  const list = document.getElementById('list');
+  const entries = Object.values(botes).sort((a,b) => b.updated_at.localeCompare(a.updated_at));
+  if (!entries.length) {
+    list.innerHTML = '<p class="muted">Aucune B(o)Té. Crée la première.</p>';
+    return;
+  }
+  list.innerHTML = '<ul>' + entries.map(b =>
+    `<li><a href="/bote.html?id=${encodeURIComponent(b.id)}">${esc(b.title)}</a> <span class="muted"> — ${esc(b.updated_at)}</span></li>`
+  ).join('') + '</ul>';
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function randId() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+document.getElementById('newForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const title = document.getElementById('newTitle').value.trim() || 'B(o)Té';
+  const id = randId();
+  const now = new Date().toISOString();
+  const botes = load();
+  botes[id] = { id, title, content: '⟦O⟧\n\n', created_at: now, updated_at: now };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(botes));
+  window.location.href = '/bote.html?id=' + id;
+});
+
+render(load());
+</script>
+</body>
+</html>
