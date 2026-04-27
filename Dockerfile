@@ -10,7 +10,12 @@ RUN apt-get update \
 RUN a2enmod rewrite
 
 # Autoriser les .htaccess (pour les routes propres)
-RUN sed -i '/<Directory \\/var\\/www\\/>/,/<\\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+RUN printf '%s\n' \
+    '<Directory /var/www/html>' \
+    '    AllowOverride All' \
+    '</Directory>' \
+    > /etc/apache2/conf-available/o-allow-override.conf \
+    && a2enconf o-allow-override
 
 # Copie des fichiers sources
 COPY . /var/www/html/
